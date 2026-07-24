@@ -312,6 +312,19 @@
     tvGallery.querySelectorAll('video').forEach((v) => v.pause());
   });
 
+  /* ================= PROFILE CARD ================= */
+  const faceCard = document.getElementById('faceCard');
+  const faceModal = document.getElementById('faceModal');
+  if (faceCard && faceModal) {
+    faceCard.addEventListener('click', () => {
+      faceModal.showModal();
+      faceModal.scrollTop = 0;
+      magHide();
+    });
+    document.getElementById('faceClose').addEventListener('click', () => faceModal.close());
+    faceModal.addEventListener('click', (e) => { if (e.target === faceModal) faceModal.close(); });
+  }
+
   /* ================= CURSOR ================= */
   if (finePointer) {
     const dot = document.getElementById('cursorDot');

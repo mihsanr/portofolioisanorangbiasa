@@ -1,18 +1,20 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" translate="no">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="google" content="notranslate">
   <title>Projects — Muhammad Ihsan Rizka</title>
-  <meta name="description" content="Selected projects by Muhammad Ihsan Rizka — graphic design, motion design, and video editing from Cimahi, Indonesia.">
+  <meta name="description" content="Selected projects by Muhammad Ihsan Rizka — graphic design, motion design, and video editing. Currently nomadic.">
   <meta property="og:title" content="Projects — Muhammad Ihsan Rizka">
   <meta property="og:description" content="Selected design, motion, and video work. Each project a different channel.">
   <meta property="og:type" content="website">
-  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="assets/favicon.png" type="image/png">
+  <link rel="apple-touch-icon" href="assets/favicon.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;900&family=Space+Grotesk:wght@400;500;600;700;800&family=VT323&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=4">
+  <link rel="stylesheet" href="css/style.css?v=5">
 </head>
 <body>
   <a href="#projects" class="skip-link">Skip to content</a>
@@ -24,7 +26,7 @@
 
   <!-- ===== NAV ===== -->
   <nav class="site-nav" id="siteNav" aria-label="Main">
-    <a class="nav-left" href="#top">IHSAN RIZKA — CIMAHI, ID</a>
+    <a class="nav-left" href="#top">MUHAMMAD IHSAN RIZKA — NOMADEN</a>
     <div class="nav-links">
       <a class="nav-link" href="#projects">Work</a>
       <a class="nav-link" href="#journey">Journey</a>
@@ -35,7 +37,7 @@
 
   <!-- ghost page header, fixed right -->
   <div class="page-header" aria-hidden="true">
-    <div class="page-header-nr">09 CHANNELS</div>
+    <div class="page-header-nr">08 CHANNELS</div>
     <div class="page-header-title">Selected<br>Work</div>
   </div>
 
@@ -58,6 +60,17 @@
       <div class="clients-marquee" aria-hidden="true">
         <div class="clients-track" id="clientsTrack"></div>
       </div>
+    </section>
+
+    <!-- ===== THE FACE ===== -->
+    <section class="face" id="face" aria-label="The face behind the work">
+      <p class="face-label">The face behind all of this</p>
+      <div class="face-stage">
+        <button class="face-card" id="faceCard" aria-haspopup="dialog" aria-label="Open profile — Muhammad Ihsan Rizka">
+          <img src="assets/img/profile-card.webp" alt="Muhammad Ihsan Rizka — playing card portrait" draggable="false">
+        </button>
+      </div>
+      <p class="face-hint" aria-hidden="true">▚ PICK A CARD — CLICK IT ▞</p>
     </section>
 
     <!-- ===== JOURNEY ===== -->
@@ -105,7 +118,7 @@
         <div class="footer-right">
           <a href="https://linktr.ee/PortofolioDesain" class="footer-nav-link" target="_blank" rel="noopener">Linktree ↗&#xFE0E;</a>
           <a href="https://wa.me/62895347178366" class="footer-nav-link" target="_blank" rel="noopener">WhatsApp ↗&#xFE0E;</a>
-          <span class="footer-location">Cimahi, Indonesia</span>
+          <span class="footer-location">NOMADEN</span>
         </div>
       </div>
       <div class="footer-bottom">
@@ -131,6 +144,22 @@
     </div>
     <p class="tv-desc" id="tvDesc"></p>
     <div class="tv-gallery" id="tvGallery"></div>
+  </dialog>
+
+  <!-- ===== PROFILE MODAL ===== -->
+  <dialog class="face-modal" id="faceModal">
+    <button class="face-close" id="faceClose" aria-label="Close">✕</button>
+    <div class="face-grid">
+      <div class="face-photo">
+        <img src="assets/img/profile-ihsan.webp" alt="Muhammad Ihsan Rizka" draggable="false">
+        <span class="face-photo-tag">▶ LIVE FEED · SUBJECT 01</span>
+      </div>
+      <div class="face-bio">
+        <p class="face-kicker">CH 00 — OFF AIR</p>
+        <h2 class="face-name">Muhammad Ihsan Rizka</h2>
+        <p class="face-story">Orang biasa yang akhir akhir ini memilih menggunakan adobe di marketplace dan ada kemungkinan beralih ke adobe crack (tergantung kondisi ekonomi)</p>
+      </div>
+    </div>
   </dialog>
 
   <!-- ===== CUSTOM CURSOR ===== -->
@@ -182,9 +211,10 @@
     </div>
   </div>
 
-  <script src="js/media.js?v=4"></script>
-  <script src="js/data.js?v=4"></script>
-  <script src="js/fluid.js?v=4"></script>
-  <script src="js/main.js?v=4"></script>
+  <script src="js/media.js?v=5"></script>
+  <script src="js/data.js?v=5"></script>
+  <script src="js/fluid.js?v=5"></script>
+  <script src="js/sfx.js?v=5"></script>
+  <script src="js/main.js?v=5"></script>
 </body>
 </html>
