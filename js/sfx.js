@@ -15,6 +15,7 @@
     'hover-skill': 0.4,
     'hover-footer': 0.3, 'click-footer': 0.4,
     'click-doc': 0.45,
+    'hover-player': 0.3, 'click-player': 0.4,
   };
 
   const cache = {};
@@ -23,7 +24,7 @@
 
   const last = {};
   function play(n) {
-    if (!unlocked || reduceMotion || !(n in SOUNDS)) return;
+    if (!unlocked || reduceMotion || window.SFX_MUTED || !(n in SOUNDS)) return;
     const now = performance.now();
     if (last[n] && now - last[n] < 140) return;
     last[n] = now;
@@ -46,6 +47,7 @@
 
   // [selector, hoverSound, clickSound] — first match wins, most specific first
   const MAP = [
+    ['.bgm-btn', 'hover-player', 'click-player'],
     ['.face-card', 'hover-card', 'click-card'],
     ['.project-row-head', 'hover-row', 'click-row'],
     ['.tv-doc', null, 'click-doc'],

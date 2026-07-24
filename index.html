@@ -14,7 +14,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;900&family=Space+Grotesk:wght@400;500;600;700;800&family=VT323&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=5">
+  <link rel="stylesheet" href="css/style.css?v=6">
 </head>
 <body>
   <a href="#projects" class="skip-link">Skip to content</a>
@@ -26,7 +26,7 @@
 
   <!-- ===== NAV ===== -->
   <nav class="site-nav" id="siteNav" aria-label="Main">
-    <a class="nav-left" href="#top">MUHAMMAD IHSAN RIZKA — NOMADEN</a>
+    <a class="nav-left" href="#top">MUHAMMAD IHSAN RIZKA<span class="nav-loc"> — NOMADEN</span></a>
     <div class="nav-links">
       <a class="nav-link" href="#projects">Work</a>
       <a class="nav-link" href="#journey">Journey</a>
@@ -34,6 +34,24 @@
       <a class="nav-link nav-link--cta" href="mailto:muhammadihsanrizka186@gmail.com">Get in touch ↗</a>
     </div>
   </nav>
+
+  <!-- ===== BGM PLAYER ===== -->
+  <div class="bgm-bar" id="bgmBar" role="group" aria-label="Background music">
+    <button class="bgm-btn bgm-mute" id="bgmMute" aria-pressed="false">MUTE</button>
+    <span class="bgm-sep" aria-hidden="true">·</span>
+    <span class="bgm-vol">
+      <span class="bgm-vol-label" aria-hidden="true">VOL</span>
+      <button class="bgm-btn bgm-step" id="bgmDown" aria-label="Lower volume">−</button>
+      <span class="bgm-meter" id="bgmMeter" role="img"></span>
+      <button class="bgm-btn bgm-step" id="bgmUp" aria-label="Raise volume">+</button>
+    </span>
+    <span class="bgm-sep" aria-hidden="true">·</span>
+    <span class="bgm-track">
+      <button class="bgm-btn bgm-arrow" id="bgmPrev" aria-label="Previous track">◀&#xFE0E;</button>
+      <span class="bgm-title" id="bgmTitle" aria-live="polite"></span>
+      <button class="bgm-btn bgm-arrow" id="bgmNext" aria-label="Next track">▶&#xFE0E;</button>
+    </span>
+  </div>
 
   <!-- ghost page header, fixed right -->
   <div class="page-header" aria-hidden="true">
@@ -211,10 +229,11 @@
     </div>
   </div>
 
-  <script src="js/media.js?v=5"></script>
-  <script src="js/data.js?v=5"></script>
-  <script src="js/fluid.js?v=5"></script>
-  <script src="js/sfx.js?v=5"></script>
-  <script src="js/main.js?v=5"></script>
+  <script src="js/media.js?v=6"></script>
+  <script src="js/data.js?v=6"></script>
+  <script src="js/fluid.js?v=6"></script>
+  <script src="js/sfx.js?v=6"></script>
+  <script src="js/bgm.js?v=6"></script>
+  <script src="js/main.js?v=6"></script>
 </body>
 </html>

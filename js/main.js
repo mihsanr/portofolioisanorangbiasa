@@ -219,10 +219,12 @@
 
   /* ================= SCROLL: nav + bg transition ================= */
   const nav = document.getElementById('siteNav');
+  const bgmBar = document.getElementById('bgmBar');
   const journey = document.getElementById('journey');
   const lerp3 = (a, b, t) => a.map((v, i) => Math.round(v + (b[i] - v) * t));
   function onScroll() {
     nav.classList.toggle('is-scrolled', scrollY > 8);
+    if (bgmBar) bgmBar.classList.toggle('is-scrolled', scrollY > 8);
     const r = journey.getBoundingClientRect();
     const vh = innerHeight;
     // 0 while journey below viewport → 1 once its top passes 25% of screen
