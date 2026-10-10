@@ -26,11 +26,18 @@ Upload seluruh isi folder `site/` ke Netlify / Vercel / GitHub Pages / Cloudflar
 Tidak ada konfigurasi khusus. Total ±44 MB (39 MB video).
 
 ## Struktur
-- `index.html` — satu halaman: hero, Channel Guide (8 proyek), marquee klien, Journey (CV), skills, kontak.
+- `index.html` — halaman utama: hero, Channel Guide (8 proyek), marquee klien, Journey (CV), skills, kontak.
+- `product.html` — layar "NO SIGNAL": MOTION — COMING SOON (CH 99 / Off Air).
+- `next.html` — "Next Up": ide proyek yang bisa di-Join Waitlist, urut dari waitlist terbanyak.
+  Halaman baru sengaja ada di root supaya semua path relatif (`assets/`, `css/`, `js/`) tetap jalan.
 - `js/data.js` — daftar proyek & media. Tambah/kurangi karya di sini.
 - `js/media.js` — hasil generate: dimensi gambar + placeholder blur (LQIP). Regenerate dengan skrip sharp bila menambah gambar.
 - `js/fluid.js` — simulasi fluid WebGL2 (efek liquid hover). Otomatis mati jika WebGL2 tidak ada atau `prefers-reduced-motion`.
 - `js/main.js` — render channel, modal galeri TV, kursor kustom, grain CRT, jam OSD.
+- `js/chrome.js` — "TV chrome" untuk subpage: frame CRT barrel, kursor, grain, status nav saat scroll. Hanya dimuat di subpage (index tetap pakai main.js).
+- `js/sfx.js`, `js/bgm.js` — SFX & BGM, dipakai semua halaman. State BGM di localStorage `ihsan.bgm`.
+- `js/waitlist-data.js` — daftar ide Next Up (`id`, `title`, `type`, `price`, `desc`, `status`: voting | in_production | done, `seed`).
+- `js/waitlist.js` — render & Join Waitlist. Semua akses data lewat objek `store` (`list`, `join`, `hasJoined`).
 - `assets/img/*.webp` — gambar terkompresi (max 1100px, q80).
 - `assets/video/*.mp4 + .webp` — video H.264 720p (CRF 26, faststart) + poster frame.
 - `assets/cv/Muhammad-Ihsan-Rizka-CV.pdf` — tombol "Download full CV".
@@ -40,3 +47,10 @@ Tidak ada konfigurasi khusus. Total ±44 MB (39 MB video).
 2. Tambahkan entri `<slug>: {w, h, lqip}` di `js/media.js` (atau regenerate).
 3. Daftarkan di `js/data.js` pada channel yang sesuai (`{t:'i', s:'<slug>'}`).
 Video: transcode `ffmpeg -i in.mp4 -vf scale=-2:1280 -c:v libx264 -crf 26 -c:a aac -b:a 96k -movflags +faststart out.mp4`, buat poster `.webp`, daftarkan `{t:'v', s:'<slug>', label:'...'}`.
+
+## Waitlist: Fase 1 → Fase 2 (Supabase)
+Fase 1 (sekarang): `store = LocalAdapter` — hitungan disimpan di localStorage browser
+pengunjung sendiri (`ihsan.waitlist.joined`, `ihsan.waitlist.voter`), jadi hanya demo.
+Fase 2: ganti `store` dengan `SupabaseAdapter` bermetode sama — tabel `ideas` + `votes`
+(unique `idea_id, voter_id`), RPC `join_waitlist(idea_id, voter_id)`, RLS publik hanya
+SELECT + panggil RPC. Di frontend hanya boleh **anon key**, jangan pernah service role key.

@@ -50,6 +50,8 @@
     ['.bgm-btn', 'hover-player', 'click-player'],
     ['.face-card', 'hover-card', 'click-card'],
     ['.project-row-head', 'hover-row', 'click-row'],
+    ['.waitlist-btn:not([aria-disabled="true"])', 'hover-row', 'click-row'],
+    ['.next-up-link', 'hover-nav', 'click-nav'],
     ['.tv-doc', null, 'click-doc'],
     ['.cv-btn', 'hover-cv', 'click-cv'],
     ['.contact-btn', 'hover-contact', 'click-contact'],
@@ -76,10 +78,11 @@
     play(m.hov);
   }, { passive: true });
 
+  // capture: match against the element's state before page handlers change it
   document.addEventListener('click', (e) => {
     const m = match(e.target);
     if (m && m.clk) play(m.clk);
-  });
+  }, true);
 
   // modal closes (✕ button, backdrop, or Esc) get their own sounds
   addEventListener('DOMContentLoaded', () => {
