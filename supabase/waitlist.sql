@@ -4,6 +4,8 @@
 -- Public (anon key) can only: read `ideas`, call list_waitlist(), call join_waitlist().
 -- `votes` has RLS on and no policies, so voter ids are never readable from the browser.
 -- Only the anon / publishable key goes in the frontend — never the service_role / secret key.
+-- Anti-spam: join_waitlist() rate-limits per client IP (Cloudflare cf-connecting-ip, which
+-- clients cannot forge). IPs are stored only as a salted SHA-256 hash.
 
 -- ============ TABLES ============
 create table if not exists public.ideas (
@@ -25,6 +27,23 @@ create table if not exists public.votes (
   created_at timestamptz not null default now(),
   primary key (idea_id, voter_id)   -- one vote per browser per idea
 );
+
+-- salted hash of the voter's IP, only used for rate limiting
+alter table public.votes add column if not exists ip_hash text;
+create index if not exists votes_ip_hash_created_idx on public.votes (ip_hash, created_at);
+
+-- ============ PRIVATE (not exposed by the API) ============
+create schema if not exists private;
+revoke all on schema private from public, anon, authenticated;
+create table if not exists private.config (
+  key   text primary key,
+  value text not null
+);
+revoke all on private.config from public, anon, authenticated;
+-- random per-project salt, so stored hashes cannot be reversed by trying every IPv4
+insert into private.config (key, value)
+values ('ip_salt', replace(gen_random_uuid()::text || gen_random_uuid()::text, '-', ''))
+on conflict (key) do nothing;
 
 -- ============ ROW LEVEL SECURITY ============
 alter table public.ideas enable row level security;
@@ -59,13 +78,21 @@ $$;
 
 -- ============ RPC: join ============
 -- Returns the idea's new count; joined = false when this voter was already on the list.
+-- Raises 'rate-limited' when one IP adds too many votes (limits below).
 create or replace function public.join_waitlist(idea_id text, voter_id uuid)
 returns table (id text, count integer, joined boolean)
 language plpgsql volatile security definer
 set search_path = ''
 as $$
 declare
+  -- rate limits per IP (many Indonesian mobile users share one IP via CGNAT — keep it loose)
+  c_per_idea  constant integer  := 5;                    -- votes on one idea ...
+  c_idea_win  constant interval := interval '24 hours';  -- ... within this window
+  c_per_ip    constant integer  := 10;                   -- votes across all ideas ...
+  c_ip_win    constant interval := interval '1 hour';    -- ... within this window
   v_status   text;
+  v_ip       text;
+  v_ip_hash  text;
   v_inserted integer;
 begin
   select i.status into v_status
@@ -78,8 +105,28 @@ begin
     raise exception 'closed';
   end if;
 
-  insert into public.votes (idea_id, voter_id)
-  values (join_waitlist.idea_id, join_waitlist.voter_id)
+  -- set by Cloudflare in front of Supabase; absent outside HTTP (SQL editor) → no limit
+  v_ip := nullif(current_setting('request.headers', true), '')::json ->> 'cf-connecting-ip';
+  if v_ip is not null then
+    select encode(sha256(convert_to(c.value || '|' || v_ip, 'UTF8')), 'hex') into v_ip_hash
+    from private.config c
+    where c.key = 'ip_salt';
+
+    -- a repeat vote from the same browser is a no-op, so only new votes count
+    if not exists (select 1 from public.votes v
+                   where v.idea_id = join_waitlist.idea_id and v.voter_id = join_waitlist.voter_id)
+       and ((select count(*) from public.votes v
+             where v.ip_hash = v_ip_hash and v.idea_id = join_waitlist.idea_id
+               and v.created_at > now() - c_idea_win) >= c_per_idea
+         or (select count(*) from public.votes v
+             where v.ip_hash = v_ip_hash and v.created_at > now() - c_ip_win) >= c_per_ip)
+    then
+      raise exception 'rate-limited';
+    end if;
+  end if;
+
+  insert into public.votes (idea_id, voter_id, ip_hash)
+  values (join_waitlist.idea_id, join_waitlist.voter_id, v_ip_hash)
   on conflict do nothing;
   get diagnostics v_inserted = row_count;
 

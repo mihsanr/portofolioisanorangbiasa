@@ -281,6 +281,21 @@
 
   /* ================= JOIN ================= */
   const busy = new Set();
+  const flashTimers = new Map();
+
+  // short visible error on the button itself, then back to normal
+  function flash(id, label, spoken) {
+    const r = rows.get(id);
+    if (!r) return;
+    clearTimeout(flashTimers.get(id));
+    r.label.textContent = label;
+    r.btn.classList.add('is-error');
+    announce(spoken);
+    flashTimers.set(id, setTimeout(() => {
+      r.btn.classList.remove('is-error');
+      paint();
+    }, 4000));
+  }
   list.addEventListener('click', async (e) => {
     const btn = e.target.closest('.waitlist-btn');
     if (!btn || btn.getAttribute('aria-disabled') === 'true') return;
@@ -301,8 +316,11 @@
       }
       announce(`You're on the list for ${it.title}. ${it.count} waiting — now ranked number ${ideas.indexOf(it) + 1}.`);
     } catch (err) {
-      if (err && err.message === 'already-joined') paint();
-      else announce('No signal — could not join the waitlist. Try again.');
+      const msg = err && err.message;
+      if (msg === 'already-joined') paint();
+      else if (msg === 'closed' || msg === 'unknown-idea') load(); // idea changed on the server
+      else if (msg === 'rate-limited') flash(id, 'SLOW DOWN — TRY LATER', 'Too many votes from your network right now. Try again later.');
+      else flash(id, 'NO SIGNAL — RETRY', 'No signal — could not join the waitlist. Try again.');
     } finally {
       busy.delete(id);
       btn.classList.remove('is-busy');
