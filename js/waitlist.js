@@ -1,8 +1,8 @@
 /* Next Up — ranked idea rows with Join Waitlist.
-   Every data call goes through `store`. Phase 1 uses LocalAdapter
-   (localStorage, this browser only — demo). Phase 2 swaps in a
-   SupabaseAdapter with the same three methods; nothing else changes.
-   Rows are built with textContent only: data will come from a database. */
+   Every data call goes through `store`: SupabaseAdapter when
+   js/supabase-config.js has a URL + anon key (Phase 2), otherwise
+   LocalAdapter (localStorage, this browser only — demo).
+   Rows are built with textContent only: data comes from a database. */
 (() => {
   const list = document.getElementById('waitlistList');
   if (!list || typeof WAITLIST_IDEAS === 'undefined') return;
@@ -17,15 +17,23 @@
     set(k, v) { try { localStorage.setItem(k, v); return true; } catch (e) { return false; } },
   };
 
-  // anonymous id per browser — Phase 2 sends it to join_waitlist() to stop double votes
+  // anonymous id per browser — sent to join_waitlist() so one browser = one vote per idea
+  const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  function uuid4() {
+    if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+    const b = new Uint8Array(16);
+    if (window.crypto && crypto.getRandomValues) crypto.getRandomValues(b);
+    else for (let i = 0; i < 16; i++) b[i] = (Math.random() * 256) | 0;
+    b[6] = (b[6] & 0x0f) | 0x40; b[8] = (b[8] & 0x3f) | 0x80;
+    const h = [...b].map((x) => x.toString(16).padStart(2, '0')).join('');
+    return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
+  }
   let voter = null;
   function voterId() {
     if (voter) return voter;
     voter = ls.get(KEY_VOTER);
-    if (!voter) {
-      voter = (window.crypto && crypto.randomUUID)
-        ? crypto.randomUUID()
-        : 'v-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 12);
+    if (!voter || !UUID.test(voter)) {
+      voter = uuid4();
       ls.set(KEY_VOTER, voter);
     }
     return voter;
@@ -41,9 +49,12 @@
     return joinedSet;
   }
 
-  /* Phase 1 adapter. Phase 2: SupabaseAdapter = { list: select from ideas
-     (+ vote counts), join: rpc('join_waitlist', { idea_id, voter_id }),
-     hasJoined: same local check below } — anon key only. */
+  function markJoined(id) {
+    joined().add(id);
+    ls.set(KEY_JOINED, JSON.stringify([...joined()]));
+  }
+
+  /* Phase 1 adapter — counts live in this browser only. */
   const LocalAdapter = {
     async list() {
       return WAITLIST_IDEAS.map((i) => ({
@@ -58,14 +69,73 @@
       if (idea.status !== 'voting') throw new Error('closed');
       if (joined().has(id)) throw new Error('already-joined');
       voterId();
-      joined().add(id);
-      ls.set(KEY_JOINED, JSON.stringify([...joined()]));
+      markJoined(id);
       return { id, count: (idea.seed | 0) + 1 };
     },
     hasJoined(id) { return joined().has(id); },
   };
 
-  const store = LocalAdapter;
+  /* Phase 2 adapter — PostgREST RPCs from supabase/waitlist.sql, plain fetch
+     (no SDK, no build step). Same methods and errors as LocalAdapter. */
+  function makeSupabaseAdapter(cfg) {
+    const base = cfg.url.replace(/\/+$/, '') + '/rest/v1/rpc/';
+    const headers = { apikey: cfg.anonKey, 'Content-Type': 'application/json' };
+    // legacy anon keys are JWTs and go in Authorization too; publishable keys must not
+    if (/^eyJ/.test(cfg.anonKey)) headers.Authorization = `Bearer ${cfg.anonKey}`;
+
+    async function rpc(fn, body) {
+      const ctl = new AbortController();
+      const timer = setTimeout(() => ctl.abort(), 8000);
+      try {
+        const res = await fetch(base + fn, {
+          method: 'POST', headers, body: JSON.stringify(body || {}), signal: ctl.signal,
+        });
+        const data = await res.json().catch(() => null);
+        if (!res.ok) throw new Error((data && data.message) || `http-${res.status}`);
+        return data;
+      } finally {
+        clearTimeout(timer);
+      }
+    }
+
+    return {
+      async list() {
+        const rows = await rpc('list_waitlist', { voter_id: voterId() });
+        // resync the local cache from the server (drops stale Phase 1 demo joins)
+        joinedSet = new Set(rows.filter((r) => r.joined).map((r) => r.id));
+        ls.set(KEY_JOINED, JSON.stringify([...joinedSet]));
+        return rows.map((r) => ({
+          id: r.id, title: r.title, type: r.type, price: r.price,
+          desc: r.description, status: r.status, sort: r.sort, count: r.count,
+        }));
+      },
+      async join(id) {
+        if (joined().has(id)) throw new Error('already-joined');
+        const [r] = await rpc('join_waitlist', { idea_id: id, voter_id: voterId() });
+        if (!r) throw new Error('unknown-idea');
+        markJoined(id); // joined === false means this browser had already voted
+        return { id: r.id, count: r.count };
+      },
+      hasJoined(id) { return joined().has(id); },
+    };
+  }
+
+  // refuse anything that looks like a secret key — it must never reach the browser
+  function isSecretKey(key) {
+    if (/^sb_secret_/.test(key)) return true;
+    try {
+      const p = JSON.parse(atob(key.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+      return p.role === 'service_role';
+    } catch (e) { return false; }
+  }
+
+  const cfg = window.WAITLIST_SUPABASE || {};
+  let store = LocalAdapter;
+  if (cfg.url && cfg.anonKey) {
+    if (isSecretKey(cfg.anonKey)) console.error('waitlist: secret key in supabase-config.js — refusing to use it. Use the anon/publishable key.');
+    else store = makeSupabaseAdapter(cfg);
+  }
+  const live = store !== LocalAdapter;
 
   /* ================= RENDER ================= */
   const META = new Map(WAITLIST_IDEAS.map((i) => [i.id, i]));
@@ -73,11 +143,15 @@
   const stateEl = document.getElementById('waitlistState');
   const liveEl = document.getElementById('waitlistLive');
   const pilotsEl = document.getElementById('pilotsNr');
+  const noteEl = document.getElementById('waitlistNote');
+  if (noteEl) noteEl.hidden = live; // the "kept on this device" note only applies to the local demo
   const rows = new Map(); // id -> { li, nr, badge, num, btn, label }
   let ideas = [];         // merged meta + { count, status }, ranked
 
   const pad = (n) => String(n).padStart(2, '0');
-  const rank = (a, b) => b.count - a.count || ORDER.get(a.id) - ORDER.get(b.id);
+  // ties: database `sort`, then order in waitlist-data.js, unknown ideas last
+  const pos = (it) => (Number.isFinite(it.sort) ? it.sort : 1e6) * 1e3 + (ORDER.has(it.id) ? ORDER.get(it.id) : 999);
+  const rank = (a, b) => b.count - a.count || pos(a) - pos(b);
   const el = (tag, cls, text) => {
     const e = document.createElement(tag);
     if (cls) e.className = cls;

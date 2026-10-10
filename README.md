@@ -48,9 +48,17 @@ Tidak ada konfigurasi khusus. Total ±44 MB (39 MB video).
 3. Daftarkan di `js/data.js` pada channel yang sesuai (`{t:'i', s:'<slug>'}`).
 Video: transcode `ffmpeg -i in.mp4 -vf scale=-2:1280 -c:v libx264 -crf 26 -c:a aac -b:a 96k -movflags +faststart out.mp4`, buat poster `.webp`, daftarkan `{t:'v', s:'<slug>', label:'...'}`.
 
-## Waitlist: Fase 1 → Fase 2 (Supabase)
-Fase 1 (sekarang): `store = LocalAdapter` — hitungan disimpan di localStorage browser
-pengunjung sendiri (`ihsan.waitlist.joined`, `ihsan.waitlist.voter`), jadi hanya demo.
-Fase 2: ganti `store` dengan `SupabaseAdapter` bermetode sama — tabel `ideas` + `votes`
-(unique `idea_id, voter_id`), RPC `join_waitlist(idea_id, voter_id)`, RLS publik hanya
-SELECT + panggil RPC. Di frontend hanya boleh **anon key**, jangan pernah service role key.
+## Waitlist (Supabase — Fase 2)
+- `js/supabase-config.js` — URL project + **publishable/anon key** (publik, aman di frontend).
+  Jangan pernah taruh `service_role` / `sb_secret_…` di sini; `waitlist.js` menolak key seperti itu.
+  Kosongkan keduanya → kembali ke mode demo lokal (localStorage).
+- `supabase/waitlist.sql` — skema lengkap, aman dijalankan ulang: tabel `ideas` + `votes`
+  (PK `idea_id, voter_id`), RLS aktif, publik hanya SELECT `ideas` + RPC `list_waitlist(voter_id)`
+  dan `join_waitlist(idea_id, voter_id)`. Tabel `votes` tidak bisa dibaca/ditulis langsung.
+- Menerapkan perubahan skema: `supabase db query --linked --project-ref <ref> -f supabase/waitlist.sql`
+  (atau tempel di SQL Editor dashboard).
+- Kelola ide lewat Table Editor tabel `ideas`: ubah `status` (voting / in_production / done),
+  `sort` untuk urutan saat jumlah sama, `seed` untuk angka awal. Ide baru langsung tampil
+  tanpa ubah kode. `js/waitlist-data.js` hanya dipakai mode demo lokal.
+- `voter_id` = UUID acak per browser (`ihsan.waitlist.voter`). Satu browser satu vote per ide;
+  ini bukan proteksi anti-spam penuh (hapus localStorage = voter baru).
