@@ -60,5 +60,9 @@ Video: transcode `ffmpeg -i in.mp4 -vf scale=-2:1280 -c:v libx264 -crf 26 -c:a a
 - Kelola ide lewat Table Editor tabel `ideas`: ubah `status` (voting / in_production / done),
   `sort` untuk urutan saat jumlah sama, `seed` untuk angka awal. Ide baru langsung tampil
   tanpa ubah kode. `js/waitlist-data.js` hanya dipakai mode demo lokal.
-- `voter_id` = UUID acak per browser (`ihsan.waitlist.voter`). Satu browser satu vote per ide;
-  ini bukan proteksi anti-spam penuh (hapus localStorage = voter baru).
+- `voter_id` = UUID acak per browser (`ihsan.waitlist.voter`). Satu browser satu vote per ide.
+- Anti-spam: `join_waitlist` membatasi per IP — maks **5 vote per ide / 24 jam** dan **10 vote / jam**
+  (konstanta `c_per_idea`, `c_idea_win`, `c_per_ip`, `c_ip_win` di `supabase/waitlist.sql`).
+  IP diambil dari header Cloudflare `cf-connecting-ip` (tidak bisa dipalsukan klien) dan hanya
+  disimpan sebagai hash SHA-256 bersalt (`votes.ip_hash`; salt di `private.config`, tidak terekspos API).
+  Batasnya sengaja longgar karena banyak pengguna seluler berbagi IP (CGNAT).
