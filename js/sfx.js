@@ -18,6 +18,9 @@
     'hover-player': 0.3, 'click-player': 0.4,
   };
 
+  // hover sounds play at this share of their volume (clicks stay as listed)
+  const HOVER_GAIN = 0.6;
+
   const cache = {};
   let unlocked = false;
   const get = (n) => cache[n] || (cache[n] = Object.assign(new Audio(`assets/sfx/${n}.mp3`), { preload: 'auto' }));
@@ -31,7 +34,7 @@
     const a = get(n);
     try {
       a.currentTime = 0;
-      a.volume = SOUNDS[n];
+      a.volume = SOUNDS[n] * (n.startsWith('hover-') ? HOVER_GAIN : 1);
       a.play().catch(() => {});
     } catch (e) { /* ignore */ }
   }
