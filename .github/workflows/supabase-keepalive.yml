@@ -1,0 +1,27 @@
+# Supabase free projects are paused after ~7 days without activity, which takes
+# the Next Up waitlist offline. One read-only call every 3 days keeps it awake.
+# Uses only the public publishable key (already shipped in js/supabase-config.js).
+name: Supabase keep-alive
+
+on:
+  schedule:
+    - cron: '17 3 */3 * *'   # 03:17 UTC every 3rd day
+  workflow_dispatch:          # "Run workflow" button for a manual ping
+
+permissions: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Read the waitlist (no writes)
+        run: |
+          code=$(curl -sS -o body.json -w '%{http_code}' --retry 3 --retry-delay 10 \
+            -X POST "https://hxghzjfthbxgcpxkysxa.supabase.co/rest/v1/rpc/list_waitlist" \
+            -H "apikey: sb_publishable_iuvvOWOkk4EXXmJQMdA5sQ_xA4Ea7Br" \
+            -H "Content-Type: application/json" -d '{}')
+          echo "HTTP $code"
+          head -c 300 body.json; echo
+          # a failed run e-mails the repo owner — usually means the project is paused
+          test "$code" = "200"
