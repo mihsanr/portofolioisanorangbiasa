@@ -199,6 +199,11 @@ const PROJECTS = [
 
 const JOURNEY = [
   {
+    company: 'PT Tanindo Anugerah Nusantara', cat: 'Digital Creator', period: '07/2026 — PRESENT',
+    role: 'Orang Bae',
+    desc: 'A one-person content unit: product design, brand collateral, social media management, video campaigns shot and edited solo, and content analytics.',
+  },
+  {
     company: 'CV Rabbani Asysa', cat: 'Graphic Design', period: '03/2025 — 12/2025',
     role: 'Graphic Designer',
     desc: 'Visual content for three product brands — Kemko, Hiro, and Palestine — plus posters, vouchers, backdrops, monthly Shopee campaign assets, and after-event video edits.',
