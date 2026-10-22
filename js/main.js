@@ -146,7 +146,47 @@
       }, 120);
     }
   }
-  function magHide() { magOn = false; mag.classList.remove('is-visible'); }
+  function magHide() { magOn = false; mag.classList.remove('is-visible'); stopCycle(); }
+
+  /* hover preview flips through every item of the channel, one every 0.5s.
+     Videos show their poster frame; a frame only swaps in once it has loaded. */
+  const CYCLE_MS = 500;
+  const previews = PROJECTS.map((p) => {
+    const out = [coverSrc(p)];
+    for (const m of p.media) {
+      const src = m.t === 'i' ? (MEDIA[m.s] && `assets/img/${m.s}.webp`)
+        : m.t === 'v' ? `assets/video/${m.s}.webp`
+        : m.t === 'd' ? (MEDIA[m.cover] && `assets/img/${m.cover}.webp`)
+        : null;
+      if (src && !out.includes(src)) out.push(src);
+    }
+    return out;
+  });
+  const preCache = new Map();
+  function preload(src) {
+    let im = preCache.get(src);
+    if (!im) { im = new Image(); im.decoding = 'async'; im.src = src; preCache.set(src, im); }
+    return im;
+  }
+  let cycleTimer = 0;
+  function stopCycle() { clearInterval(cycleTimer); cycleTimer = 0; }
+  function startCycle(i) {
+    stopCycle();
+    const srcs = previews[i];
+    if (srcs.length < 2) return;
+    let at = 0;
+    preload(srcs[1]);
+    cycleTimer = setInterval(() => {
+      const next = (at + 1) % srcs.length;
+      const im = preload(srcs[next]);
+      if (!im.complete) return;       // still loading — hold the current frame
+      at = next;
+      preload(srcs[(next + 1) % srcs.length]);
+      if (!im.naturalWidth) return;   // broken file — skip it
+      magEl.classList.remove('is-changing');
+      magEl.src = srcs[next];         // hard cut, like flipping channels
+    }, CYCLE_MS);
+  }
 
   /* row hover: activate + magnetic + scramble */
   let activeRow = null;
@@ -160,6 +200,7 @@
     row.classList.add('is-active');
     if (finePointer && !reduceMotion) {
       magShow(coverSrc(PROJECTS[head.dataset.idx]));
+      startCycle(+head.dataset.idx);
       scramble(head.querySelector('.project-row-title'));
     }
   });
