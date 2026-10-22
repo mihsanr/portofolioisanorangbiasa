@@ -4,7 +4,7 @@
 (() => {
   const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const finePointer = matchMedia('(hover: hover) and (pointer: fine)').matches;
-  const BLUE = [0, 0, 255], PAPER = [244, 242, 238];
+  const BLUE = [0, 0, 255], PAPER = [244, 242, 238]; // BLUE = fallback if theme.js is missing
 
   /* ================= PRELOADER ================= */
   const pre = document.getElementById('preloader');
@@ -270,12 +270,13 @@
     const vh = innerHeight;
     // 0 while journey below viewport → 1 once its top passes 25% of screen
     const t = Math.min(1, Math.max(0, (vh * 0.85 - r.top) / (vh * 0.60)));
-    const c = lerp3(BLUE, PAPER, t);
+    const c = lerp3(window.BRAND_RGB || BLUE, PAPER, t);
     document.body.style.backgroundColor = `rgb(${c[0]},${c[1]},${c[2]})`;
     document.body.classList.toggle('on-light', t > 0.5);
   }
   addEventListener('scroll', onScroll, { passive: true });
   addEventListener('resize', onScroll, { passive: true });
+  addEventListener('brandchange', onScroll); // click-to-recolour (theme.js)
   onScroll();
 
   /* ================= MODAL ================= */
