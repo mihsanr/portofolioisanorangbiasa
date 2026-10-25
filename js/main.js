@@ -28,34 +28,51 @@
   }
 
   /* ================= CRT BARREL FRAME ================= */
+  /* Clip paths use objectBoundingBox units so they stretch together with the
+     fixed layers when a mobile URL bar hides/shows mid-scroll. A pixel path()
+     stays at the old height until `resize` fires, leaving a bare strip. */
   const frame = document.getElementById('crtFrame');
   const bevel = document.getElementById('crtBevel');
   const strokeSvg = document.getElementById('crtStroke');
+  const SVGNS = 'http://www.w3.org/2000/svg';
+  const clipDefs = document.createElementNS(SVGNS, 'svg');
+  clipDefs.setAttribute('width', '0');
+  clipDefs.setAttribute('height', '0');
+  clipDefs.setAttribute('aria-hidden', 'true');
+  clipDefs.style.position = 'absolute';
+  clipDefs.innerHTML =
+    '<clipPath id="crtClipFrame" clipPathUnits="objectBoundingBox"><path clip-rule="evenodd"/></clipPath>' +
+    '<clipPath id="crtClipInner" clipPathUnits="objectBoundingBox"><path/></clipPath>';
+  document.body.appendChild(clipDefs);
+  const [clipFrame, clipInner] = clipDefs.querySelectorAll('path');
+  const strokePath = document.createElementNS(SVGNS, 'path');
+  strokePath.setAttribute('fill', 'none');
+  strokePath.setAttribute('stroke', 'rgba(30,28,26,0.10)');
+  strokePath.setAttribute('stroke-width', '6');
+  strokePath.setAttribute('vector-effect', 'non-scaling-stroke');
   function barrel() {
-    const W = innerWidth, H = innerHeight, m = W <= 768;
+    const W = innerWidth, H = innerHeight, m = W <= 768 || H <= 500;
     const MC = m ? 12 : 38;              // corner inset
     const MM = m ? 4 : 8;                // mid-edge inset (barrel bulge)
     const R = m ? Math.min(Math.max(18, W * 0.03), 28)
                 : Math.min(Math.max(40, W * 0.042), 70); // corner radius
+    const p = (x, y) => `${(x / W).toFixed(5)},${(y / H).toFixed(5)}`;
     const inner =
-      `M ${MC + R},${MC} Q ${W / 2},${MM} ${W - MC - R},${MC}` +
-      ` Q ${W - MC},${MC} ${W - MC},${MC + R} Q ${W - MM},${H / 2} ${W - MC},${H - MC - R}` +
-      ` Q ${W - MC},${H - MC} ${W - MC - R},${H - MC} Q ${W / 2},${H - MM} ${MC + R},${H - MC}` +
-      ` Q ${MC},${H - MC} ${MC},${H - MC - R} Q ${MM},${H / 2} ${MC},${MC + R}` +
-      ` Q ${MC},${MC} ${MC + R},${MC} Z`;
-    const outer = `M 0,0 L ${W},0 L ${W},${H} L 0,${H} Z`;
-    frame.style.clipPath = `path(evenodd, '${outer} ${inner}')`;
+      `M ${p(MC + R, MC)} Q ${p(W / 2, MM)} ${p(W - MC - R, MC)}` +
+      ` Q ${p(W - MC, MC)} ${p(W - MC, MC + R)} Q ${p(W - MM, H / 2)} ${p(W - MC, H - MC - R)}` +
+      ` Q ${p(W - MC, H - MC)} ${p(W - MC - R, H - MC)} Q ${p(W / 2, H - MM)} ${p(MC + R, H - MC)}` +
+      ` Q ${p(MC, H - MC)} ${p(MC, H - MC - R)} Q ${p(MM, H / 2)} ${p(MC, MC + R)}` +
+      ` Q ${p(MC, MC)} ${p(MC + R, MC)} Z`;
+    clipFrame.setAttribute('d', `M 0,0 L 1,0 L 1,1 L 0,1 Z ${inner}`);
+    clipInner.setAttribute('d', inner);
+    frame.style.clipPath = 'url(#crtClipFrame)';
     frame.style.visibility = 'visible';
-    bevel.style.clipPath = `path('${inner}')`;
-    strokeSvg.setAttribute('viewBox', `0 0 ${W} ${H}`);
-    strokeSvg.style.clipPath = `path('${inner}')`;
-    strokeSvg.innerHTML = '';
-    const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-    p.setAttribute('d', inner);
-    p.setAttribute('fill', 'none');
-    p.setAttribute('stroke', 'rgba(30,28,26,0.10)');
-    p.setAttribute('stroke-width', '6');
-    strokeSvg.appendChild(p);
+    bevel.style.clipPath = 'url(#crtClipInner)';
+    strokeSvg.setAttribute('viewBox', '0 0 1 1');
+    strokeSvg.setAttribute('preserveAspectRatio', 'none');
+    strokeSvg.style.clipPath = 'url(#crtClipInner)';
+    strokePath.setAttribute('d', inner);
+    if (!strokePath.parentNode) strokeSvg.appendChild(strokePath);
   }
   barrel();
   addEventListener('resize', barrel, { passive: true });
