@@ -63,7 +63,7 @@ a, button { cursor: none; }
 .site-nav {
   position: fixed; top: 38px; left: 48px; right: 48px; z-index: 9000;
   height: 46px;
-  display: flex; align-items: center; justify-content: space-between;
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
   padding: 0 22px;
   border: 2px solid var(--line);
   border-radius: 16px;
@@ -79,9 +79,10 @@ a, button { cursor: none; }
 .nav-left {
   font-size: 0.68rem; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase;
   color: rgba(255, 255, 255, 0.55); white-space: nowrap; transition: color 0.25s;
+  min-width: 0; overflow: hidden; text-overflow: ellipsis; /* truncate before colliding */
 }
 .nav-left:hover { color: #fff; }
-.nav-links { display: flex; align-items: center; gap: 28px; }
+.nav-links { display: flex; align-items: center; gap: 28px; flex-shrink: 0; }
 .nav-link {
   font-size: 0.66rem; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase;
   color: rgba(255, 255, 255, 0.55); transition: color 0.25s; white-space: nowrap;
@@ -881,6 +882,14 @@ body.on-light .nav-link[aria-current="page"] { color: var(--ink); }
   .nav-loc { display: none; }
   .nav-links { gap: 16px; }
   .nav-link { letter-spacing: 0.10em; }
+  .nav-link[href$="#contact"] { display: none; } /* "Get in touch" covers it */
+}
+
+/* phone landscape: short screen — tuck bars up, drop the ghost header */
+@media (max-height: 500px) and (orientation: landscape) {
+  .site-nav { top: 14px; left: 24px; right: 24px; height: 40px; padding: 0 16px; }
+  .bgm-bar { top: 62px; left: 24px; right: 24px; padding: 6px 12px; }
+  .page-header { display: none; }
 }
 
 /* "next up" teaser under the project rows (index) */
