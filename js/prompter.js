@@ -3,6 +3,8 @@
    everything persists to localStorage (wrapped: storage can be blocked). */
 (() => {
   const KEY = 'ihsan.prompter';
+  const LIB_KEY = 'ihsan.prompter.scripts';   // recent scripts, newest first
+  const MAX_RECENT = 10;
   const LIMITS = {
     size: { min: 20, max: 180, step: 4 },
     speed: { min: 1, max: 50, step: 1 },
@@ -24,6 +26,7 @@
   const editor = $('editor');
   const editorText = $('editorText');
   const more = $('more');
+  const recent = $('recent');
   const phone = matchMedia('(max-width: 820px), (max-height: 520px)');
 
   let state = { ...DEFAULTS };
@@ -33,12 +36,50 @@
   function hasSaved() {
     try { return !!localStorage.getItem(KEY); } catch (e) { return false; }
   }
-  let saveTimer;
+
+  /* ================= SCRIPT LIBRARY =================
+     Each script: { id, text, progress (0–1 read position), updated }.
+     Lives only in this browser — nothing leaves the device. */
+  let lib = [];
+  try { lib = JSON.parse(localStorage.getItem(LIB_KEY) || '[]'); } catch (e) { /* storage blocked */ }
+  if (!Array.isArray(lib)) lib = [];
+  const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  function addScript(text = '') {
+    const s = { id: newId(), text, progress: 0, updated: Date.now() };
+    lib.unshift(s);
+    lib = lib.slice(0, MAX_RECENT);
+    return s;
+  }
+  if (!lib.length) state.current = addScript(state.text || '').id;   // first visit, or upgrading from the single-script version
+  delete state.text;
+  const cur = () => lib.find((s) => s.id === state.current) || (state.current = lib[0].id, lib[0]);
+  function touch(s) {   // move to the top of Recent
+    s.updated = Date.now();
+    lib = [s, ...lib.filter((x) => x !== s)];
+  }
+  // a script left blank isn't worth a Recent slot
+  function dropIfEmpty(s) {
+    if (!s.text.trim() && lib.length > 1) lib = lib.filter((x) => x !== s);
+  }
+
+  // throttled (not debounced) so a long read still gets saved every few hundred ms
+  let saveTimer = 0;
+  function persist() {
+    clearTimeout(saveTimer); saveTimer = 0;
+    try {
+      localStorage.setItem(KEY, JSON.stringify(state));
+      localStorage.setItem(LIB_KEY, JSON.stringify(lib));
+    } catch (e) { /* storage blocked or full */ }
+  }
   function save() {
-    clearTimeout(saveTimer);
-    saveTimer = setTimeout(() => {
-      try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) { /* storage blocked */ }
-    }, 250);
+    if (!saveTimer) saveTimer = setTimeout(persist, 300);
+  }
+  function setText(text) {
+    const s = cur();
+    if (s.text === text) return;
+    s.text = text;
+    touch(s);
+    save();
   }
 
   const clamp = (k, v) => Math.min(LIMITS[k].max, Math.max(LIMITS[k].min, v));
@@ -79,8 +120,22 @@
   }
 
   function renderText() {
-    script.textContent = state.text;
+    script.textContent = cur().text;
     script.dataset.placeholder = phone.matches ? 'Tap EDIT to add your script' : 'Paste your script here';
+  }
+
+  /* read position as 0–1 from the script's start, whichever way it's mirrored */
+  function getProgress() {
+    const max = maxScroll();
+    if (!max) return 0;
+    const p = scroller.scrollTop / max;
+    return state.flipy ? 1 - p : p;
+  }
+  function restoreProgress(announce) {
+    const p = cur().progress || 0;
+    const max = maxScroll();
+    scroller.scrollTop = pos = (state.flipy ? 1 - p : p) * max;
+    if (announce && p > 0.01 && p < 0.98) flash(`Resumed · ${Math.round(p * 100)}%`, 1400);
   }
 
   // changing size/margin reflows the text — keep the reader at the same spot
@@ -183,9 +238,23 @@
       } else if (!on && lock) { await lock.release(); lock = null; }
     } catch (e) { /* not allowed — fine */ }
   }
+  /* home button / app switcher / tab closed: write everything down right now,
+     the browser may kill the page without another chance */
+  function flushNow() {
+    if (editor.open) cur().text = editorText.value;
+    cur().progress = getProgress();
+    persist();
+  }
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible' && playing) wake(true);
+    if (document.visibilityState === 'hidden') flushNow();
+    else if (playing) wake(true);
   });
+  addEventListener('pagehide', flushNow);
+
+  scroller.addEventListener('scroll', () => {
+    cur().progress = getProgress();
+    save();
+  }, { passive: true });
 
   /* ================= INLINE EDITING (desktop) ================= */
   const plainOnly = (() => {
@@ -202,9 +271,9 @@
     });
   }
   script.addEventListener('input', () => {
-    state.text = script.innerText.replace(/\n$/, '');
-    if (!state.text.trim()) script.textContent = '';
-    save();
+    const text = script.innerText.replace(/\n$/, '');
+    if (!text.trim()) script.textContent = '';
+    setText(text);
   });
 
   /* ================= EDITOR SHEET (phone) ================= */
@@ -215,21 +284,25 @@
   }
   function openEditor() {
     stop();
-    editorText.value = state.text;
+    editorText.value = cur().text;
     countWords();
     editor.showModal();
     fitEditor();
-    if (!state.text) editorText.focus();
+    if (!cur().text) editorText.focus();
   }
   function closeEditor() {
-    state.text = editorText.value.replace(/\s+$/, '');
-    renderText();
-    save();
+    setText(editorText.value.replace(/\s+$/, ''));
+    persist();
     editorText.blur();
     if (editor.open) editor.close();
-    toStart();
+    renderText();
+    restoreProgress(false);   // small fix mid-script → stay where you were
   }
-  editorText.addEventListener('input', countWords);
+  // every keystroke is kept — no need to press Done before the app gets closed
+  editorText.addEventListener('input', () => {
+    countWords();
+    setText(editorText.value);
+  });
   editor.addEventListener('cancel', (e) => { e.preventDefault(); closeEditor(); });
 
   // the editor follows the visible viewport, so the keyboard never covers "Done"
@@ -249,11 +322,98 @@
       const { selectionStart: a, selectionEnd: b, value } = editorText;
       editorText.value = value.slice(0, a) + t + value.slice(b);
       countWords();
+      setText(editorText.value);
     } catch (e) {
       editorText.focus();
       flash('Long-press the box → Paste', 1600);
     }
   }
+
+  /* ================= RECENT SCRIPTS ================= */
+  const titleOf = (t) => (t.split('\n').find((l) => l.trim()) || '').trim().slice(0, 70) || 'Untitled';
+  function whenOf(ms) {
+    const d = new Date(ms), now = new Date();
+    const hm = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const day = (x) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+    const diff = Math.round((day(now) - day(d)) / 864e5);
+    if (diff === 0) return 'Today ' + hm;
+    if (diff === 1) return 'Yesterday ' + hm;
+    return d.toLocaleDateString([], { day: 'numeric', month: 'short' });
+  }
+  function renderRecent() {
+    const list = $('recentList');
+    list.innerHTML = '';
+    lib.forEach((s) => {
+      const li = document.createElement('li');
+      li.className = 'rc-item' + (s.id === state.current ? ' is-current' : '');
+      const open = document.createElement('button');
+      open.className = 'rc-open';
+      open.dataset.open = s.id;
+      const words = (s.text.match(/\S+/g) || []).length;
+      const name = document.createElement('span');
+      name.className = 'rc-title';
+      name.textContent = titleOf(s.text);
+      const meta = document.createElement('span');
+      meta.className = 'rc-meta';
+      meta.textContent = `${s.id === state.current ? 'Open now · ' : ''}${whenOf(s.updated)} · ${words} words · ${Math.round((s.progress || 0) * 100)}% read`;
+      open.append(name, meta);
+      const del = document.createElement('button');
+      del.className = 'rc-del';
+      del.dataset.del = s.id;
+      del.setAttribute('aria-label', 'Delete ' + titleOf(s.text));
+      del.textContent = '×';
+      li.append(open, del);
+      list.append(li);
+    });
+    $('recentNote').textContent = `Saved on this device only · up to ${MAX_RECENT} scripts`;
+  }
+  function openRecent() {
+    stop();
+    flushNow();
+    if (more.open) more.close();
+    renderRecent();
+    recent.showModal();
+  }
+  function switchTo(s, announce) {
+    const from = cur();
+    from.progress = getProgress();
+    if (from !== s) dropIfEmpty(from);
+    state.current = s.id;
+    touch(s);
+    persist();
+    renderText();
+    restoreProgress(announce);   // same tick: the reflow's scroll event must not overwrite the saved spot
+  }
+  function newScript() {
+    stop();
+    if (recent.open) recent.close();
+    const from = cur();
+    if (!from.text.trim()) return phone.matches ? openEditor() : script.focus();   // already on a blank one
+    from.progress = getProgress();
+    const s = addScript('');
+    switchTo(s, false);
+    flash('New script', 900);
+    if (phone.matches) openEditor();
+    else script.focus();
+  }
+  $('recentList').addEventListener('click', (e) => {
+    const o = e.target.closest('[data-open]');
+    const d = e.target.closest('[data-del]');
+    if (o) {
+      const s = lib.find((x) => x.id === o.dataset.open);
+      recent.close();
+      if (s) switchTo(s, true);
+    } else if (d) {
+      const s = lib.find((x) => x.id === d.dataset.del);
+      if (!s || (s.text.trim() && !confirm(`Delete "${titleOf(s.text)}"?`))) return;
+      lib = lib.filter((x) => x !== s);
+      if (!lib.length) addScript('');   // deleting the last one leaves a blank page
+      if (s.id === state.current) { state.current = lib[0].id; renderText(); restoreProgress(false); }
+      persist();
+      renderRecent();
+    }
+  });
+  recent.addEventListener('click', (e) => { if (e.target === recent) recent.close(); });   // tap backdrop
 
   /* ================= FULLSCREEN ================= */
   function measureBar() {
@@ -293,6 +453,9 @@
     clear: () => { if (!editorText.value || confirm('Clear the whole script?')) { editorText.value = ''; countWords(); editorText.focus(); } },
     more: () => { stop(); more.showModal(); },
     close: () => more.close(),
+    recent: openRecent,
+    'recent-close': () => recent.close(),
+    new: newScript,
   };
   document.addEventListener('click', (e) => {
     const b = e.target.closest('[data-act]');
@@ -341,7 +504,7 @@
 
   /* keyboard */
   document.addEventListener('keydown', (e) => {
-    if (editor.open || more.open) return;
+    if (editor.open || more.open || recent.open) return;
     const typing = document.activeElement === script && !playing;
     if (e.key === 'Escape') {
       if (typing) script.blur();
@@ -370,5 +533,6 @@
   renderText();
   makeEditable();
   measureBar();
-  requestAnimationFrame(toStart);
+  persist();   // stores the upgraded format right away
+  restoreProgress(true);   // pick up where you left off
 })();
