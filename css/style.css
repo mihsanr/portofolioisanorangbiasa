@@ -1069,3 +1069,61 @@ body.on-light .nav-link[aria-current="page"] { color: var(--ink); }
   .nosignal-soon, .waitlist-badge--next .waitlist-badge-dot,
   .waitlist-state--loading, .waitlist-num.is-bump { animation: none; }
 }
+
+/* ============================ FREE TOOLS ============================ */
+@media (min-width: 769px) {
+  .tools { margin-right: clamp(150px, 14vw, 240px); }
+}
+.tools-list { list-style: none; margin-bottom: 64px; }
+.tool-row {
+  display: grid;
+  grid-template-columns: 72px minmax(0, auto) minmax(0, 1fr) auto;
+  grid-template-areas: "nr name desc tag";
+  align-items: center; column-gap: 28px;
+  padding: 26px 0;
+  border-top: 1px solid var(--line);
+  color: #fff; text-decoration: none;
+  transition: background 0.2s ease, padding 0.25s ease, color 0.2s ease;
+}
+.tools-list li:last-child .tool-row { border-bottom: 1px solid var(--line); }
+.tool-nr {
+  grid-area: nr;
+  font-family: var(--font-display); font-weight: 900;
+  font-size: clamp(1.4rem, 2.2vw, 2.2rem); letter-spacing: 0.04em; line-height: 1;
+  color: rgba(255, 255, 255, 0.65);
+}
+.tool-name {
+  grid-area: name;
+  font-family: var(--font-display); font-weight: 900;
+  font-size: clamp(2.6rem, 6vw, 6rem); line-height: 0.9;
+  text-transform: uppercase; letter-spacing: -0.01em;
+}
+.tool-desc {
+  grid-area: desc;
+  font-family: var(--font-display); font-weight: 700;
+  font-size: clamp(1rem, 1.4vw, 1.35rem); line-height: 1.35;
+  text-transform: uppercase; letter-spacing: 0.02em;
+  color: var(--white-85); max-width: 26em;
+}
+.tool-tag {
+  grid-area: tag;
+  font-family: var(--font-crt); font-size: 1.35rem; letter-spacing: 0.08em; line-height: 1;
+  text-transform: uppercase; white-space: nowrap;
+  padding: 10px 14px; border: 1px solid rgba(255, 255, 255, 0.55); border-radius: 2px;
+}
+.tool-tag--live { background: #fff; color: var(--blue); border-color: #fff; }
+a.tool-row:hover, a.tool-row:focus-visible { background: #fff; color: #0d0d0d; padding-inline: 20px; }
+a.tool-row:hover .tool-nr, a.tool-row:hover .tool-desc,
+a.tool-row:focus-visible .tool-nr, a.tool-row:focus-visible .tool-desc { color: #0d0d0d; }
+a.tool-row:hover .tool-tag--live, a.tool-row:focus-visible .tool-tag--live { background: var(--blue); color: #fff; border-color: var(--blue); }
+.tool-row--soon { opacity: 0.45; }
+@media (max-width: 768px) {
+  .tool-row {
+    grid-template-columns: 44px minmax(0, 1fr) auto;
+    grid-template-areas: "nr name tag" ". desc desc";
+    column-gap: 14px; row-gap: 10px;
+    padding: 22px 0;
+  }
+  .tool-name { font-size: clamp(2.2rem, 10vw, 3.4rem); }
+  .tool-tag { font-size: 1.15rem; padding: 8px 10px; }
+}

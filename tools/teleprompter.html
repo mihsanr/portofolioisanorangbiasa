@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en" translate="no">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content">
+  <meta name="google" content="notranslate">
+  <meta name="theme-color" content="#000000">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <title>Teleprompter — Free Tools — Muhammad Ihsan Rizka</title>
+  <meta name="description" content="A free online teleprompter that works on desktop and phone — paste your script, set size and speed, read.">
+  <meta property="og:title" content="Teleprompter — Muhammad Ihsan Rizka">
+  <meta property="og:description" content="Free online teleprompter for desktop and mobile.">
+  <meta property="og:type" content="website">
+  <link rel="icon" href="../assets/favicon.png" type="image/png">
+  <link rel="apple-touch-icon" href="../assets/favicon.png">
+  <link rel="stylesheet" href="../css/prompter.css?v=2">
+</head>
+<body>
+
+  <!-- ===== DESKTOP TOOLBAR (mirrors the classic prompter bar) ===== -->
+  <header class="tp-bar" id="tpBar" role="toolbar" aria-label="Prompter controls">
+    <button class="tp-icon" id="tbPlay" data-act="play" title="Play / Pause [Space]" aria-label="Play">
+      <svg class="i-play" viewBox="0 0 24 24"><path d="M7 4.5v15L19 12z"/></svg>
+      <svg class="i-pause" viewBox="0 0 24 24"><path d="M7 4.5h3.5v15H7zM13.5 4.5H17v15h-3.5z"/></svg>
+    </button>
+    <button class="tp-icon" data-act="align" title="Align text left / center" aria-label="Align text">
+      <svg viewBox="0 0 24 24"><path d="M4 5h16M7 9.5h10M4 14h16M7 18.5h10"/></svg>
+    </button>
+    <button class="tp-icon" data-act="flipx" title="Mirror text horizontally" aria-label="Mirror horizontally" aria-pressed="false">
+      <svg viewBox="0 0 24 24"><path d="M12 3v18M9 5H5v14h4M15 5h4v14h-4" /></svg>
+    </button>
+    <button class="tp-icon" data-act="flipy" title="Mirror text vertically" aria-label="Mirror vertically" aria-pressed="false">
+      <svg viewBox="0 0 24 24"><path d="M3 12h18M5 9V5h14v4M5 15v4h14v-4" stroke-dasharray="2 2.2"/></svg>
+    </button>
+    <button class="tp-icon" data-act="top" title="Back to start [Home]" aria-label="Back to start">
+      <svg viewBox="0 0 24 24"><path d="M5 4h14M12 20V8M7 13l5-5 5 5"/></svg>
+    </button>
+    <button class="tp-icon" data-act="expand" title="Expand [F]" aria-label="Expand">
+      <svg viewBox="0 0 24 24"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/></svg>
+    </button>
+
+    <label class="tp-swatch">
+      <input type="color" id="tbBg" value="#000000">
+      <span>Background color</span>
+    </label>
+    <label class="tp-swatch">
+      <input type="color" id="tbFg" value="#ffffff">
+      <span>Text color</span>
+    </label>
+
+    <label class="tp-range">
+      <input type="range" id="tbSize" min="20" max="180" step="1">
+      <span>Text size: <b id="tbSizeVal"></b>px</span>
+    </label>
+    <label class="tp-range">
+      <input type="range" id="tbMargin" min="0" max="40" step="1">
+      <span>Margin: <b id="tbMarginVal"></b>%</span>
+    </label>
+    <label class="tp-range">
+      <input type="range" id="tbSpeed" min="1" max="50" step="1">
+      <span>Speed: <b id="tbSpeedVal"></b></span>
+    </label>
+
+    <a class="tp-home" href="../tools.html" title="Back to Free Tools">← FREE TOOLS</a>
+  </header>
+
+  <!-- ===== SCRIPT ===== -->
+  <main class="tp-stage" id="stage">
+    <div class="tp-scroll" id="scroller" tabindex="-1">
+      <div class="tp-text" id="script" spellcheck="false" aria-label="Script"></div>
+    </div>
+    <div class="tp-guide" id="guide" aria-hidden="true"></div>
+    <div class="tp-hud" id="hud" aria-live="polite"></div>
+  </main>
+
+  <!-- ===== MOBILE DOCK (portrait: bottom · landscape: right rail) ===== -->
+  <nav class="tp-dock" id="dock" aria-label="Prompter controls">
+    <div class="dk-step" data-key="size">
+      <span class="dk-label">Size</span>
+      <div class="dk-row">
+        <button class="dk-btn" data-step="size" data-dir="-1" aria-label="Smaller text">A−</button>
+        <output class="dk-val" id="dkSize"></output>
+        <button class="dk-btn" data-step="size" data-dir="1" aria-label="Bigger text">A+</button>
+      </div>
+    </div>
+    <div class="dk-step" data-key="speed">
+      <span class="dk-label">Speed</span>
+      <div class="dk-row">
+        <button class="dk-btn" data-step="speed" data-dir="-1" aria-label="Slower">−</button>
+        <output class="dk-val" id="dkSpeed"></output>
+        <button class="dk-btn" data-step="speed" data-dir="1" aria-label="Faster">+</button>
+      </div>
+    </div>
+    <div class="dk-main">
+      <button class="dk-btn dk-tool" data-act="edit">Edit</button>
+      <button class="dk-btn dk-tool" data-act="top" aria-label="Back to start">Top</button>
+      <button class="dk-btn dk-play" id="dkPlay" data-act="play" aria-label="Play">
+        <svg class="i-play" viewBox="0 0 24 24"><path d="M7 4.5v15L19 12z"/></svg>
+        <svg class="i-pause" viewBox="0 0 24 24"><path d="M7 4.5h3.5v15H7zM13.5 4.5H17v15h-3.5z"/></svg>
+      </button>
+      <button class="dk-btn dk-tool" data-act="flipx" aria-pressed="false">Mirror</button>
+      <button class="dk-btn dk-tool" data-act="more" aria-haspopup="dialog">More</button>
+    </div>
+  </nav>
+
+  <!-- ===== EDITOR (its own screen so the keyboard never hides the controls) ===== -->
+  <dialog class="tp-sheet tp-editor" id="editor" aria-labelledby="editorTitle">
+    <div class="sh-head">
+      <button class="sh-btn" data-act="paste">Paste</button>
+      <h2 id="editorTitle">Script</h2>
+      <button class="sh-btn sh-btn--primary" data-act="done">Done</button>
+    </div>
+    <textarea id="editorText" spellcheck="false" autocapitalize="sentences" placeholder="Paste or type your script here…"></textarea>
+    <div class="sh-foot">
+      <button class="sh-btn" data-act="clear">Clear</button>
+      <span class="sh-count" id="wordCount"></span>
+    </div>
+  </dialog>
+
+  <!-- ===== MORE SETTINGS ===== -->
+  <dialog class="tp-sheet tp-more" id="more" aria-labelledby="moreTitle">
+    <div class="sh-head">
+      <span></span>
+      <h2 id="moreTitle">Settings</h2>
+      <button class="sh-btn sh-btn--primary" data-act="close">Close</button>
+    </div>
+    <div class="sh-body">
+      <div class="sh-grid">
+        <button class="sh-tile" data-act="align" aria-pressed="false">Center text</button>
+        <button class="sh-tile" data-act="flipx" aria-pressed="false">Mirror ↔</button>
+        <button class="sh-tile" data-act="flipy" aria-pressed="false">Mirror ↕</button>
+        <button class="sh-tile" data-act="guide" aria-pressed="false">Eye line</button>
+        <button class="sh-tile" data-act="expand">Fullscreen</button>
+        <button class="sh-tile" data-act="countdown" aria-pressed="false">3-2-1 start</button>
+      </div>
+
+      <div class="sh-line">
+        <span>Margin</span>
+        <div class="dk-row">
+          <button class="dk-btn" data-step="margin" data-dir="-1" aria-label="Less margin">−</button>
+          <output class="dk-val" id="dkMargin"></output>
+          <button class="dk-btn" data-step="margin" data-dir="1" aria-label="More margin">+</button>
+        </div>
+      </div>
+
+      <div class="sh-line sh-line--col">
+        <span>Colors</span>
+        <div class="sh-themes" id="themes">
+          <button class="sh-theme" data-bg="#000000" data-fg="#ffffff" style="--b:#000;--f:#fff">Aa</button>
+          <button class="sh-theme" data-bg="#ffffff" data-fg="#000000" style="--b:#fff;--f:#000">Aa</button>
+          <button class="sh-theme" data-bg="#000000" data-fg="#ffd400" style="--b:#000;--f:#ffd400">Aa</button>
+          <button class="sh-theme" data-bg="#0000ff" data-fg="#ffffff" style="--b:#00f;--f:#fff">Aa</button>
+          <button class="sh-theme" data-bg="#111111" data-fg="#39ff7a" style="--b:#111;--f:#39ff7a">Aa</button>
+        </div>
+        <div class="sh-colors">
+          <label><input type="color" id="mBg"> Background</label>
+          <label><input type="color" id="mFg"> Text</label>
+        </div>
+      </div>
+
+      <a class="sh-home" href="../tools.html">← Back to Free Tools</a>
+    </div>
+  </dialog>
+
+  <script src="../js/prompter.js?v=2"></script>
+</body>
+</html>
