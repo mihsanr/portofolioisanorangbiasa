@@ -2,6 +2,8 @@
    Audio stays muted until the first user gesture (browser autoplay policy). */
 (() => {
   const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  // assets sit next to js/, so pages in subfolders (tools/) resolve them too
+  const ROOT = new URL('../', document.currentScript.src).href;
 
   // name -> volume
   const SOUNDS = {
@@ -23,7 +25,7 @@
 
   const cache = {};
   let unlocked = false;
-  const get = (n) => cache[n] || (cache[n] = Object.assign(new Audio(`assets/sfx/${n}.mp3`), { preload: 'auto' }));
+  const get = (n) => cache[n] || (cache[n] = Object.assign(new Audio(`${ROOT}assets/sfx/${n}.mp3`), { preload: 'auto' }));
 
   const last = {};
   function play(n) {
@@ -51,6 +53,7 @@
   // [selector, hoverSound, clickSound] — first match wins, most specific first
   const MAP = [
     ['.bgm-btn', 'hover-player', 'click-player'],
+    ['.calc-btn, .calc-chip', 'hover-player', 'click-player'],
     ['.face-card', 'hover-card', 'click-card'],
     ['.project-row-head', 'hover-row', 'click-row'],
     ['.waitlist-btn:not([aria-disabled="true"])', 'hover-row', 'click-row'],

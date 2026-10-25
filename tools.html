@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="google" content="notranslate">
   <title>Free Tools — Muhammad Ihsan Rizka</title>
-  <meta name="description" content="Free tools by Muhammad Ihsan Rizka — teleprompter and more, free to use on desktop and phone.">
+  <meta name="description" content="Free tools by Muhammad Ihsan Rizka — teleprompter, BPM-to-frame and timecode calculators, free to use on desktop and phone.">
   <meta property="og:title" content="Free Tools — Muhammad Ihsan Rizka">
-  <meta property="og:description" content="Free tools for creators — teleprompter and more.">
+  <meta property="og:description" content="Free tools for creators — teleprompter, BPM ↔ frame, timecode.">
   <meta property="og:type" content="website">
   <link rel="icon" href="assets/favicon.png" type="image/png">
   <link rel="apple-touch-icon" href="assets/favicon.png">
@@ -15,7 +15,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;900&family=Space+Grotesk:wght@400;500;600;700;800&family=VT323&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css?v=9">
-  <script src="js/theme.js?v=9"></script>
+  <script src="js/theme.js?v=10"></script>
 </head>
 <body class="subpage">
   <a href="#top" class="skip-link">Skip to content</a>
@@ -59,7 +59,7 @@
 
   <!-- ghost page header, fixed right -->
   <div class="page-header" aria-hidden="true">
-    <div class="page-header-nr" id="toolsNr">01 TOOL</div>
+    <div class="page-header-nr" id="toolsNr">03 TOOLS</div>
     <div class="page-header-title">Free<br>Tools</div>
   </div>
 
@@ -85,8 +85,24 @@
           </a>
         </li>
         <li>
-          <div class="tool-row tool-row--soon" aria-disabled="true">
+          <a class="tool-row" href="tools/bpm-frame.html">
             <span class="tool-nr">02</span>
+            <span class="tool-name">BPM ↔ Frame</span>
+            <span class="tool-desc">Which frame every beat lands on. Tap tempo, metronome, clean-BPM finder.</span>
+            <span class="tool-tag tool-tag--live">Open ↗&#xFE0E;</span>
+          </a>
+        </li>
+        <li>
+          <a class="tool-row" href="tools/timecode.html">
+            <span class="tool-nr">03</span>
+            <span class="tool-name">Timecode</span>
+            <span class="tool-desc">Frames ↔ timecode ↔ seconds, drop-frame, retime &amp; slow-mo conform.</span>
+            <span class="tool-tag tool-tag--live">Open ↗&#xFE0E;</span>
+          </a>
+        </li>
+        <li>
+          <div class="tool-row tool-row--soon" aria-disabled="true">
+            <span class="tool-nr">04</span>
             <span class="tool-name">More soon</span>
             <span class="tool-desc">Next tools are in the works.</span>
             <span class="tool-tag">Soon</span>
@@ -144,8 +160,8 @@
   <svg class="crt-stroke" id="crtStroke" aria-hidden="true"></svg>
 
   <script src="js/fluid.js?v=7"></script>
-  <script src="js/sfx.js?v=8"></script>
-  <script src="js/bgm.js?v=7"></script>
+  <script src="js/sfx.js?v=9"></script>
+  <script src="js/bgm.js?v=8"></script>
   <script src="js/chrome.js?v=7"></script>
 </body>
 </html>

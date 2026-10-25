@@ -30,6 +30,13 @@ Tidak ada konfigurasi khusus. Total ±44 MB (39 MB video).
 - `product.html` — layar "NO SIGNAL": MOTION — COMING SOON (CH 99 / Off Air).
 - `next.html` — "Next Up": ide proyek yang bisa di-Join Waitlist, urut dari waitlist terbanyak.
   Halaman baru sengaja ada di root supaya semua path relatif (`assets/`, `css/`, `js/`) tetap jalan.
+- `tools.html` — daftar Free Tools. Tiap tool satu halaman di `tools/`:
+  - `tools/teleprompter.html` (+ `css/prompter.css`, `js/prompter.js`) — layar penuh, tanpa chrome situs.
+  - `tools/bpm-frame.html` (`js/bpm.js`) — BPM ↔ frame: beat map, tap tempo, metronome (Web Audio, BGM dibisukan lewat event `bgm:hush`), clean-BPM.
+  - `tools/timecode.html` (`js/timecode.js`) — frame ↔ timecode ↔ detik, drop-frame 29.97/59.94, retime & conform, durasi in/out.
+  - Kalkulator berbagi `js/framecore.js` (daftar FPS + matematika timecode) dan `css/calc.css`.
+    Area tool diberi `data-keep-brand` supaya klik di dalamnya tidak mengganti warna brand (theme.js).
+    `sfx.js`/`bgm.js` mencari `assets/` relatif ke lokasi skripnya, jadi halaman di subfolder tetap bersuara.
 - `js/data.js` — daftar proyek & media. Tambah/kurangi karya di sini.
 - `js/media.js` — hasil generate: dimensi gambar + placeholder blur (LQIP). Regenerate dengan skrip sharp bila menambah gambar.
 - `js/fluid.js` — simulasi fluid WebGL2 (efek liquid hover). Otomatis mati jika WebGL2 tidak ada atau `prefers-reduced-motion`.

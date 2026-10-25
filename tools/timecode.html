@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en" translate="no">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="google" content="notranslate">
+  <title>Timecode &amp; FPS Converter — Free Tools — Muhammad Ihsan Rizka</title>
+  <meta name="description" content="Free timecode converter: frames ↔ timecode ↔ seconds at 23.976, 24, 25, 29.97 (drop-frame), 30, 50, 59.94 and 60 fps. Retime between frame rates and measure in/out durations.">
+  <meta property="og:title" content="Timecode / FPS Converter — Muhammad Ihsan Rizka">
+  <meta property="og:description" content="Frames ↔ timecode ↔ seconds, drop-frame, retime and slow-mo conform. Free, in the browser.">
+  <meta property="og:type" content="website">
+  <link rel="icon" href="../assets/favicon.png" type="image/png">
+  <link rel="apple-touch-icon" href="../assets/favicon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;900&family=Space+Grotesk:wght@400;500;600;700;800&family=VT323&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/style.css?v=9">
+  <link rel="stylesheet" href="../css/calc.css?v=3">
+  <script src="../js/theme.js?v=10"></script>
+</head>
+<body class="subpage">
+  <a href="#top" class="skip-link">Skip to content</a>
+
+  <!-- ===== BACKGROUND FLUID ===== -->
+  <div class="bg-layer" aria-hidden="true">
+    <canvas id="fluid"></canvas>
+  </div>
+
+  <!-- ===== NAV ===== -->
+  <nav class="site-nav" id="siteNav" aria-label="Main">
+    <a class="nav-left" href="../index.html">MUHAMMAD IHSAN RIZKA<span class="nav-loc"> — NOMADEN</span></a>
+    <div class="nav-links">
+      <a class="nav-link" href="../index.html#projects">Work</a>
+      <a class="nav-link" href="../index.html#journey">Journey</a>
+      <a class="nav-link" href="../next.html">Next Up</a>
+      <a class="nav-link" href="../product.html">Product</a>
+      <a class="nav-link" href="../tools.html" aria-current="page">Free Tools</a>
+      <a class="nav-link" href="../index.html#contact">Contact</a>
+      <a class="nav-link nav-link--cta" href="mailto:muhammadihsanrizka186@gmail.com">Get in touch ↗</a>
+    </div>
+  </nav>
+
+  <!-- ===== BGM PLAYER ===== -->
+  <div class="bgm-bar" id="bgmBar" role="group" aria-label="Background music">
+    <button class="bgm-btn bgm-mute" id="bgmMute" aria-pressed="false">MUTE</button>
+    <span class="bgm-sep" aria-hidden="true">·</span>
+    <span class="bgm-vol">
+      <span class="bgm-vol-label" aria-hidden="true">VOL</span>
+      <button class="bgm-btn bgm-step" id="bgmDown" aria-label="Lower volume">−</button>
+      <span class="bgm-meter" id="bgmMeter" role="img"></span>
+      <button class="bgm-btn bgm-step" id="bgmUp" aria-label="Raise volume">+</button>
+    </span>
+    <span class="bgm-sep" aria-hidden="true">·</span>
+    <span class="bgm-track">
+      <button class="bgm-btn bgm-arrow" id="bgmPrev" aria-label="Previous track">◀&#xFE0E;</button>
+      <span class="bgm-title" id="bgmTitle" aria-live="polite"></span>
+      <button class="bgm-btn bgm-arrow" id="bgmNext" aria-label="Next track">▶&#xFE0E;</button>
+    </span>
+  </div>
+
+  <!-- ghost page header, fixed right -->
+  <div class="page-header" aria-hidden="true">
+    <div class="page-header-nr">TOOL 03</div>
+    <div class="page-header-title">Time<br>Code</div>
+  </div>
+
+  <!-- ===== MAIN ===== -->
+  <main class="wrap wrap--sub" id="top">
+    <header>
+      <a class="calc-back" href="../tools.html">← Free Tools</a>
+      <h1 class="hero-title calc-title">Timecode</h1>
+      <p class="page-intro">
+        Frames ↔ timecode ↔ seconds at any frame rate. Retime between rates, check slow-mo speed,
+        measure in/out durations.
+      </p>
+    </header>
+
+    <section class="calc" aria-label="Timecode and frame rate converter" data-keep-brand>
+
+      <div class="calc-block">
+        <span class="calc-label" id="fpsLabel">01 · Frame rate</span>
+        <div class="calc-body">
+          <div class="calc-chips" id="fpsChips" role="group" aria-labelledby="fpsLabel"></div>
+          <div class="calc-chips">
+            <button class="calc-btn" id="df" type="button" aria-pressed="false">Drop-frame</button>
+          </div>
+          <p class="calc-note" id="dfNote"></p>
+        </div>
+      </div>
+
+      <div class="calc-block">
+        <span class="calc-label">02 · Convert</span>
+        <div class="calc-body">
+          <label class="calc-unitwrap">
+            <input class="calc-mid" id="tc" type="text" inputmode="numeric" autocomplete="off" spellcheck="false" value="00:00:10:00" aria-describedby="tcHint">
+            <span class="calc-unit">Timecode</span>
+          </label>
+          <label class="calc-unitwrap">
+            <input class="calc-mid" id="frames" type="text" inputmode="numeric" autocomplete="off" spellcheck="false">
+            <span class="calc-unit">Frames</span>
+          </label>
+          <label class="calc-unitwrap">
+            <input class="calc-mid" id="secs" type="text" inputmode="decimal" autocomplete="off" spellcheck="false">
+            <span class="calc-unit">Seconds</span>
+          </label>
+          <p class="calc-note" id="tcHint">Type in any field, the other two follow. Timecode takes <strong>01:02:03:04</strong>, <strong>2:12</strong> (seconds:frames) or just digits <strong>1020304</strong>.</p>
+          <p class="calc-status" id="real"></p>
+        </div>
+      </div>
+
+      <div class="calc-block">
+        <span class="calc-label" id="tgtLabel">03 · To another rate</span>
+        <div class="calc-body">
+          <div class="calc-chips" id="tgtChips" role="group" aria-labelledby="tgtLabel"></div>
+          <div class="calc-stats" id="retime" aria-live="polite"></div>
+          <p class="calc-note"><strong>Same duration</strong> = moving a cut to a new timeline rate.
+            <strong>Same frames</strong> = conforming footage (shoot 60, play at 24 → 40% slow-mo).</p>
+        </div>
+      </div>
+
+      <div class="calc-block">
+        <span class="calc-label">04 · Duration</span>
+        <div class="calc-body">
+          <div class="calc-inline">
+            <label for="inTc">In</label>
+            <input class="calc-small calc-tc" id="inTc" type="text" inputmode="numeric" autocomplete="off" spellcheck="false" value="00:00:00:00">
+            <label for="outTc">Out</label>
+            <input class="calc-small calc-tc" id="outTc" type="text" inputmode="numeric" autocomplete="off" spellcheck="false" value="00:00:30:00">
+          </div>
+          <div class="calc-stats" id="dur" aria-live="polite"></div>
+          <p class="calc-note">Out is exclusive, the way Premiere, Resolve and After Effects count. If your out point is the last frame you keep, add 1 frame.</p>
+        </div>
+      </div>
+
+    </section>
+  </main>
+
+  <!-- ===== FOOTER ===== -->
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <div class="footer-main">
+        <nav class="footer-nav" aria-label="Footer">
+          <a href="../index.html" class="footer-nav-link">Home</a>
+          <a href="../index.html#projects" class="footer-nav-link">Projects</a>
+          <a href="../index.html#journey" class="footer-nav-link">Journey</a>
+          <a href="../next.html" class="footer-nav-link">Next Up</a>
+          <a href="../product.html" class="footer-nav-link">Product</a>
+          <a href="../tools.html" class="footer-nav-link" aria-current="page">Free Tools</a>
+          <a href="../index.html#contact" class="footer-nav-link">Contact</a>
+        </nav>
+        <div class="footer-right">
+          <a href="https://linktr.ee/PortofolioDesain" class="footer-nav-link" target="_blank" rel="noopener">Linktree ↗&#xFE0E;</a>
+          <a href="https://wa.me/62895347178366" class="footer-nav-link" target="_blank" rel="noopener">WhatsApp · Business Only ↗&#xFE0E;</a>
+          <span class="footer-location">NOMADEN</span>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <span class="footer-copy">© 2026 Muhammad Ihsan Rizka. All rights reserved.</span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ===== CUSTOM CURSOR ===== -->
+  <div class="cursor" aria-hidden="true">
+    <div class="cursor-ring" id="cursorRing"></div>
+    <div class="cursor-dot" id="cursorDot"></div>
+  </div>
+
+  <!-- ===== CRT / TV OVERLAY ===== -->
+  <div class="page-tv-overlay" aria-hidden="true">
+    <div class="page-scanlines"></div>
+    <canvas class="page-grain" id="grain"></canvas>
+    <div class="page-scanners">
+      <span style="--dur:10s;--op:0.10"></span>
+      <span style="--dur:13s;--del:2s;--op:0.07"></span>
+      <span style="--dur:17s;--del:5s;--op:0.04"></span>
+    </div>
+    <div class="page-inner-glow"></div>
+    <div class="page-vignette"></div>
+  </div>
+  <div class="crt-bevel" id="crtBevel" aria-hidden="true"></div>
+  <div class="crt-frame" id="crtFrame" aria-hidden="true"></div>
+  <svg class="crt-stroke" id="crtStroke" aria-hidden="true"></svg>
+
+  <script src="../js/fluid.js?v=7"></script>
+  <script src="../js/sfx.js?v=9"></script>
+  <script src="../js/bgm.js?v=8"></script>
+  <script src="../js/chrome.js?v=7"></script>
+  <script src="../js/framecore.js?v=1"></script>
+  <script src="../js/timecode.js?v=2"></script>
+</body>
+</html>
