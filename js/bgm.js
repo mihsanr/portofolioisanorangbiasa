@@ -15,6 +15,7 @@
     { name: 'WARKOPKAH',              file: 'warkopkah',              gain: 0.38 },
   ];
   const STEPS = 10;
+  const ROOT = new URL('../', document.currentScript.src).href; // works from tools/ too
   const STORE = 'ihsan.bgm';
 
   const bar = document.getElementById('bgmBar');
@@ -23,7 +24,7 @@
   const muteBtn = document.getElementById('bgmMute');
   const meterEl = document.getElementById('bgmMeter');
 
-  let idx = 0, level = 3, muted = false, started = false, ducked = false;
+  let idx = 0, level = 3, muted = false, started = false, ducked = false, hushed = false;
 
   try {
     const s = JSON.parse(localStorage.getItem(STORE) || '{}');
@@ -49,7 +50,7 @@
 
   function applyVolume() {
     const t = TRACKS[idx];
-    audio.volume = muted ? 0 : (level / STEPS) * t.gain * (ducked ? 0.25 : 1);
+    audio.volume = muted || hushed ? 0 : (level / STEPS) * t.gain * (ducked ? 0.25 : 1);
     segs.forEach((s, i) => s.classList.toggle('on', !muted && i < level));
     meterEl.setAttribute('aria-label', `Volume ${level * (100 / STEPS)}%`);
   }
@@ -57,7 +58,7 @@
   function load(play) {
     const t = TRACKS[idx];
     titleEl.textContent = t.name;
-    audio.src = `assets/bgm/${t.file}.mp3`;
+    audio.src = `${ROOT}assets/bgm/${t.file}.mp3`;
     applyVolume();
     if (play) audio.play().catch(() => {});
     save();
@@ -103,6 +104,9 @@
   };
   document.addEventListener('pause', undock, true);
   document.addEventListener('ended', undock, true);
+
+  /* tools (metronome) silence the bed fully: dispatch 'bgm:hush' with detail true/false */
+  addEventListener('bgm:hush', (e) => { hushed = !!e.detail; applyVolume(); });
 
   /* autoplay policy: first gesture starts the bed */
   function start() {

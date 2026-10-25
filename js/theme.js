@@ -17,7 +17,9 @@
   }
   apply();
 
-  document.addEventListener('click', () => {
+  document.addEventListener('click', (e) => {
+    // tool UIs take many clicks; keep the colour still there
+    if (e.target.closest && e.target.closest('[data-keep-brand]')) return;
     i = (i + 1) % COLORS.length;
     try { sessionStorage.setItem(KEY, COLORS[i]); } catch (e) { /* storage blocked */ }
     apply();
