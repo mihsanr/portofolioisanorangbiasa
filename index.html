@@ -1,192 +1,285 @@
 <!DOCTYPE html>
-<html lang="en" translate="no">
+<html lang="id" translate="no">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="google" content="notranslate">
-  <title>Projects — Muhammad Ihsan Rizka</title>
-  <meta name="description" content="Selected projects by Muhammad Ihsan Rizka — graphic design, motion design, and video editing. Currently nomadic.">
-  <meta property="og:title" content="Projects — Muhammad Ihsan Rizka">
-  <meta property="og:description" content="Selected design, motion, and video work. Each project a different channel.">
+  <title>@isanorgbiasa — Muhammad Ihsan Rizka</title>
+  <meta name="description" content="Semua link Muhammad Ihsan Rizka (@isanorgbiasa): portofolio, free tools, donate, request lagu, TikTok, Instagram.">
+  <meta property="og:title" content="@isanorgbiasa — Muhammad Ihsan Rizka">
+  <meta property="og:description" content="Portofolio, free tools, donate, request lagu, TikTok, Instagram.">
   <meta property="og:type" content="website">
+  <meta property="og:image" content="assets/img/avatar.webp">
+  <meta name="theme-color" content="#0000FF">
   <link rel="icon" href="assets/favicon.png" type="image/png">
   <link rel="apple-touch-icon" href="assets/favicon.png">
+  <script>
+    // Link lama (dulu root = portofolio) seperti /#projects atau /#contact → work.html
+    (function (h) { if (/^#(top|projects|face|journey|skills|contact)\b/.test(h)) location.replace('work.html' + h); })(location.hash);
+  </script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://media.giphy.com">
   <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;900&family=Space+Grotesk:wght@400;500;600;700;800&family=VT323&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css?v=10">
   <script src="js/theme.js?v=10"></script>
+  <style>
+    /* ===== Link-in-bio: gaya porto (biru, putih, CRT) + tombol ala Linktree ===== */
+    :root { --col: 100%; --gut: 24px; }
+    /* Skala ikut resolusi: 16px di HP & laptop, naik pelan sampai 24px di layar 4K */
+    @media (min-width: 640px) {
+      html { font-size: clamp(16px, calc(8px + 0.55vw), 24px); }
+      :root { --col: clamp(520px, 38vw, 900px); --gut: 0px; }
+    }
+
+    .lt {
+      position: relative; z-index: 1;
+      width: var(--col);
+      margin: 0 auto;
+      padding: 56px var(--gut) 72px;
+      min-height: 100vh;
+    }
+    @media (min-width: 769px) { .lt { padding-top: 84px; padding-bottom: 96px; } }
+
+    .lt-share {
+      position: absolute; top: 24px; right: var(--gut);
+      width: 2.6rem; height: 2.6rem;
+      display: grid; place-items: center;
+      color: #fff; background: transparent;
+      border: 2px solid var(--line); border-radius: 12px;
+      transition: background .25s, color .25s, border-color .25s;
+    }
+    @media (min-width: 769px) { .lt-share { top: 52px; } }
+    .lt-share:hover { background: #fff; color: var(--blue); border-color: #fff; }
+    .lt-share svg { width: 1.1rem; height: 1.1rem; }
+
+    /* profil */
+    .lt-profile { text-align: center; }
+    .lt-avatar {
+      width: 6.25rem; height: 6.25rem; margin: 0 auto;
+      border-radius: 50%; object-fit: cover;
+      border: 3px solid #fff;
+      background: var(--ink);
+    }
+    .lt-handle {
+      margin-top: 1.1rem;
+      font-family: var(--font-display); font-weight: 900;
+      font-size: min(3.6rem, 13.5vw);
+      line-height: .85; letter-spacing: -0.005em; text-transform: uppercase;
+      color: var(--white-85);
+    }
+    .lt-name {
+      margin-top: .6rem;
+      font-family: var(--font-crt); font-size: 1.3rem; letter-spacing: .08em; text-transform: uppercase;
+      color: #fff;
+    }
+    .lt-contact {
+      display: inline-block; margin-top: .2rem;
+      font-size: .72rem; font-weight: 700; letter-spacing: .16em; text-transform: uppercase;
+      color: var(--white-85);
+      border-bottom: 1px solid rgba(255, 255, 255, .45);
+      transition: color .2s, border-color .2s;
+    }
+    .lt-contact:hover { color: #fff; border-color: #fff; }
+    .lt-socials { display: flex; justify-content: center; gap: 1rem; margin-top: 1.1rem; }
+    .lt-socials a {
+      width: 2.75rem; height: 2.75rem;
+      display: grid; place-items: center;
+      border: 2px solid var(--line); border-radius: 50%;
+      color: #fff;
+      transition: background .25s, color .25s, border-color .25s, transform .25s var(--ease-out);
+    }
+    .lt-socials a:hover { background: #fff; color: var(--blue); border-color: #fff; transform: translateY(-3px); }
+    .lt-socials svg { width: 1.2rem; height: 1.2rem; }
+
+    /* tombol ala Linktree */
+    .lt-links { list-style: none; margin-top: 2.25rem; display: grid; gap: .9rem; }
+    .lt-card {
+      position: relative;
+      display: grid;
+      grid-template-columns: 3.1rem 1fr 3.1rem;
+      align-items: center; gap: .5rem;
+      min-height: 4.25rem;
+      padding: .5rem;
+      color: #fff;
+      background: rgba(28, 25, 23, .30);
+      -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+      border: 2px solid rgba(255, 255, 255, .28);
+      border-radius: 16px;
+      box-shadow: 4px 5px 0 0 var(--ink);
+      transition: background .25s ease, color .25s ease, border-color .25s ease, transform .2s var(--ease-out), box-shadow .2s var(--ease-out);
+    }
+    .lt-card:hover, .lt-card:focus-visible {
+      background: #fff; color: #0d0d0d; border-color: #fff;
+      transform: translate(-2px, -2px); box-shadow: 6px 7px 0 0 var(--ink);
+    }
+    .lt-card:active { transform: translate(4px, 5px); box-shadow: 0 0 0 0 var(--ink); }
+    .lt-thumb {
+      width: 3.1rem; height: 3.1rem;
+      border-radius: 10px; object-fit: cover;
+      background: rgba(255, 255, 255, .12);
+    }
+    .lt-glyph {
+      display: grid; place-items: center;
+      font-family: var(--font-crt); font-size: 1.6rem; line-height: 1;
+      border: 1px solid rgba(255, 255, 255, .45); background: transparent;
+    }
+    .lt-card:hover .lt-glyph, .lt-card:focus-visible .lt-glyph { border-color: #0d0d0d; }
+    .lt-label {
+      text-align: center; padding: .35rem 0;
+      font-size: .9rem; font-weight: 700; line-height: 1.3; letter-spacing: .08em; text-transform: uppercase;
+    }
+    .lt-label small {
+      display: block; margin-top: .1rem;
+      font-family: var(--font-crt); font-weight: 400; font-size: 1.05rem; letter-spacing: .03em;
+      opacity: .75;
+    }
+    .lt-arrow { justify-self: center; font-family: var(--font-crt); font-size: 1.4rem; line-height: 1; opacity: .8; }
+
+    /* kartu besar (featured) */
+    .lt-card--feature { grid-template-rows: auto auto; padding: .9rem .9rem .45rem; }
+    .lt-hero {
+      grid-column: 1 / -1;
+      width: 100%; aspect-ratio: 16 / 9; object-fit: cover;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, .12);
+    }
+    .lt-card--feature .lt-label { grid-column: 2; padding-top: .7rem; }
+    .lt-card--feature .lt-arrow { grid-column: 3; }
+    .lt-new {
+      position: absolute; top: 1.4rem; left: 1.4rem;
+      font-family: var(--font-crt); font-size: 1.25rem; letter-spacing: .08em; line-height: 1;
+      padding: 6px 10px 5px;
+      background: #fff; color: var(--blue);
+      border-radius: 2px;
+      box-shadow: 3px 3px 0 var(--ink);
+    }
+    .lt-card--feature:hover .lt-new { background: var(--blue); color: #fff; }
+
+    .lt-foot {
+      margin-top: 2.5rem; text-align: center;
+      font-family: var(--font-crt); font-size: 1.15rem; letter-spacing: .08em; text-transform: uppercase;
+      color: var(--white-85);
+    }
+    .lt-foot a { border-bottom: 1px solid rgba(255, 255, 255, .45); }
+    .lt-foot a:hover { color: #fff; border-color: #fff; }
+
+    .lt-toast {
+      position: fixed; left: 50%; bottom: 40px; z-index: 9990;
+      transform: translate(-50%, 12px); opacity: 0; pointer-events: none;
+      font-family: var(--font-crt); font-size: 1.3rem; letter-spacing: .08em;
+      padding: 8px 14px 6px;
+      background: #fff; color: var(--blue);
+      border-radius: 2px; box-shadow: 3px 3px 0 var(--ink);
+      transition: opacity .2s, transform .2s;
+    }
+    .lt-toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+    /* ghost header kanan cuma di layar lebar supaya tak menabrak kolom */
+    @media (max-width: 1199px) { .page-header { display: none; } }
+  </style>
 </head>
-<body>
-  <a href="#projects" class="skip-link">Skip to content</a>
+<body class="subpage">
+  <a href="#links" class="skip-link">Skip to links</a>
 
   <!-- ===== BACKGROUND FLUID ===== -->
   <div class="bg-layer" aria-hidden="true">
     <canvas id="fluid"></canvas>
   </div>
 
-  <!-- ===== NAV ===== -->
-  <nav class="site-nav" id="siteNav" aria-label="Main">
-    <a class="nav-left" href="#top">MUHAMMAD IHSAN RIZKA<span class="nav-loc"> — NOMADEN</span></a>
-    <div class="nav-links">
-      <a class="nav-link" href="#projects">Work</a>
-      <a class="nav-link" href="#journey">Journey</a>
-      <a class="nav-link" href="next.html">Next Up</a>
-      <a class="nav-link" href="product.html">Product</a>
-      <a class="nav-link" href="tools.html">Free Tools</a>
-      <a class="nav-link" href="#contact">Contact</a>
-      <a class="nav-link nav-link--cta" href="mailto:muhammadihsanrizka186@gmail.com">Get in touch ↗</a>
-    </div>
-  </nav>
-
-  <!-- ===== BGM PLAYER ===== -->
-  <div class="bgm-bar" id="bgmBar" role="group" aria-label="Background music">
-    <button class="bgm-btn bgm-mute" id="bgmMute" aria-pressed="false">MUTE</button>
-    <span class="bgm-sep" aria-hidden="true">·</span>
-    <span class="bgm-vol">
-      <span class="bgm-vol-label" aria-hidden="true">VOL</span>
-      <button class="bgm-btn bgm-step" id="bgmDown" aria-label="Lower volume">−</button>
-      <span class="bgm-meter" id="bgmMeter" role="img"></span>
-      <button class="bgm-btn bgm-step" id="bgmUp" aria-label="Raise volume">+</button>
-    </span>
-    <span class="bgm-sep" aria-hidden="true">·</span>
-    <span class="bgm-track">
-      <button class="bgm-btn bgm-arrow" id="bgmPrev" aria-label="Previous track">◀&#xFE0E;</button>
-      <span class="bgm-title" id="bgmTitle" aria-live="polite"></span>
-      <button class="bgm-btn bgm-arrow" id="bgmNext" aria-label="Next track">▶&#xFE0E;</button>
-    </span>
-  </div>
-
   <!-- ghost page header, fixed right -->
   <div class="page-header" aria-hidden="true">
-    <div class="page-header-nr">08 CHANNELS</div>
-    <div class="page-header-title">Selected<br>Work</div>
+    <div class="page-header-nr">00 LINKS</div>
+    <div class="page-header-title">Link<br>In Bio</div>
   </div>
 
-  <!-- ===== MAIN ===== -->
-  <main class="wrap" id="top">
-    <header id="projects">
-      <h1 class="hero-title">Projects</h1>
-      <p class="page-intro">
-        I'm Muhammad Ihsan Rizka — graphic designer &amp; motion designer.
-        Selected work from three-plus years of logos, feeds, posters, and frames —
-        each one a different channel.
-      </p>
+  <main class="lt" id="top">
+    <button class="lt-share" id="shareBtn" type="button" aria-label="Bagikan halaman ini">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 8l5-5 5 5M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg>
+    </button>
+
+    <header class="lt-profile">
+      <img class="lt-avatar" src="assets/img/avatar.webp" alt="Avatar isanorgbiasa" width="100" height="100">
+      <h1 class="lt-handle">@isanorgbiasa</h1>
+      <p class="lt-name">Muhammad Ihsan Rizka — Nomaden</p>
+      <a class="lt-contact" href="work.html#contact">Contact on Website</a>
+      <nav class="lt-socials" aria-label="Sosial media">
+        <a href="https://www.tiktok.com/@isanorgbiasa" target="_blank" rel="noopener" aria-label="TikTok">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16.6 2h-3.4v13.4a2.9 2.9 0 1 1-2.9-2.9c.3 0 .6 0 .9.1V9.1a6.4 6.4 0 1 0 5.4 6.3V8.6a8 8 0 0 0 4.7 1.5V6.7a4.7 4.7 0 0 1-4.7-4.7z"/></svg>
+        </a>
+        <a href="https://www.instagram.com/isanorgbiasa" target="_blank" rel="noopener" aria-label="Instagram">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4.2"/><circle cx="17.4" cy="6.6" r="1.1" fill="currentColor" stroke="none"/></svg>
+        </a>
+        <a href="mailto:muhammadihsanrizka186@gmail.com" aria-label="Email">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M2.5 5.5A1.5 1.5 0 0 1 4 4h16a1.5 1.5 0 0 1 1.5 1.5v.6L12 12.4 2.5 6.1zM2.5 8.5V18.5A1.5 1.5 0 0 0 4 20h16a1.5 1.5 0 0 0 1.5-1.5V8.5L12 14.8z"/></svg>
+        </a>
+      </nav>
     </header>
 
-    <ul class="projects-list" id="projectsList" role="list"></ul>
-    <a class="next-up-link" href="next.html">▶&#xFE0E; Next Up — vote on what I build next ↗&#xFE0E;</a>
-
-    <!-- clients -->
-    <section class="clients" aria-label="Clients and collaborations">
-      <p class="clients-label">Proud to have worked with</p>
-      <div class="clients-marquee" aria-hidden="true">
-        <div class="clients-track" id="clientsTrack"></div>
-      </div>
-    </section>
-
-    <!-- ===== THE FACE ===== -->
-    <section class="face" id="face" aria-label="The face behind the work">
-      <p class="face-label">The face behind all of this</p>
-      <div class="face-stage">
-        <button class="face-card" id="faceCard" aria-haspopup="dialog" aria-label="Open profile — Muhammad Ihsan Rizka">
-          <img src="assets/img/profile-card.webp" alt="Muhammad Ihsan Rizka — playing card portrait" draggable="false">
-        </button>
-      </div>
-      <p class="face-hint" aria-hidden="true">▚ PICK A CARD — CLICK IT ▞</p>
-    </section>
-
-    <!-- ===== JOURNEY ===== -->
-    <section class="journey" id="journey">
-      <div class="journey-hero">
-        <h2 class="journey-title">Journey</h2>
-        <p class="journey-sub">A few chapters — download the CV for the full story.</p>
-      </div>
-
-      <ol class="journey-list" id="journeyList" role="list"></ol>
-
-      <div class="journey-footer">
-        <a class="cv-btn" href="assets/cv/Muhammad-Ihsan-Rizka-CV.pdf" download>
-          <span>Download Full CV</span><span class="cv-btn-arrow">↓</span>
+    <ul class="lt-links" id="links" role="list">
+      <li>
+        <a class="lt-card" href="work.html">
+          <img class="lt-thumb" src="https://media.giphy.com/media/774uK11mxE3W0cjE8L/200w.webp" alt="" loading="lazy">
+          <span class="lt-label">Portfolio Website | Kenalan di Portfolio🤤</span>
+          <span class="lt-arrow" aria-hidden="true">↗&#xFE0E;</span>
         </a>
-      </div>
+      </li>
+      <li>
+        <a class="lt-card" href="tools.html">
+          <span class="lt-thumb lt-glyph" aria-hidden="true">FT</span>
+          <span class="lt-label">Free Tools<small>teleprompter · bpm · timecode</small></span>
+          <span class="lt-arrow" aria-hidden="true">↗&#xFE0E;</span>
+        </a>
+      </li>
+      <li>
+        <a class="lt-card" href="https://sociabuzz.com/mihsanr/support" target="_blank" rel="noopener">
+          <img class="lt-thumb" src="https://media.giphy.com/media/U1Yp8zc6pSmRO/200w.webp" alt="" loading="lazy">
+          <span class="lt-label">Donate</span>
+          <span class="lt-arrow" aria-hidden="true">↗&#xFE0E;</span>
+        </a>
+      </li>
+      <li>
+        <a class="lt-card lt-card--feature" href="https://tako.id/isanorgbiasa" target="_blank" rel="noopener">
+          <img class="lt-hero" src="https://media.giphy.com/media/eRvQQpENFNNwjsQlL8/giphy.webp" alt="" loading="lazy">
+          <span class="lt-new">NEW</span>
+          <span class="lt-label">Req Lagu Masukin Sendiri</span>
+          <span class="lt-arrow" aria-hidden="true">↗&#xFE0E;</span>
+        </a>
+      </li>
+      <li>
+        <a class="lt-card" href="next.html">
+          <span class="lt-thumb lt-glyph" aria-hidden="true">NX</span>
+          <span class="lt-label">Next Up<small>vote ide konten</small></span>
+          <span class="lt-arrow" aria-hidden="true">↗&#xFE0E;</span>
+        </a>
+      </li>
+      <li>
+        <a class="lt-card" href="https://www.tiktok.com/@isanorgbiasa" target="_blank" rel="noopener">
+          <img class="lt-thumb" src="https://media.giphy.com/media/pY8jLmZw0ElqvVeRH4/200w.webp" alt="" loading="lazy">
+          <span class="lt-label">TikTok</span>
+          <span class="lt-arrow" aria-hidden="true">↗&#xFE0E;</span>
+        </a>
+      </li>
+      <li>
+        <a class="lt-card" href="https://www.instagram.com/isanorgbiasa" target="_blank" rel="noopener">
+          <img class="lt-thumb" src="https://media.giphy.com/media/93mS3A87wfmOySC29W/200w.webp" alt="" loading="lazy">
+          <span class="lt-label">Instagram<small>@isanorgbiasa</small></span>
+          <span class="lt-arrow" aria-hidden="true">↗&#xFE0E;</span>
+        </a>
+      </li>
+      <li>
+        <a class="lt-card" href="product.html">
+          <span class="lt-thumb lt-glyph" aria-hidden="true">PR</span>
+          <span class="lt-label">Product<small>coming soon</small></span>
+          <span class="lt-arrow" aria-hidden="true">↗&#xFE0E;</span>
+        </a>
+      </li>
+    </ul>
 
-      <div class="journey-skills" id="skillsWrap">
-        <p class="skills-label">Skills</p>
-        <div class="skills-tags" id="skillsTags"></div>
-        <p class="skills-langs">Indonesian &amp; Sundanese native — English intermediate</p>
-      </div>
-
-      <div class="journey-contact" id="contact">
-        <span class="contact-label">Let's Connect</span>
-        <h3 class="contact-heading">Want to work together?</h3>
-        <div class="contact-actions">
-          <a class="contact-btn" href="mailto:muhammadihsanrizka186@gmail.com">Get in touch ↗&#xFE0E;</a>
-          <a class="contact-btn" href="https://wa.me/62895347178366" target="_blank" rel="noopener">WhatsApp · Business Only ↗&#xFE0E;</a>
-        </div>
-      </div>
-    </section>
+    <p class="lt-foot"><a href="work.html">isanorgbiasa.com/work</a> · © 2026 Muhammad Ihsan Rizka</p>
   </main>
 
-  <!-- ===== FOOTER ===== -->
-  <footer class="site-footer">
-    <div class="footer-inner">
-      <div class="footer-main">
-        <nav class="footer-nav" aria-label="Footer">
-          <a href="#top" class="footer-nav-link">Home</a>
-          <a href="#projects" class="footer-nav-link">Projects</a>
-          <a href="#journey" class="footer-nav-link">Journey</a>
-          <a href="next.html" class="footer-nav-link">Next Up</a>
-          <a href="product.html" class="footer-nav-link">Product</a>
-          <a href="tools.html" class="footer-nav-link">Free Tools</a>
-          <a href="#contact" class="footer-nav-link">Contact</a>
-        </nav>
-        <div class="footer-right">
-          <a href="https://linktr.ee/PortofolioDesain" class="footer-nav-link" target="_blank" rel="noopener">Linktree ↗&#xFE0E;</a>
-          <a href="https://wa.me/62895347178366" class="footer-nav-link" target="_blank" rel="noopener">WhatsApp · Business Only ↗&#xFE0E;</a>
-          <span class="footer-location">NOMADEN</span>
-        </div>
-      </div>
-      <div class="footer-bottom">
-        <span class="footer-copy">© 2026 Muhammad Ihsan Rizka. All rights reserved.</span>
-      </div>
-    </div>
-  </footer>
-
-  <!-- ===== MAGNETIC FLOATING IMAGE ===== -->
-  <div class="magnetic-img" id="magneticImg" aria-hidden="true">
-    <div class="magnetic-frame" id="magneticFrame">
-      <img class="magnetic-el" id="magneticEl" src="" alt="" draggable="false">
-      <div class="magnetic-glare" id="magneticGlare"></div>
-    </div>
-  </div>
-
-  <!-- ===== PROJECT MODAL ===== -->
-  <dialog class="tv-modal" id="tvModal">
-    <div class="tv-head">
-      <p class="tv-ch" id="tvCh">CH 01</p>
-      <h2 class="tv-title" id="tvTitle"></h2>
-      <button class="tv-close" id="tvClose" aria-label="Close">✕</button>
-    </div>
-    <p class="tv-desc" id="tvDesc"></p>
-    <div class="tv-gallery" id="tvGallery"></div>
-  </dialog>
-
-  <!-- ===== PROFILE MODAL ===== -->
-  <dialog class="face-modal" id="faceModal">
-    <button class="face-close" id="faceClose" aria-label="Close">✕</button>
-    <div class="face-grid">
-      <div class="face-photo">
-        <img src="assets/img/profile-ihsan.webp" alt="Muhammad Ihsan Rizka" draggable="false">
-        <span class="face-photo-tag">▶ LIVE FEED · SUBJECT 01</span>
-      </div>
-      <div class="face-bio">
-        <p class="face-kicker">CH 00 — OFF AIR</p>
-        <h2 class="face-name">Muhammad Ihsan Rizka</h2>
-        <p class="face-story">Orang biasa yang akhir akhir ini memilih menggunakan adobe di marketplace dan ada kemungkinan beralih ke adobe crack (tergantung kondisi ekonomi)</p>
-      </div>
-    </div>
-  </dialog>
+  <div class="lt-toast" id="toast" role="status" aria-live="polite"></div>
 
   <!-- ===== CUSTOM CURSOR ===== -->
   <div class="cursor" aria-hidden="true">
@@ -210,38 +303,30 @@
   <div class="crt-frame" id="crtFrame" aria-hidden="true"></div>
   <svg class="crt-stroke" id="crtStroke" aria-hidden="true"></svg>
 
-  <!-- ===== TV PRELOADER ===== -->
-  <div class="preloader" id="preloader" aria-hidden="true">
-    <div class="tv-screen">
-      <div class="tv-bars">
-        <span style="background:#fff"></span><span style="background:#ff0"></span>
-        <span style="background:#0ff"></span><span style="background:#0f0"></span>
-        <span style="background:#f0f"></span><span style="background:#f00"></span>
-        <span style="background:#00f"></span>
-      </div>
-      <div class="tv-bars-bottom">
-        <span style="background:#0000bb"></span><span style="background:#131313"></span>
-        <span style="background:#bb00bb"></span><span style="background:#131313"></span>
-        <span style="background:#00bbbb"></span><span style="background:#131313"></span>
-        <span style="background:#eee"></span>
-      </div>
-      <div class="tv-barcode tv-barcode--l"></div>
-      <div class="tv-barcode tv-barcode--r"></div>
-      <div class="tv-panel">
-        <p class="tv-msg">IHSAN.TV</p>
-        <div class="tv-progress"><div class="tv-progress-fill" id="tvFill"></div></div>
-        <p class="tv-skip">CLICK TO SKIP</p>
-      </div>
-      <div class="tv-scanlines"></div>
-      <div class="tv-vignette"></div>
-    </div>
-  </div>
-
-  <script src="js/media.js?v=7"></script>
-  <script src="js/data.js?v=8"></script>
   <script src="js/fluid.js?v=7"></script>
-  <script src="js/sfx.js?v=9"></script>
-  <script src="js/bgm.js?v=8"></script>
-  <script src="js/main.js?v=10"></script>
+  <script src="js/chrome.js?v=8"></script>
+  <script>
+    (function () {
+      var btn = document.getElementById('shareBtn');
+      var toast = document.getElementById('toast');
+      var timer;
+      function say(msg) {
+        toast.textContent = msg;
+        toast.classList.add('show');
+        clearTimeout(timer);
+        timer = setTimeout(function () { toast.classList.remove('show'); }, 1800);
+      }
+      btn.addEventListener('click', function () {
+        var url = location.origin + location.pathname;
+        if (navigator.share) {
+          navigator.share({ title: document.title, url: url }).catch(function () {});
+        } else if (navigator.clipboard) {
+          navigator.clipboard.writeText(url).then(function () { say('LINK DISALIN ✓'); }, function () { say(url); });
+        } else {
+          say(url);
+        }
+      });
+    })();
+  </script>
 </body>
 </html>
