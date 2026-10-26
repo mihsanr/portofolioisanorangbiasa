@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en" translate="no">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="google" content="notranslate">
+  <title>Projects — Muhammad Ihsan Rizka</title>
+  <meta name="description" content="Selected projects by Muhammad Ihsan Rizka — graphic design, motion design, and video editing. Currently nomadic.">
+  <meta property="og:title" content="Projects — Muhammad Ihsan Rizka">
+  <meta property="og:description" content="Selected design, motion, and video work. Each project a different channel.">
+  <meta property="og:type" content="website">
+  <link rel="icon" href="assets/favicon.png" type="image/png">
+  <link rel="apple-touch-icon" href="assets/favicon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;900&family=Space+Grotesk:wght@400;500;600;700;800&family=VT323&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css?v=10">
+  <script src="js/theme.js?v=10"></script>
+</head>
+<body>
+  <a href="#projects" class="skip-link">Skip to content</a>
+
+  <!-- ===== BACKGROUND FLUID ===== -->
+  <div class="bg-layer" aria-hidden="true">
+    <canvas id="fluid"></canvas>
+  </div>
+
+  <!-- ===== NAV ===== -->
+  <nav class="site-nav" id="siteNav" aria-label="Main">
+    <a class="nav-left" href="#top">MUHAMMAD IHSAN RIZKA<span class="nav-loc"> — NOMADEN</span></a>
+    <div class="nav-links">
+      <a class="nav-link" href="#projects">Work</a>
+      <a class="nav-link" href="#journey">Journey</a>
+      <a class="nav-link" href="next.html">Next Up</a>
+      <a class="nav-link" href="product.html">Product</a>
+      <a class="nav-link" href="tools.html">Free Tools</a>
+      <a class="nav-link" href="#contact">Contact</a>
+      <a class="nav-link nav-link--cta" href="mailto:muhammadihsanrizka186@gmail.com">Get in touch ↗</a>
+    </div>
+  </nav>
+
+  <!-- ===== BGM PLAYER ===== -->
+  <div class="bgm-bar" id="bgmBar" role="group" aria-label="Background music">
+    <button class="bgm-btn bgm-mute" id="bgmMute" aria-pressed="false">MUTE</button>
+    <span class="bgm-sep" aria-hidden="true">·</span>
+    <span class="bgm-vol">
+      <span class="bgm-vol-label" aria-hidden="true">VOL</span>
+      <button class="bgm-btn bgm-step" id="bgmDown" aria-label="Lower volume">−</button>
+      <span class="bgm-meter" id="bgmMeter" role="img"></span>
+      <button class="bgm-btn bgm-step" id="bgmUp" aria-label="Raise volume">+</button>
+    </span>
+    <span class="bgm-sep" aria-hidden="true">·</span>
+    <span class="bgm-track">
+      <button class="bgm-btn bgm-arrow" id="bgmPrev" aria-label="Previous track">◀&#xFE0E;</button>
+      <span class="bgm-title" id="bgmTitle" aria-live="polite"></span>
+      <button class="bgm-btn bgm-arrow" id="bgmNext" aria-label="Next track">▶&#xFE0E;</button>
+    </span>
+  </div>
+
+  <!-- ghost page header, fixed right -->
+  <div class="page-header" aria-hidden="true">
+    <div class="page-header-nr">08 CHANNELS</div>
+    <div class="page-header-title">Selected<br>Work</div>
+  </div>
+
+  <!-- ===== MAIN ===== -->
+  <main class="wrap" id="top">
+    <header id="projects">
+      <h1 class="hero-title">Projects</h1>
+      <p class="page-intro">
+        I'm Muhammad Ihsan Rizka — graphic designer &amp; motion designer.
+        Selected work from three-plus years of logos, feeds, posters, and frames —
+        each one a different channel.
+      </p>
+    </header>
+
+    <ul class="projects-list" id="projectsList" role="list"></ul>
+    <a class="next-up-link" href="next.html">▶&#xFE0E; Next Up — vote on what I build next ↗&#xFE0E;</a>
+
+    <!-- clients -->
+    <section class="clients" aria-label="Clients and collaborations">
+      <p class="clients-label">Proud to have worked with</p>
+      <div class="clients-marquee" aria-hidden="true">
+        <div class="clients-track" id="clientsTrack"></div>
+      </div>
+    </section>
+
+    <!-- ===== THE FACE ===== -->
+    <section class="face" id="face" aria-label="The face behind the work">
+      <p class="face-label">The face behind all of this</p>
+      <div class="face-stage">
+        <button class="face-card" id="faceCard" aria-haspopup="dialog" aria-label="Open profile — Muhammad Ihsan Rizka">
+          <img src="assets/img/profile-card.webp" alt="Muhammad Ihsan Rizka — playing card portrait" draggable="false">
+        </button>
+      </div>
+      <p class="face-hint" aria-hidden="true">▚ PICK A CARD — CLICK IT ▞</p>
+    </section>
+
+    <!-- ===== JOURNEY ===== -->
+    <section class="journey" id="journey">
+      <div class="journey-hero">
+        <h2 class="journey-title">Journey</h2>
+        <p class="journey-sub">A few chapters — download the CV for the full story.</p>
+      </div>
+
+      <ol class="journey-list" id="journeyList" role="list"></ol>
+
+      <div class="journey-footer">
+        <a class="cv-btn" href="assets/cv/Muhammad-Ihsan-Rizka-CV.pdf" download>
+          <span>Download Full CV</span><span class="cv-btn-arrow">↓</span>
+        </a>
+      </div>
+
+      <div class="journey-skills" id="skillsWrap">
+        <p class="skills-label">Skills</p>
+        <div class="skills-tags" id="skillsTags"></div>
+        <p class="skills-langs">Indonesian &amp; Sundanese native — English intermediate</p>
+      </div>
+
+      <div class="journey-contact" id="contact">
+        <span class="contact-label">Let's Connect</span>
+        <h3 class="contact-heading">Want to work together?</h3>
+        <div class="contact-actions">
+          <a class="contact-btn" href="mailto:muhammadihsanrizka186@gmail.com">Get in touch ↗&#xFE0E;</a>
+          <a class="contact-btn" href="https://wa.me/62895347178366" target="_blank" rel="noopener">WhatsApp · Business Only ↗&#xFE0E;</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ===== FOOTER ===== -->
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <div class="footer-main">
+        <nav class="footer-nav" aria-label="Footer">
+          <a href="#top" class="footer-nav-link">Home</a>
+          <a href="#projects" class="footer-nav-link">Projects</a>
+          <a href="#journey" class="footer-nav-link">Journey</a>
+          <a href="next.html" class="footer-nav-link">Next Up</a>
+          <a href="product.html" class="footer-nav-link">Product</a>
+          <a href="tools.html" class="footer-nav-link">Free Tools</a>
+          <a href="#contact" class="footer-nav-link">Contact</a>
+        </nav>
+        <div class="footer-right">
+          <a href="./" class="footer-nav-link">Links</a>
+          <a href="https://wa.me/62895347178366" class="footer-nav-link" target="_blank" rel="noopener">WhatsApp · Business Only ↗&#xFE0E;</a>
+          <span class="footer-location">NOMADEN</span>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <span class="footer-copy">© 2026 Muhammad Ihsan Rizka. All rights reserved.</span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ===== MAGNETIC FLOATING IMAGE ===== -->
+  <div class="magnetic-img" id="magneticImg" aria-hidden="true">
+    <div class="magnetic-frame" id="magneticFrame">
+      <img class="magnetic-el" id="magneticEl" src="" alt="" draggable="false">
+      <div class="magnetic-glare" id="magneticGlare"></div>
+    </div>
+  </div>
+
+  <!-- ===== PROJECT MODAL ===== -->
+  <dialog class="tv-modal" id="tvModal">
+    <div class="tv-head">
+      <p class="tv-ch" id="tvCh">CH 01</p>
+      <h2 class="tv-title" id="tvTitle"></h2>
+      <button class="tv-close" id="tvClose" aria-label="Close">✕</button>
+    </div>
+    <p class="tv-desc" id="tvDesc"></p>
+    <div class="tv-gallery" id="tvGallery"></div>
+  </dialog>
+
+  <!-- ===== PROFILE MODAL ===== -->
+  <dialog class="face-modal" id="faceModal">
+    <button class="face-close" id="faceClose" aria-label="Close">✕</button>
+    <div class="face-grid">
+      <div class="face-photo">
+        <img src="assets/img/profile-ihsan.webp" alt="Muhammad Ihsan Rizka" draggable="false">
+        <span class="face-photo-tag">▶ LIVE FEED · SUBJECT 01</span>
+      </div>
+      <div class="face-bio">
+        <p class="face-kicker">CH 00 — OFF AIR</p>
+        <h2 class="face-name">Muhammad Ihsan Rizka</h2>
+        <p class="face-story">Orang biasa yang akhir akhir ini memilih menggunakan adobe di marketplace dan ada kemungkinan beralih ke adobe crack (tergantung kondisi ekonomi)</p>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- ===== CUSTOM CURSOR ===== -->
+  <div class="cursor" aria-hidden="true">
+    <div class="cursor-ring" id="cursorRing"></div>
+    <div class="cursor-dot" id="cursorDot"></div>
+  </div>
+
+  <!-- ===== CRT / TV OVERLAY ===== -->
+  <div class="page-tv-overlay" aria-hidden="true">
+    <div class="page-scanlines"></div>
+    <canvas class="page-grain" id="grain"></canvas>
+    <div class="page-scanners">
+      <span style="--dur:10s;--op:0.10"></span>
+      <span style="--dur:13s;--del:2s;--op:0.07"></span>
+      <span style="--dur:17s;--del:5s;--op:0.04"></span>
+    </div>
+    <div class="page-inner-glow"></div>
+    <div class="page-vignette"></div>
+  </div>
+  <div class="crt-bevel" id="crtBevel" aria-hidden="true"></div>
+  <div class="crt-frame" id="crtFrame" aria-hidden="true"></div>
+  <svg class="crt-stroke" id="crtStroke" aria-hidden="true"></svg>
+
+  <!-- ===== TV PRELOADER ===== -->
+  <div class="preloader" id="preloader" aria-hidden="true">
+    <div class="tv-screen">
+      <div class="tv-bars">
+        <span style="background:#fff"></span><span style="background:#ff0"></span>
+        <span style="background:#0ff"></span><span style="background:#0f0"></span>
+        <span style="background:#f0f"></span><span style="background:#f00"></span>
+        <span style="background:#00f"></span>
+      </div>
+      <div class="tv-bars-bottom">
+        <span style="background:#0000bb"></span><span style="background:#131313"></span>
+        <span style="background:#bb00bb"></span><span style="background:#131313"></span>
+        <span style="background:#00bbbb"></span><span style="background:#131313"></span>
+        <span style="background:#eee"></span>
+      </div>
+      <div class="tv-barcode tv-barcode--l"></div>
+      <div class="tv-barcode tv-barcode--r"></div>
+      <div class="tv-panel">
+        <p class="tv-msg">IHSAN.TV</p>
+        <div class="tv-progress"><div class="tv-progress-fill" id="tvFill"></div></div>
+        <p class="tv-skip">CLICK TO SKIP</p>
+      </div>
+      <div class="tv-scanlines"></div>
+      <div class="tv-vignette"></div>
+    </div>
+  </div>
+
+  <script src="js/media.js?v=7"></script>
+  <script src="js/data.js?v=8"></script>
+  <script src="js/fluid.js?v=7"></script>
+  <script src="js/sfx.js?v=9"></script>
+  <script src="js/bgm.js?v=8"></script>
+  <script src="js/main.js?v=10"></script>
+</body>
+</html>

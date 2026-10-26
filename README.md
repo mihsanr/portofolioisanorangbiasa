@@ -26,7 +26,8 @@ Upload seluruh isi folder `site/` ke Netlify / Vercel / GitHub Pages / Cloudflar
 Tidak ada konfigurasi khusus. Total ±44 MB (39 MB video).
 
 ## Struktur
-- `index.html` — halaman utama: hero, Channel Guide (8 proyek), marquee klien, Journey (CV), skills, kontak.
+- `index.html` — root ala linktree (@isanorgbiasa): avatar, ikon sosmed, kartu link (portfolio, free tools, donate, req lagu, next up, TikTok, IG, product). CSS inline, tanpa preloader/BGM supaya cepat dibuka dari bio. Link lama `/#projects` dsb otomatis dialihkan ke `work.html`.
+- `work.html` — portofolio (dulu `index.html`): hero, Channel Guide (8 proyek), marquee klien, Journey (CV), skills, kontak.
 - `product.html` — layar "NO SIGNAL": MOTION — COMING SOON (CH 99 / Off Air).
 - `next.html` — "Next Up": ide proyek yang bisa di-Join Waitlist, urut dari waitlist terbanyak.
   Halaman baru sengaja ada di root supaya semua path relatif (`assets/`, `css/`, `js/`) tetap jalan.
@@ -41,7 +42,7 @@ Tidak ada konfigurasi khusus. Total ±44 MB (39 MB video).
 - `js/media.js` — hasil generate: dimensi gambar + placeholder blur (LQIP). Regenerate dengan skrip sharp bila menambah gambar.
 - `js/fluid.js` — simulasi fluid WebGL2 (efek liquid hover). Otomatis mati jika WebGL2 tidak ada atau `prefers-reduced-motion`.
 - `js/main.js` — render channel, modal galeri TV, kursor kustom, grain CRT, jam OSD.
-- `js/chrome.js` — "TV chrome" untuk subpage: frame CRT barrel, kursor, grain, status nav saat scroll. Hanya dimuat di subpage (index tetap pakai main.js).
+- `js/chrome.js` — "TV chrome" untuk subpage: frame CRT barrel, kursor, grain, status nav saat scroll. Hanya dimuat di subpage (work.html tetap pakai main.js).
 - `js/sfx.js`, `js/bgm.js` — SFX & BGM, dipakai semua halaman. State BGM di localStorage `ihsan.bgm`.
 - `js/waitlist-data.js` — daftar ide Next Up (`id`, `title`, `type`, `price`, `desc`, `status`: voting | in_production | done, `seed`).
 - `js/waitlist.js` — render & Join Waitlist. Semua akses data lewat objek `store` (`list`, `join`, `hasJoined`).
