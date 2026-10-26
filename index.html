@@ -10,7 +10,7 @@
   <meta property="og:description" content="Portofolio, free tools, donate, request lagu, TikTok, Instagram.">
   <meta property="og:type" content="website">
   <meta property="og:image" content="assets/img/avatar.webp">
-  <meta name="theme-color" content="#00d3d6">
+  <meta name="theme-color" content="#0000FF">
   <link rel="icon" href="assets/favicon.png" type="image/png">
   <link rel="apple-touch-icon" href="assets/favicon.png">
   <script>
@@ -20,283 +20,291 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="preconnect" href="https://media.giphy.com">
-  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;900&family=Space+Grotesk:wght@400;500;600;700;800&family=VT323&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css?v=10">
+  <script src="js/theme.js?v=10"></script>
   <style>
-    :root {
-      --bg: #00d3d6;          /* tosca terang kolom */
-      --bg-dots: #00a2a5;     /* halftone */
-      --bg-outer: #00777a;    /* di luar kolom (desktop) */
-      --card: #084343;
-      --ink: #031818;
-      --text: #ffffff;
-      --head: #140202;
-      --col: 100%;
-      --pad: 1.25rem;
-    }
-    /* Skala ikut resolusi: 16px di HP & laptop kecil, naik pelan sampai 24px di layar 4K */
-    html { font-size: 16px; -webkit-text-size-adjust: 100%; }
+    /* ===== Link-in-bio: gaya porto (biru, putih, CRT) + tombol ala Linktree ===== */
+    :root { --col: 100%; --gut: 24px; }
+    /* Skala ikut resolusi: 16px di HP & laptop, naik pelan sampai 24px di layar 4K */
     @media (min-width: 640px) {
       html { font-size: clamp(16px, calc(8px + 0.55vw), 24px); }
-      :root { --col: clamp(560px, 38vw, 900px); --pad: 1.8rem; }
+      :root { --col: clamp(520px, 38vw, 900px); --gut: 0px; }
     }
-    *, *::before, *::after { box-sizing: border-box; }
-    body {
-      margin: 0;
-      min-height: 100vh;
-      background: var(--bg-outer);
-      font-family: "Space Mono", ui-monospace, monospace;
-      color: var(--text);
-      -webkit-font-smoothing: antialiased;
-    }
-    a { color: inherit; text-decoration: none; }
-    img { display: block; }
 
-    /* ===== Kolom utama + tekstur halftone "netes" ===== */
-    .page {
-      position: relative;
+    .lt {
+      position: relative; z-index: 1;
       width: var(--col);
       margin: 0 auto;
+      padding: 56px var(--gut) 72px;
       min-height: 100vh;
-      background: var(--bg);
-      overflow: hidden;
-      isolation: isolate;
     }
-    @media (min-width: 640px) {
-      .page { margin-top: 1.25rem; min-height: calc(100vh - 1.25rem); border-radius: 1.5rem 1.5rem 0 0; box-shadow: 0 0 0 1px rgba(0,0,0,.08), 0 30px 80px rgba(0,0,0,.25); }
-    }
-    .page::before {
-      content: "";
-      position: absolute;
-      inset: 0;
-      z-index: -1;
-      background-image: radial-gradient(circle, var(--bg-dots) 0 2px, transparent 2.5px);
-      background-size: 6px 6px;
-      -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='1000'%3E%3Cfilter id='f' x='0' y='0' width='100%25' height='100%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.011 0.0022' numOctaves='3' seed='11' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  22 0 0 0 -10.6'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23f)'/%3E%3C/svg%3E");
-              mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='1000'%3E%3Cfilter id='f' x='0' y='0' width='100%25' height='100%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.011 0.0022' numOctaves='3' seed='11' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  22 0 0 0 -10.6'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23f)'/%3E%3C/svg%3E");
-      -webkit-mask-size: 100% auto; mask-size: 100% auto;
-      -webkit-mask-repeat: repeat-y; mask-repeat: repeat-y;
-    }
+    @media (min-width: 769px) { .lt { padding-top: 84px; padding-bottom: 96px; } }
 
-    .inner { padding: 1.1rem var(--pad) 3rem; }
-
-    /* ===== Tombol pojok ===== */
-    .topbar { display: flex; justify-content: space-between; align-items: center; height: 2.6rem; }
-    .round-btn {
+    .lt-share {
+      position: absolute; top: 24px; right: var(--gut);
       width: 2.6rem; height: 2.6rem;
       display: grid; place-items: center;
-      border: 0; border-radius: 0.75rem;
-      background: rgba(8, 67, 67, .55);
-      color: #fff; cursor: pointer;
-      transition: background .2s, transform .2s;
+      color: #fff; background: transparent;
+      border: 2px solid var(--line); border-radius: 12px;
+      transition: background .25s, color .25s, border-color .25s;
     }
-    .round-btn:hover { background: rgba(8, 67, 67, .85); transform: scale(1.06); }
-    .round-btn svg { width: 1.15rem; height: 1.15rem; }
-    .round-btn:focus-visible, .card:focus-visible, .socials a:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
+    @media (min-width: 769px) { .lt-share { top: 52px; } }
+    .lt-share:hover { background: #fff; color: var(--blue); border-color: #fff; }
+    .lt-share svg { width: 1.1rem; height: 1.1rem; }
 
-    /* ===== Profil ===== */
-    .profile { position: relative; text-align: center; margin-top: 1.4rem; }
-    .avatar {
-      width: 6rem; height: 6rem; margin: 0 auto;
+    /* profil */
+    .lt-profile { text-align: center; }
+    .lt-avatar {
+      width: 6.25rem; height: 6.25rem; margin: 0 auto;
       border-radius: 50%; object-fit: cover;
-      background: var(--card);
+      border: 3px solid #fff;
+      background: var(--ink);
     }
-    .handle { margin: 1rem 0 0; font-size: 1.5rem; font-weight: 400; color: var(--head); letter-spacing: .02em; }
-    .tagline { display: inline-block; margin-top: .3rem; font-size: 1rem; color: var(--head); }
-    .tagline:hover { text-decoration: underline; text-underline-offset: 3px; }
-    .socials { display: flex; justify-content: center; gap: 1.25rem; margin-top: 1rem; }
-    .socials a { display: grid; place-items: center; width: 2.4rem; height: 2.4rem; color: var(--head); transition: transform .2s; }
-    .socials a:hover { transform: translateY(-3px) rotate(-6deg); }
-    .socials svg { width: 1.75rem; height: 1.75rem; }
+    .lt-handle {
+      margin-top: 1.1rem;
+      font-family: var(--font-display); font-weight: 900;
+      font-size: min(3.6rem, 13.5vw);
+      line-height: .85; letter-spacing: -0.005em; text-transform: uppercase;
+      color: var(--white-85);
+    }
+    .lt-name {
+      margin-top: .6rem;
+      font-family: var(--font-crt); font-size: 1.3rem; letter-spacing: .08em; text-transform: uppercase;
+      color: #fff;
+    }
+    .lt-contact {
+      display: inline-block; margin-top: .2rem;
+      font-size: .72rem; font-weight: 700; letter-spacing: .16em; text-transform: uppercase;
+      color: var(--white-85);
+      border-bottom: 1px solid rgba(255, 255, 255, .45);
+      transition: color .2s, border-color .2s;
+    }
+    .lt-contact:hover { color: #fff; border-color: #fff; }
+    .lt-socials { display: flex; justify-content: center; gap: 1rem; margin-top: 1.1rem; }
+    .lt-socials a {
+      width: 2.75rem; height: 2.75rem;
+      display: grid; place-items: center;
+      border: 2px solid var(--line); border-radius: 50%;
+      color: #fff;
+      transition: background .25s, color .25s, border-color .25s, transform .25s var(--ease-out);
+    }
+    .lt-socials a:hover { background: #fff; color: var(--blue); border-color: #fff; transform: translateY(-3px); }
+    .lt-socials svg { width: 1.2rem; height: 1.2rem; }
 
-    /* ===== Kartu link ===== */
-    .links { list-style: none; margin: 2rem 0 0; padding: 0; display: grid; gap: 1rem; }
-    .links li { position: relative; }
-    .card {
+    /* tombol ala Linktree */
+    .lt-links { list-style: none; margin-top: 2.25rem; display: grid; gap: .9rem; }
+    .lt-card {
       position: relative;
       display: grid;
       grid-template-columns: 3.1rem 1fr 3.1rem;
-      align-items: center;
-      gap: .5rem;
+      align-items: center; gap: .5rem;
       min-height: 4.25rem;
       padding: .5rem;
-      background: var(--card);
-      border: 2px solid var(--ink);
-      border-radius: 1rem;
-      box-shadow: 3px 4px 0 0 var(--ink);
-      transition: transform .15s ease, box-shadow .15s ease;
+      color: #fff;
+      background: rgba(28, 25, 23, .30);
+      -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+      border: 2px solid rgba(255, 255, 255, .28);
+      border-radius: 16px;
+      box-shadow: 4px 5px 0 0 var(--ink);
+      transition: background .25s ease, color .25s ease, border-color .25s ease, transform .2s var(--ease-out), box-shadow .2s var(--ease-out);
     }
-    .card:hover { transform: translate(-2px, -2px); box-shadow: 5px 6px 0 0 var(--ink); }
-    .card:active { transform: translate(3px, 4px); box-shadow: 0 0 0 0 var(--ink); }
-    .thumb {
+    .lt-card:hover, .lt-card:focus-visible {
+      background: #fff; color: #0d0d0d; border-color: #fff;
+      transform: translate(-2px, -2px); box-shadow: 6px 7px 0 0 var(--ink);
+    }
+    .lt-card:active { transform: translate(4px, 5px); box-shadow: 0 0 0 0 var(--ink); }
+    .lt-thumb {
       width: 3.1rem; height: 3.1rem;
-      border-radius: .6rem; object-fit: cover;
-      background: #0d5555;
+      border-radius: 10px; object-fit: cover;
+      background: rgba(255, 255, 255, .12);
     }
-    .glyph { display: grid; place-items: center; font-size: 1.5rem; line-height: 1; }
-    .label { text-align: center; font-weight: 700; font-size: 1rem; line-height: 1.3; text-transform: uppercase; padding: .35rem 0; }
-    .label small { display: block; font-weight: 400; font-size: .72rem; opacity: .75; text-transform: none; margin-top: .15rem; }
-    .dots { justify-self: center; opacity: .7; font-size: 1rem; letter-spacing: -.05em; }
+    .lt-glyph {
+      display: grid; place-items: center;
+      font-family: var(--font-crt); font-size: 1.6rem; line-height: 1;
+      border: 1px solid rgba(255, 255, 255, .45); background: transparent;
+    }
+    .lt-card:hover .lt-glyph, .lt-card:focus-visible .lt-glyph { border-color: #0d0d0d; }
+    .lt-label {
+      text-align: center; padding: .35rem 0;
+      font-size: .9rem; font-weight: 700; line-height: 1.3; letter-spacing: .08em; text-transform: uppercase;
+    }
+    .lt-label small {
+      display: block; margin-top: .1rem;
+      font-family: var(--font-crt); font-weight: 400; font-size: 1.05rem; letter-spacing: .03em;
+      opacity: .75;
+    }
+    .lt-arrow { justify-self: center; font-family: var(--font-crt); font-size: 1.4rem; line-height: 1; opacity: .8; }
 
     /* kartu besar (featured) */
-    .card--feature { grid-template-columns: 3.1rem 1fr 3.1rem; grid-template-rows: auto auto; padding: 1rem 1rem .5rem; }
-    .card--feature .hero {
+    .lt-card--feature { grid-template-rows: auto auto; padding: .9rem .9rem .45rem; }
+    .lt-hero {
       grid-column: 1 / -1;
-      width: 100%; aspect-ratio: 16 / 9;
-      object-fit: cover;
-      border-radius: .6rem;
-      background: #0d5555;
+      width: 100%; aspect-ratio: 16 / 9; object-fit: cover;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, .12);
     }
-    .card--feature .label { grid-column: 2; padding: .75rem 0 .35rem; }
-    .card--feature .dots { grid-column: 3; }
+    .lt-card--feature .lt-label { grid-column: 2; padding-top: .7rem; }
+    .lt-card--feature .lt-arrow { grid-column: 3; }
+    .lt-new {
+      position: absolute; top: 1.4rem; left: 1.4rem;
+      font-family: var(--font-crt); font-size: 1.25rem; letter-spacing: .08em; line-height: 1;
+      padding: 6px 10px 5px;
+      background: #fff; color: var(--blue);
+      border-radius: 2px;
+      box-shadow: 3px 3px 0 var(--ink);
+    }
+    .lt-card--feature:hover .lt-new { background: var(--blue); color: #fff; }
 
-    /* ===== Stiker ===== */
-    .sticker { position: absolute; z-index: 3; pointer-events: none; filter: drop-shadow(2px 3px 0 rgba(3,24,24,.35)); }
-    .sticker--cursor { width: 2.8rem; right: 16%; top: 10.6rem; animation: nudge 3.2s ease-in-out infinite; }
-    .sticker--eyes { width: 3rem; right: 2.2rem; top: -1.5rem; animation: blink 4s infinite; transform-origin: center; }
-    .sticker--new { width: 5.6rem; left: -1.6rem; top: 42%; animation: spin 9s linear infinite; }
-    .sticker--zap { width: 3rem; right: .6rem; top: -1rem; animation: pulse 1.6s ease-in-out infinite; }
-    .sticker--peace { left: 5.6rem; bottom: -1.3rem; font-size: 2rem; transform: rotate(-12deg); filter: drop-shadow(0 0 0 #fff) drop-shadow(2px 0 0 #fff) drop-shadow(-2px 0 0 #fff) drop-shadow(0 2px 0 #fff) drop-shadow(0 -2px 0 #fff); }
-    @keyframes nudge { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(-6px, -4px); } }
-    @keyframes blink { 0%, 92%, 100% { transform: scaleY(1); } 95% { transform: scaleY(.1); } }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    @keyframes pulse { 0%, 100% { transform: scale(1) rotate(0); } 50% { transform: scale(1.15) rotate(12deg); } }
-    @media (prefers-reduced-motion: reduce) { .sticker { animation: none !important; } }
-    @media (max-width: 639px) {
-      .sticker--cursor { right: 9%; }
-      .label { font-size: .9rem; }
+    .lt-foot {
+      margin-top: 2.5rem; text-align: center;
+      font-family: var(--font-crt); font-size: 1.15rem; letter-spacing: .08em; text-transform: uppercase;
+      color: var(--white-85);
     }
+    .lt-foot a { border-bottom: 1px solid rgba(255, 255, 255, .45); }
+    .lt-foot a:hover { color: #fff; border-color: #fff; }
 
-    /* ===== Footer ===== */
-    .foot { margin-top: 3rem; text-align: center; font-size: .78rem; color: var(--head); }
-    .foot a { text-decoration: underline; text-underline-offset: 3px; }
-    .toast {
-      position: fixed; left: 50%; bottom: 1.5rem; z-index: 10;
-      transform: translate(-50%, 1rem); opacity: 0;
-      background: var(--card); color: #fff;
-      border: 2px solid var(--ink); border-radius: 999px; box-shadow: 3px 4px 0 var(--ink);
-      padding: .55rem 1.1rem; font-size: .85rem; font-weight: 700;
-      transition: opacity .2s, transform .2s; pointer-events: none;
+    .lt-toast {
+      position: fixed; left: 50%; bottom: 40px; z-index: 9990;
+      transform: translate(-50%, 12px); opacity: 0; pointer-events: none;
+      font-family: var(--font-crt); font-size: 1.3rem; letter-spacing: .08em;
+      padding: 8px 14px 6px;
+      background: #fff; color: var(--blue);
+      border-radius: 2px; box-shadow: 3px 3px 0 var(--ink);
+      transition: opacity .2s, transform .2s;
     }
-    .toast.show { opacity: 1; transform: translate(-50%, 0); }
+    .lt-toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+    /* ghost header kanan cuma di layar lebar supaya tak menabrak kolom */
+    @media (max-width: 1199px) { .page-header { display: none; } }
   </style>
 </head>
-<body>
-  <div class="page">
-    <div class="inner">
-      <div class="topbar">
-        <a class="round-btn" href="work.html" aria-label="Buka portofolio">
-          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M10.6 2h2.8v6.2l4.4-4.4 2 2-4.4 4.4H21.6v2.8h-6.2l4.4 4.4-2 2-4.4-4.4V22h-2.8v-6.2l-4.4 4.4-2-2 4.4-4.4H2.4V10.6h6.2L4.2 6.2l2-2 4.4 4.4z"/></svg>
-        </a>
-        <button class="round-btn" id="shareBtn" type="button" aria-label="Bagikan halaman ini">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 8l5-5 5 5M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg>
-        </button>
-      </div>
+<body class="subpage">
+  <a href="#links" class="skip-link">Skip to links</a>
 
-      <header class="profile">
-        <img class="avatar" src="assets/img/avatar.webp" alt="Avatar isanorgbiasa" width="96" height="96">
-        <h1 class="handle">@isanorgbiasa</h1>
-        <a class="tagline" href="work.html#contact">Contact on Website</a>
-        <nav class="socials" aria-label="Sosial media">
-          <a href="https://www.tiktok.com/@isanorgbiasa" target="_blank" rel="noopener" aria-label="TikTok">
-            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16.6 2h-3.4v13.4a2.9 2.9 0 1 1-2.9-2.9c.3 0 .6 0 .9.1V9.1a6.4 6.4 0 1 0 5.4 6.3V8.6a8 8 0 0 0 4.7 1.5V6.7a4.7 4.7 0 0 1-4.7-4.7z"/></svg>
-          </a>
-          <a href="https://www.instagram.com/isanorgbiasa" target="_blank" rel="noopener" aria-label="Instagram">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4.2"/><circle cx="17.4" cy="6.6" r="1.1" fill="currentColor" stroke="none"/></svg>
-          </a>
-          <a href="mailto:muhammadihsanrizka186@gmail.com" aria-label="Email">
-            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M2.5 5.5A1.5 1.5 0 0 1 4 4h16a1.5 1.5 0 0 1 1.5 1.5v.6L12 12.4 2.5 6.1zM2.5 8.5V18.5A1.5 1.5 0 0 0 4 20h16a1.5 1.5 0 0 0 1.5-1.5V8.5L12 14.8z"/></svg>
-          </a>
-        </nav>
-        <!-- stiker kursor pixel -->
-        <svg class="sticker sticker--cursor" viewBox="0 0 12 18" shape-rendering="crispEdges" aria-hidden="true">
-          <path fill="#031818" d="M0 0h1v1H0zM0 1h2v1H0zM0 2h3v1H0zM0 3h4v1H0zM0 4h5v1H0zM0 5h6v1H0zM0 6h7v1H0zM0 7h8v1H0zM0 8h9v1H0zM0 9h10v1H0zM0 10h11v1H0zM0 11h12v1H0zM0 12h7v1H0zM0 13h3v1H0zM4 13h4v1H4zM0 14h2v1H0zM5 14h3v1H5zM0 15h1v1H0zM5 15h4v1H5zM6 16h3v1H6zM6 17h2v1H6z"/>
-          <path fill="#fff" d="M1 2h1v1H1zM1 3h2v1H1zM1 4h3v1H1zM1 5h4v1H1zM1 6h5v1H1zM1 7h6v1H1zM1 8h7v1H1zM1 9h8v1H1zM1 10h9v1H1zM1 11h5v1H1zM1 12h2v1H1zM4 12h2v1H4zM1 13h1v1H1zM5 13h2v1H5zM6 14h1v1H6zM6 15h2v1H6zM7 16h1v1H7z"/>
-        </svg>
-      </header>
-
-      <ul class="links" role="list">
-        <li>
-          <a class="card" href="work.html">
-            <img class="thumb" src="https://media.giphy.com/media/774uK11mxE3W0cjE8L/200w.webp" alt="" loading="lazy">
-            <span class="label">Portfolio Website | Kenalan di Portfolio🤤</span>
-            <span class="dots" aria-hidden="true">⋮</span>
-          </a>
-        </li>
-        <li>
-          <a class="card" href="tools.html">
-            <span class="thumb glyph" aria-hidden="true">🛠️</span>
-            <span class="label">Free Tools<small>teleprompter · bpm · timecode</small></span>
-            <span class="dots" aria-hidden="true">⋮</span>
-          </a>
-        </li>
-        <li>
-          <a class="card" href="https://sociabuzz.com/mihsanr/support" target="_blank" rel="noopener">
-            <img class="thumb" src="https://media.giphy.com/media/U1Yp8zc6pSmRO/200w.webp" alt="" loading="lazy">
-            <span class="label">Donate</span>
-            <span class="dots" aria-hidden="true">⋮</span>
-          </a>
-          <svg class="sticker sticker--eyes" viewBox="0 0 48 32" aria-hidden="true">
-            <ellipse cx="13" cy="16" rx="11" ry="14" fill="#fff8e7" stroke="#031818" stroke-width="2.5"/>
-            <ellipse cx="35" cy="16" rx="11" ry="14" fill="#fff8e7" stroke="#031818" stroke-width="2.5"/>
-            <ellipse cx="11" cy="17" rx="6.5" ry="9" fill="#5a3410"/>
-            <ellipse cx="33" cy="17" rx="6.5" ry="9" fill="#5a3410"/>
-            <circle cx="9" cy="13" r="2.2" fill="#fff"/><circle cx="31" cy="13" r="2.2" fill="#fff"/>
-          </svg>
-        </li>
-        <li>
-          <a class="card card--feature" href="https://tako.id/isanorgbiasa" target="_blank" rel="noopener">
-            <img class="hero" src="https://media.giphy.com/media/eRvQQpENFNNwjsQlL8/giphy.webp" alt="" loading="lazy">
-            <span class="label">Req Lagu Masukin Sendiri</span>
-            <span class="dots" aria-hidden="true">⋮</span>
-          </a>
-          <svg class="sticker sticker--new" viewBox="0 0 100 100" aria-hidden="true">
-            <polygon fill="#d4ec2c" stroke="#031818" stroke-width="2.5" stroke-linejoin="round" points="50,2 57,16 70,6 71,22 86,16 81,31 97,32 87,44 99,54 84,60 92,74 76,74 78,90 64,84 58,98 50,86 42,98 36,84 22,90 24,74 8,74 16,60 1,54 13,44 3,32 19,31 14,16 29,22 30,6 43,16"/>
-            <text x="50" y="58" text-anchor="middle" font-family="Arial Black, Arial, sans-serif" font-size="22" font-weight="900" fill="#031818" transform="rotate(-24 50 50)">NEW</text>
-          </svg>
-        </li>
-        <li>
-          <a class="card" href="next.html">
-            <span class="thumb glyph" aria-hidden="true">🗳️</span>
-            <span class="label">Next Up<small>vote ide konten berikutnya</small></span>
-            <span class="dots" aria-hidden="true">⋮</span>
-          </a>
-        </li>
-        <li>
-          <a class="card" href="https://www.tiktok.com/@isanorgbiasa" target="_blank" rel="noopener">
-            <img class="thumb" src="https://media.giphy.com/media/pY8jLmZw0ElqvVeRH4/200w.webp" alt="" loading="lazy">
-            <span class="label">TikTok</span>
-            <span class="dots" aria-hidden="true">⋮</span>
-          </a>
-          <svg class="sticker sticker--zap" viewBox="0 0 48 48" aria-hidden="true">
-            <path fill="#1d2bff" stroke="#031818" stroke-width="1.5" stroke-linejoin="round" d="M24 1l4.5 16.5L45 24l-16.5 4.5L24 47l-4.5-18.5L3 24l16.5-6.5z"/>
-            <path fill="#fff" d="M24 12l2.2 9.8L36 24l-9.8 2.2L24 36l-2.2-9.8L12 24l9.8-2.2z"/>
-          </svg>
-          <span class="sticker sticker--peace" aria-hidden="true">✌️</span>
-        </li>
-        <li>
-          <a class="card" href="https://www.instagram.com/isanorgbiasa" target="_blank" rel="noopener">
-            <img class="thumb" src="https://media.giphy.com/media/93mS3A87wfmOySC29W/200w.webp" alt="" loading="lazy">
-            <span class="label">Instagram<small>@isanorgbiasa</small></span>
-            <span class="dots" aria-hidden="true">⋮</span>
-          </a>
-        </li>
-        <li>
-          <a class="card" href="product.html">
-            <span class="thumb glyph" aria-hidden="true">📦</span>
-            <span class="label">Product<small>coming soon</small></span>
-            <span class="dots" aria-hidden="true">⋮</span>
-          </a>
-        </li>
-      </ul>
-
-      <footer class="foot">
-        <a href="work.html">isanorgbiasa.com/work</a> · © 2026 Muhammad Ihsan Rizka
-      </footer>
-    </div>
+  <!-- ===== BACKGROUND FLUID ===== -->
+  <div class="bg-layer" aria-hidden="true">
+    <canvas id="fluid"></canvas>
   </div>
 
-  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <!-- ghost page header, fixed right -->
+  <div class="page-header" aria-hidden="true">
+    <div class="page-header-nr">00 LINKS</div>
+    <div class="page-header-title">Link<br>In Bio</div>
+  </div>
 
+  <main class="lt" id="top">
+    <button class="lt-share" id="shareBtn" type="button" aria-label="Bagikan halaman ini">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 8l5-5 5 5M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg>
+    </button>
+
+    <header class="lt-profile">
+      <img class="lt-avatar" src="assets/img/avatar.webp" alt="Avatar isanorgbiasa" width="100" height="100">
+      <h1 class="lt-handle">@isanorgbiasa</h1>
+      <p class="lt-name">Muhammad Ihsan Rizka — Nomaden</p>
+      <a class="lt-contact" href="work.html#contact">Contact on Website</a>
+      <nav class="lt-socials" aria-label="Sosial media">
+        <a href="https://www.tiktok.com/@isanorgbiasa" target="_blank" rel="noopener" aria-label="TikTok">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16.6 2h-3.4v13.4a2.9 2.9 0 1 1-2.9-2.9c.3 0 .6 0 .9.1V9.1a6.4 6.4 0 1 0 5.4 6.3V8.6a8 8 0 0 0 4.7 1.5V6.7a4.7 4.7 0 0 1-4.7-4.7z"/></svg>
+        </a>
+        <a href="https://www.instagram.com/isanorgbiasa" target="_blank" rel="noopener" aria-label="Instagram">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4.2"/><circle cx="17.4" cy="6.6" r="1.1" fill="currentColor" stroke="none"/></svg>
+        </a>
+        <a href="mailto:muhammadihsanrizka186@gmail.com" aria-label="Email">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M2.5 5.5A1.5 1.5 0 0 1 4 4h16a1.5 1.5 0 0 1 1.5 1.5v.6L12 12.4 2.5 6.1zM2.5 8.5V18.5A1.5 1.5 0 0 0 4 20h16a1.5 1.5 0 0 0 1.5-1.5V8.5L12 14.8z"/></svg>
+        </a>
+      </nav>
+    </header>
+
+    <ul class="lt-links" id="links" role="list">
+      <li>
+        <a class="lt-card" href="work.html">
+          <img class="lt-thumb" src="https://media.giphy.com/media/774uK11mxE3W0cjE8L/200w.webp" alt="" loading="lazy">
+          <span class="lt-label">Portfolio Website | Kenalan di Portfolio🤤</span>
+          <span class="lt-arrow" aria-hidden="true">↗&#xFE0E;</span>
+        </a>
+      </li>
+      <li>
+        <a class="lt-card" href="tools.html">
+          <span class="lt-thumb lt-glyph" aria-hidden="true">FT</span>
+          <span class="lt-label">Free Tools<small>teleprompter · bpm · timecode</small></span>
+          <span class="lt-arrow" aria-hidden="true">↗&#xFE0E;</span>
+        </a>
+      </li>
+      <li>
+        <a class="lt-card" href="https://sociabuzz.com/mihsanr/support" target="_blank" rel="noopener">
+          <img class="lt-thumb" src="https://media.giphy.com/media/U1Yp8zc6pSmRO/200w.webp" alt="" loading="lazy">
+          <span class="lt-label">Donate</span>
+          <span class="lt-arrow" aria-hidden="true">↗&#xFE0E;</span>
+        </a>
+      </li>
+      <li>
+        <a class="lt-card lt-card--feature" href="https://tako.id/isanorgbiasa" target="_blank" rel="noopener">
+          <img class="lt-hero" src="https://media.giphy.com/media/eRvQQpENFNNwjsQlL8/giphy.webp" alt="" loading="lazy">
+          <span class="lt-new">NEW</span>
+          <span class="lt-label">Req Lagu Masukin Sendiri</span>
+          <span class="lt-arrow" aria-hidden="true">↗&#xFE0E;</span>
+        </a>
+      </li>
+      <li>
+        <a class="lt-card" href="next.html">
+          <span class="lt-thumb lt-glyph" aria-hidden="true">NX</span>
+          <span class="lt-label">Next Up<small>vote ide konten</small></span>
+          <span class="lt-arrow" aria-hidden="true">↗&#xFE0E;</span>
+        </a>
+      </li>
+      <li>
+        <a class="lt-card" href="https://www.tiktok.com/@isanorgbiasa" target="_blank" rel="noopener">
+          <img class="lt-thumb" src="https://media.giphy.com/media/pY8jLmZw0ElqvVeRH4/200w.webp" alt="" loading="lazy">
+          <span class="lt-label">TikTok</span>
+          <span class="lt-arrow" aria-hidden="true">↗&#xFE0E;</span>
+        </a>
+      </li>
+      <li>
+        <a class="lt-card" href="https://www.instagram.com/isanorgbiasa" target="_blank" rel="noopener">
+          <img class="lt-thumb" src="https://media.giphy.com/media/93mS3A87wfmOySC29W/200w.webp" alt="" loading="lazy">
+          <span class="lt-label">Instagram<small>@isanorgbiasa</small></span>
+          <span class="lt-arrow" aria-hidden="true">↗&#xFE0E;</span>
+        </a>
+      </li>
+      <li>
+        <a class="lt-card" href="product.html">
+          <span class="lt-thumb lt-glyph" aria-hidden="true">PR</span>
+          <span class="lt-label">Product<small>coming soon</small></span>
+          <span class="lt-arrow" aria-hidden="true">↗&#xFE0E;</span>
+        </a>
+      </li>
+    </ul>
+
+    <p class="lt-foot"><a href="work.html">isanorgbiasa.com/work</a> · © 2026 Muhammad Ihsan Rizka</p>
+  </main>
+
+  <div class="lt-toast" id="toast" role="status" aria-live="polite"></div>
+
+  <!-- ===== CUSTOM CURSOR ===== -->
+  <div class="cursor" aria-hidden="true">
+    <div class="cursor-ring" id="cursorRing"></div>
+    <div class="cursor-dot" id="cursorDot"></div>
+  </div>
+
+  <!-- ===== CRT / TV OVERLAY ===== -->
+  <div class="page-tv-overlay" aria-hidden="true">
+    <div class="page-scanlines"></div>
+    <canvas class="page-grain" id="grain"></canvas>
+    <div class="page-scanners">
+      <span style="--dur:10s;--op:0.10"></span>
+      <span style="--dur:13s;--del:2s;--op:0.07"></span>
+      <span style="--dur:17s;--del:5s;--op:0.04"></span>
+    </div>
+    <div class="page-inner-glow"></div>
+    <div class="page-vignette"></div>
+  </div>
+  <div class="crt-bevel" id="crtBevel" aria-hidden="true"></div>
+  <div class="crt-frame" id="crtFrame" aria-hidden="true"></div>
+  <svg class="crt-stroke" id="crtStroke" aria-hidden="true"></svg>
+
+  <script src="js/fluid.js?v=7"></script>
+  <script src="js/chrome.js?v=8"></script>
   <script>
     (function () {
       var btn = document.getElementById('shareBtn');
