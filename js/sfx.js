@@ -5,27 +5,28 @@
   // assets sit next to js/, so pages in subfolders (tools/) resolve them too
   const ROOT = new URL('../', document.currentScript.src).href;
 
+  // the hover files are level-matched, so they all share this one volume
+  const HOVER_VOLUME = 0.02;
+
   // name -> volume
   const SOUNDS = {
-    'hover-nav': 0.35, 'click-nav': 0.4,
-    'hover-row': 0.3, 'click-row': 0.45,
+    'hover-nav': HOVER_VOLUME, 'click-nav': 0.4,
+    'hover-row': HOVER_VOLUME, 'click-row': 0.45,
     'close-modal': 0.4,
-    'hover-card': 0.35, 'click-card': 0.5, 'close-profile': 0.45,
-    'hover-journey': 0.3,
-    'hover-cv': 0.4, 'click-cv': 0.4,
-    'hover-contact': 0.35, 'click-contact': 0.5,
-    'hover-skill': 0.4,
-    'hover-footer': 0.3, 'click-footer': 0.4,
+    'hover-card': HOVER_VOLUME, 'click-card': 0.5, 'close-profile': 0.45,
+    'hover-journey': HOVER_VOLUME,
+    'hover-cv': HOVER_VOLUME, 'click-cv': 0.4,
+    'hover-contact': HOVER_VOLUME, 'click-contact': 0.5,
+    'hover-skill': HOVER_VOLUME,
+    'hover-footer': HOVER_VOLUME, 'click-footer': 0.4,
     'click-doc': 0.45,
-    'hover-player': 0.3, 'click-player': 0.4,
+    'hover-player': HOVER_VOLUME, 'click-player': 0.4,
   };
-
-  // hover sounds play at this share of their volume (clicks stay as listed)
-  const HOVER_GAIN = 0.6;
 
   const cache = {};
   let unlocked = false;
-  const get = (n) => cache[n] || (cache[n] = Object.assign(new Audio(`${ROOT}assets/sfx/${n}.mp3`), { preload: 'auto' }));
+  // ?v= busts the browser cache when the sound files are replaced
+  const get = (n) => cache[n] || (cache[n] = Object.assign(new Audio(`${ROOT}assets/sfx/${n}.mp3?v=2`), { preload: 'auto' }));
 
   const last = {};
   function play(n) {
@@ -36,7 +37,7 @@
     const a = get(n);
     try {
       a.currentTime = 0;
-      a.volume = SOUNDS[n] * (n.startsWith('hover-') ? HOVER_GAIN : 1);
+      a.volume = SOUNDS[n];
       a.play().catch(() => {});
     } catch (e) { /* ignore */ }
   }
