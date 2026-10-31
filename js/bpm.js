@@ -116,6 +116,7 @@
 
     reverse();
     lamps();
+    loopNote();
     if (playing) restartClock();
   }
 
@@ -260,6 +261,64 @@
     try { await navigator.clipboard.writeText(frames); } catch (e) { ok = false; }
     copyBtn.textContent = ok ? 'Copied ✓' : 'Copy failed';
     setTimeout(() => { copyBtn.textContent = 'Copy frames'; }, 1400);
+  });
+
+  /* ── download loop: PCM WAV written by hand, since MP3 encoders pad the ends and break the loop ── */
+  const LOOP_MAX = 10, LOOP_RATE = 48000; // seconds; 48 kHz is the video-editing norm
+  const dlBtn = $('loopDl');
+
+  // most whole bars within LOOP_MAX; if one bar is longer, whole beats without an accent
+  function loopPlan() {
+    const spb = 60 / state.bpm;
+    const bars = Math.floor(LOOP_MAX / (spb * state.bpb) + 1e-9);
+    const beats = bars ? bars * state.bpb : Math.floor(LOOP_MAX / spb + 1e-9);
+    return { bars, beats, samples: Math.round(beats * spb * LOOP_RATE) };
+  }
+
+  function loopNote() {
+    const { bars, beats, samples } = loopPlan();
+    const secs = (samples / LOOP_RATE).toFixed(2);
+    $('loopInfo').textContent = bars
+      ? `Loop file: ${bars} bar${bars > 1 ? 's' : ''} (${beats} beats), ${secs} s WAV. Repeats with no gap.`
+      : `Loop file: ${beats} beats, ${secs} s WAV. Repeats with no gap, but no accent: one ${state.bpb}-beat bar is over ${LOOP_MAX} s at this tempo.`;
+  }
+
+  // same click as the live metronome; it ends long before the next beat (50 ms vs 150 ms at 400 BPM)
+  function renderLoop() {
+    const { bars, beats, samples } = loopPlan();
+    const pcm = new Int16Array(samples);
+    const len = Math.round(0.05 * LOOP_RATE);
+    for (let i = 0; i < beats; i++) {
+      const accent = bars > 0 && i % state.bpb === 0;
+      const at = Math.round(i * samples / beats);
+      const peak = accent ? 0.5 : 0.28, hz = accent ? 1760 : 1100;
+      for (let n = 0; n < len; n++) {
+        const t = n / LOOP_RATE;
+        const env = t < 0.002 ? 0.0001 * (peak / 0.0001) ** (t / 0.002) : peak * (0.0001 / peak) ** ((t - 0.002) / 0.048);
+        pcm[at + n] = Math.round(32767 * env * Math.sin(2 * Math.PI * hz * t));
+      }
+    }
+    return pcm;
+  }
+
+  function wavBlob(pcm) {
+    const v = new DataView(new ArrayBuffer(44));
+    const tag = (at, s) => { for (let i = 0; i < 4; i++) v.setUint8(at + i, s.charCodeAt(i)); };
+    tag(0, 'RIFF'); v.setUint32(4, 36 + pcm.byteLength, true); tag(8, 'WAVE');
+    tag(12, 'fmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true); // PCM, mono
+    v.setUint32(24, LOOP_RATE, true); v.setUint32(28, LOOP_RATE * 2, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true);
+    tag(36, 'data'); v.setUint32(40, pcm.byteLength, true);
+    return new Blob([v.buffer, pcm], { type: 'audio/wav' });
+  }
+
+  dlBtn.addEventListener('click', () => {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(wavBlob(renderLoop()));
+    a.download = `metronome-${FC.num(state.bpm, 2)}bpm.wav`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    dlBtn.textContent = 'Downloaded ✓';
+    setTimeout(() => { dlBtn.textContent = 'Download loop'; }, 1400);
   });
 
   /* ── keys: T taps, Space plays (outside text fields) ── */

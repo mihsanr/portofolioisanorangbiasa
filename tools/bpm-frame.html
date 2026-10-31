@@ -140,12 +140,14 @@
             <div class="calc-chips">
               <button class="calc-btn calc-btn--main" id="metro" type="button" aria-pressed="false">▶&#xFE0E; Metronome<kbd aria-hidden="true">Space</kbd></button>
               <button class="calc-btn" id="copy" type="button">Copy frames</button>
+              <button class="calc-btn" id="loopDl" type="button" aria-describedby="loopInfo">Download loop</button>
             </div>
             <div class="calc-inline">
               <span id="barsLabel">Bars</span>
               <div class="calc-chips" id="barsChips" role="group" aria-labelledby="barsLabel"></div>
             </div>
           </div>
+          <p class="calc-note" id="loopInfo"></p>
           <div class="calc-tablewrap">
             <table class="calc-table">
               <thead>
@@ -226,6 +228,6 @@
   <script src="../js/bgm.js?v=8"></script>
   <script src="../js/chrome.js?v=7"></script>
   <script src="../js/framecore.js?v=1"></script>
-  <script src="../js/bpm.js?v=1"></script>
+  <script src="../js/bpm.js?v=2"></script>
 </body>
 </html>
