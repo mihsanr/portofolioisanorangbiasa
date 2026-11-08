@@ -92,14 +92,16 @@
   document.getElementById('bgmDown').addEventListener('click', () => step(-1));
   muteBtn.addEventListener('click', () => setMuted(!muted));
 
-  /* duck under project videos so tapes stay audible */
+  /* duck under project videos so tapes stay audible.
+     Muted previews (the Wall, data-no-duck) never duck the bed. */
+  const audible = (v) => v.tagName === 'VIDEO' && !v.muted && !('noDuck' in v.dataset);
   document.addEventListener('play', (e) => {
-    if (e.target.tagName !== 'VIDEO') return;
+    if (!audible(e.target)) return;
     ducked = true; applyVolume();
   }, true);
   const undock = (e) => {
     if (e.target.tagName !== 'VIDEO') return;
-    if ([...document.querySelectorAll('video')].some((v) => !v.paused && !v.ended)) return;
+    if ([...document.querySelectorAll('video')].some((v) => audible(v) && !v.paused && !v.ended)) return;
     ducked = false; applyVolume();
   };
   document.addEventListener('pause', undock, true);

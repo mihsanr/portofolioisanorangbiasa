@@ -14,17 +14,21 @@
     pre.classList.add('loaded');
     setTimeout(() => pre.remove(), 700);
   }
-  if (reduceMotion || !pre) { pre && pre.remove(); }
+  // once per tab session, never in front of a deep-linked tape, max ~1.2s
+  const deepTape = /^#tape\/[\w-]+/.test(location.hash);
+  let seen = false;
+  try { seen = sessionStorage.getItem('ihsan.pre') === '1'; sessionStorage.setItem('ihsan.pre', '1'); } catch (e) { /* storage blocked */ }
+  if (reduceMotion || !pre || seen || deepTape) { pre && pre.remove(); }
   else {
     let p = 0;
     const iv = setInterval(() => {
-      p = Math.min(100, p + 4 + Math.random() * 14);
+      p = Math.min(100, p + 8 + Math.random() * 16);
       fill.style.width = p.toFixed(0) + '%';
-      if (p >= 100) { clearInterval(iv); setTimeout(endPre, 260); }
-    }, 90);
+      if (p >= 100) { clearInterval(iv); setTimeout(endPre, 180); }
+    }, 70);
     pre.addEventListener('click', endPre);
     addEventListener('keydown', endPre, { once: true });
-    setTimeout(endPre, 4000); // failsafe
+    setTimeout(endPre, 1200); // hard cap
   }
 
   /* ================= CRT BARREL FRAME ================= */
@@ -52,6 +56,7 @@
   strokePath.setAttribute('vector-effect', 'non-scaling-stroke');
   function barrel() {
     const W = innerWidth, H = innerHeight, m = W <= 768 || H <= 500;
+    if (!W || !H) return; // hidden tab / not laid out yet
     const MC = m ? 12 : 38;              // corner inset
     const MM = m ? 4 : 8;                // mid-edge inset (barrel bulge)
     const R = m ? Math.min(Math.max(18, W * 0.03), 28)
@@ -103,6 +108,20 @@
   const coverSrc = (p) => p.cover.startsWith('video:')
     ? `assets/video/${p.cover.slice(6)}.webp`
     : `assets/img/${p.cover}.webp`;
+  // 4 small thumbs per channel row (tapes first, then images) — visible on phones too
+  const hasThumb = (s) => typeof TAPES !== 'undefined' && TAPES.some((t) => t.s === s);
+  const stripOf = (p) => {
+    const out = [];
+    for (const m of p.media) {
+      if (out.length >= 4) break;
+      if (m.t === 'v') out.push(hasThumb(m.s) ? `assets/video/thumb/${m.s}.webp` : `assets/video/${m.s}.webp`);
+    }
+    for (const m of p.media) {
+      if (out.length >= 4) break;
+      if (m.t === 'i' && MEDIA[m.s]) out.push(`assets/img/${m.s}.webp`);
+    }
+    return out;
+  };
 
   PROJECTS.forEach((p, i) => {
     const li = document.createElement('li');
@@ -111,6 +130,7 @@
       <button class="project-row-head" data-idx="${i}" aria-haspopup="dialog">
         <span class="project-row-nr">${String(i + 1).padStart(2, '0')}</span>
         <span class="project-row-title">${p.title}</span>
+        <span class="project-row-strip" aria-hidden="true">${stripOf(p).map((src) => `<img src="${src}" alt="" loading="lazy" decoding="async">`).join('')}</span>
         <span class="project-row-cat">${p.cat}</span>
         <span class="project-row-year">${p.year}</span>
       </button>
@@ -343,18 +363,17 @@
         continue;
       } else {
         tape++;
-        const v = document.createElement('video');
-        v.src = `assets/video/${m.s}.mp4`;
-        v.poster = `assets/video/${m.s}.webp`;
-        v.preload = 'none'; v.controls = true; v.playsInline = true;
-        v.setAttribute('aria-label', `${p.title} — ${m.label}`);
-        v.addEventListener('play', () => {
-          tvGallery.querySelectorAll('video').forEach((o) => { if (o !== v) o.pause(); });
-        });
+        // tapes open in the Viewer (sound, teletext, channel zapping)
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'tv-tape';
+        b.dataset.tape = m.s;
+        b.setAttribute('aria-label', `Putar ${p.title} — ${m.label}`);
+        b.innerHTML = `<img src="assets/video/${m.s}.webp" alt="" loading="lazy" decoding="async"><span class="tv-tape-play">▶ PLAY</span>`;
         const tag = document.createElement('span');
         tag.className = 'tape-label';
         tag.textContent = `▶ TAPE ${String(tape).padStart(2, '0')} · ${m.label}`;
-        item.append(v, tag);
+        item.append(b, tag);
       }
       tvGallery.appendChild(item);
     }
@@ -366,6 +385,10 @@
   list.addEventListener('click', (e) => {
     const head = e.target.closest('.project-row-head');
     if (head) openChannel(+head.dataset.idx);
+  });
+  tvGallery.addEventListener('click', (e) => {
+    const b = e.target.closest('.tv-tape');
+    if (b && window.Viewer) window.Viewer.open(b.dataset.tape, { trigger: b });
   });
   document.getElementById('tvClose').addEventListener('click', () => modal.close());
   modal.addEventListener('click', (e) => { if (e.target === modal) modal.close(); });
@@ -397,7 +420,7 @@
       dot.style.top = e.clientY + 'px';
       const t = e.target;
       cur.classList.toggle('grow',
-        !!(t.closest && t.closest('a, button, .project-row-head, video')));
+        !!(t.closest && t.closest('a, button, .project-row-head, video, .wall')));
     }, { passive: true });
     (function follow() {
       rx += (mx - rx) * 0.16; ry += (my - ry) * 0.16;
@@ -434,4 +457,42 @@
       g.putImageData(buf, 0, 0);
     })(0);
   }
+
+  /* ================= IHSAN.TV WALL + DEEP LINKS ================= */
+  document.querySelectorAll('[data-tape-count]').forEach((el) => {
+    if (typeof TAPES !== 'undefined') el.textContent = TAPES.length;
+  });
+  const wallEl = document.getElementById('wall');
+  let wall = null;
+  if (wallEl && window.Fisheye && typeof TAPES !== 'undefined') {
+    wall = Fisheye.mount(wallEl, {
+      tapes: TAPES, atlas: TAPE_ATLAS, variant: 'full',
+      onOpen(t) { if (window.Viewer) Viewer.open(t.s, { trigger: wallEl }); else location.hash = `tape/${t.s}`; },
+    });
+  }
+  // the fixed ghost header would sit on top of the wall — hide it while the wall is on screen
+  const showreel = document.getElementById('showreel');
+  if (showreel) new IntersectionObserver(([en]) => document.body.classList.toggle('wall-on', en.isIntersecting), { rootMargin: '-15% 0px' }).observe(showreel);
+  let openedTape = null;
+  addEventListener('viewer:open', (e) => { openedTape = e.detail && e.detail.slug; if (wall) wall.setPaused(true); magHide(); });
+  addEventListener('viewer:close', (e) => {
+    if (!wall) return;
+    wall.setPaused(false);
+    // zapped to another tape inside the Viewer → bring the wall to where the viewer ended
+    const last = e.detail && e.detail.slug;
+    if (last && last !== openedTape) wall.focus(last);
+  });
+  function route() {
+    const h = location.hash;
+    const tape = h.match(/^#tape\/([\w-]+)/);
+    if (tape && window.Viewer && Viewer.has(tape[1])) {
+      if (wall) wall.focus(tape[1]);
+      if (Viewer.current !== tape[1]) Viewer.open(tape[1], { history: 'none', trigger: wallEl, silent: true });
+      return;
+    }
+    const ch = h.match(/^#ch-(\d{1,2})$/);
+    if (ch && PROJECTS[+ch[1] - 1] && !modal.open) openChannel(+ch[1] - 1);
+  }
+  route();
+  addEventListener('hashchange', route);
 })();

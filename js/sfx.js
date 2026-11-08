@@ -21,6 +21,7 @@
     'hover-footer': HOVER_VOLUME, 'click-footer': 0.4,
     'click-doc': 0.45,
     'hover-player': HOVER_VOLUME, 'click-player': 0.4,
+    'channel-switch': 0.16,
   };
 
   const cache = {};
@@ -54,6 +55,9 @@
   // [selector, hoverSound, clickSound] — first match wins, most specific first
   const MAP = [
     ['.bgm-btn', 'hover-player', 'click-player'],
+    ['.viewer-nav button, .viewer-copy', 'hover-player', 'click-player'],
+    ['.tv-tape', null, 'click-row'],
+    ['.showreel-list, .wall-down, .hero-btn', 'hover-nav', 'click-nav'],
     ['.calc-btn, .calc-chip', 'hover-player', 'click-player'],
     ['.face-card', 'hover-card', 'click-card'],
     ['.project-row-head', 'hover-row', 'click-row'],
@@ -94,6 +98,8 @@
   // modal closes (✕ button, backdrop, or Esc) get their own sounds
   addEventListener('DOMContentLoaded', () => {
     const tv = document.getElementById('tvModal');
+    const viewer = document.getElementById('viewer');
+    viewer && viewer.addEventListener('close', () => play('close-modal'));
     const face = document.getElementById('faceModal');
     tv && tv.addEventListener('close', () => play('close-modal'));
     face && face.addEventListener('close', () => play('close-profile'));
