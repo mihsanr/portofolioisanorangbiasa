@@ -1,0 +1,14 @@
+{
+  "_note": "Metadata manual per tape. Isi client/role/year bila sudah pasti — JANGAN ditebak. featured:true = kandidat tape di tengah Wall saat dibuka. Setelah mengubah file ini jalankan: node scripts/build-tapes.mjs",
+  "vinco-tokamak": { "client": "Vinco", "featured": true },
+  "sf-malaka": { "client": "Malaka Project", "featured": true },
+  "sf-dringky": { "client": "Dr Ingky" },
+  "mg-fuccretention": { "featured": true },
+  "mg-beda": { "client": "BeDa", "featured": true },
+  "mg-exora": { "client": "Exora League : Kediri", "featured": true },
+  "chipaws-promo": { "client": "Chipaws", "featured": true },
+  "chipaws-snack": { "client": "Chipaws" },
+  "afmedika-reels": { "client": "AF Medika" },
+  "mg-afmedika-pp": { "client": "AF Medika" },
+  "mg-niche": { "client": "Prosperity Project" }
+}
