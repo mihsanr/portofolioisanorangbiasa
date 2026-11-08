@@ -30,6 +30,7 @@
   strokePath.setAttribute('vector-effect', 'non-scaling-stroke');
   function barrel() {
     const W = innerWidth, H = innerHeight, m = W <= 768 || H <= 500;
+    if (!W || !H) return; // hidden tab / not laid out yet
     const MC = m ? 12 : 38;              // corner inset
     const MM = m ? 4 : 8;                // mid-edge inset (barrel bulge)
     const R = m ? Math.min(Math.max(18, W * 0.03), 28)
