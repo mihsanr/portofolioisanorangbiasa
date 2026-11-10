@@ -14,7 +14,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;900&family=Space+Grotesk:wght@400;500;600;700;800&family=VT323&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=11">
+  <link rel="stylesheet" href="css/style.css?v=12">
   <script src="js/theme.js?v=10"></script>
 </head>
 <body>
@@ -29,7 +29,7 @@
   <nav class="site-nav" id="siteNav" aria-label="Main">
     <a class="nav-left" href="#top">MUHAMMAD IHSAN RIZKA<span class="nav-loc"> — NOMADEN</span></a>
     <div class="nav-links">
-      <a class="nav-link" href="#projects">Work</a>
+      <a class="nav-link" href="#projects" aria-current="page">Work</a>
       <a class="nav-link" href="#journey">Journey</a>
       <a class="nav-link" href="next.html">Next Up</a>
       <a class="nav-link" href="product.html">Product</a>
@@ -59,15 +59,14 @@
 
   <!-- ghost page header, fixed right -->
   <div class="page-header" aria-hidden="true">
-    <div class="page-header-nr">08 CHANNELS</div>
-    <div class="page-header-title">Selected<br>Work</div>
+    <div class="page-header-title">Selected<br><em>work</em></div>
   </div>
 
   <!-- ===== MAIN ===== -->
   <main class="wrap" id="top">
     <header class="hero-mini">
       <div>
-        <h1 class="hero-name">Muhammad Ihsan Rizka</h1>
+        <h1 class="hero-name" data-react>Muhammad Ihsan Rizka</h1>
         <p class="hero-role">Video Editor · Motion Designer · Graphic Designer</p>
       </div>
       <div class="hero-actions">
@@ -79,7 +78,12 @@
     <!-- ===== CH 00 · IHSAN.TV WALL ===== -->
     <section class="showreel" id="showreel" aria-labelledby="showreelTitle">
       <div class="showreel-head">
-        <p id="showreelTitle">CH 00 · SHOWREEL<span class="onair"><span class="onair-dot">●</span> ON AIR</span></p>
+        <p id="showreelTitle">CH 00 · SEMUA KARYA<span class="onair"><span class="onair-dot">●</span> ON AIR</span></p>
+        <div class="wall-filter" role="group" aria-label="Saring isi dinding" data-keep-brand>
+          <button type="button" class="wall-chip" data-filter="all" aria-pressed="true">SEMUA</button>
+          <button type="button" class="wall-chip" data-filter="v" aria-pressed="false">VIDEO</button>
+          <button type="button" class="wall-chip" data-filter="x" aria-pressed="false">DESAIN</button>
+        </div>
         <a class="showreel-list" href="#projects">▤ LIHAT DAFTAR</a>
       </div>
       <div class="wall" id="wall">
@@ -90,25 +94,37 @@
         <a class="wall-fb-item" href="#tape/mg-exora"><img src="assets/video/thumb/mg-exora.webp" alt="Exora League opening" loading="lazy"></a>
         <a class="wall-fb-item" href="#tape/mg-fuccretention"><img src="assets/video/thumb/mg-fuccretention.webp" alt="FUCC Retention" loading="lazy"></a>
         <a class="wall-fb-item" href="#tape/sf-malaka"><img src="assets/video/thumb/sf-malaka.webp" alt="Malaka Project" loading="lazy"></a>
-        <a class="wall-fb-item" href="#tape/vinco-tokamak"><img src="assets/video/thumb/vinco-tokamak.webp" alt="Tokamak" loading="lazy"></a>
         <a class="wall-fb-item" href="#tape/afmedika-reels"><img src="assets/video/thumb/afmedika-reels.webp" alt="AF Medika reel" loading="lazy"></a>
-        <a class="wall-fb-item" href="#tape/chipaws-snack"><img src="assets/video/thumb/chipaws-snack.webp" alt="Cara Memilih Snack" loading="lazy"></a>
-        <a class="wall-fb-item" href="#tape/lutuna-video"><img src="assets/video/thumb/lutuna-video.webp" alt="Lutuna promo" loading="lazy"></a>
-        <a class="wall-fb-item" href="#tape/mg-21sep"><img src="assets/video/thumb/mg-21sep.webp" alt="21 Sep feed" loading="lazy"></a>
-        <a class="wall-fb-item" href="#tape/mg-21story"><img src="assets/video/thumb/mg-21story.webp" alt="21 Sep story" loading="lazy"></a>
-        <a class="wall-fb-item" href="#tape/mg-afmedika-pp"><img src="assets/video/thumb/mg-afmedika-pp.webp" alt="AF Medika profile motion" loading="lazy"></a>
+        <a class="wall-fb-item" href="#tape/pdf-biro-rabbani-006"><img src="assets/img/pdf-biro-rabbani-006.webp" alt="Rabbani 18" loading="lazy"></a>
+        <a class="wall-fb-item" href="#tape/pdf-logofolio-005"><img src="assets/img/pdf-logofolio-005.webp" alt="Logo &amp; Brand 33" loading="lazy"></a>
+        <a class="wall-fb-item" href="#tape/proposal-010"><img src="assets/img/proposal-010.webp" alt="Poster &amp; Campaign 44" loading="lazy"></a>
+        <a class="wall-fb-item" href="#tape/merch-018"><img src="assets/img/merch-018.webp" alt="Merch &amp; Apparel 18" loading="lazy"></a>
+        <a class="wall-fb-item" href="#tape/feeds-069"><img src="assets/img/feeds-069.webp" alt="Social Content 69" loading="lazy"></a>
+        <a class="wall-fb-item" href="#tape/personal-004"><img src="assets/img/personal-004.webp" alt="Personal Project 4" loading="lazy"></a>
         <!-- tapes:fallback:end -->
         </div>
       </div>
       <p class="wall-hint">
-        <span class="hint-desk">TARIK UNTUK MEMUTAR · <span data-tape-count>82</span> TAPES · HOVER UNTUK MEMUTAR · KLIK UNTUK MEMBUKA</span>
-        <span class="hint-touch">GESER · TAHAN = PRATINJAU · KETUK = BUKA</span>
+        <span class="wall-count"><span data-count="v">53</span> VIDEO · <span data-count="i">335</span> DESAIN · <span data-count="d">4</span> DOKUMEN</span>
+        <span class="hint-desk">TARIK · KLIK = BUKA</span>
+        <span class="hint-touch">GESER · KETUK = BUKA</span>
       </p>
       <a class="wall-down" href="#projects">↓ LIHAT DAFTAR CHANNEL</a>
     </section>
 
+    <!-- ===== PRIME TIME · case terpilih (isi dari PRIME di js/data.js) ===== -->
+    <section class="prime" id="prime" aria-labelledby="primeTitle" data-keep-brand>
+      <header class="prime-head">
+        <p class="prime-kicker">★ KURASI · MULAI DARI SINI</p>
+        <h2 class="prime-title" id="primeTitle" data-react>Prime <em>time</em></h2>
+        <p class="prime-sub">A few picks to start with — the full archive lives in the channels below.</p>
+      </header>
+      <ol class="prime-stack" id="primeStack" role="list"></ol>
+    </section>
+
     <header id="projects">
-      <h2 class="hero-title channels-title">Channels</h2>
+      <p class="channels-kicker"><span data-count="ch">08</span> CHANNELS · <span data-count="all">392</span> KARYA</p>
+      <h2 class="hero-title channels-title" data-react>Channels</h2>
       <p class="page-intro">
         Selected work from three-plus years of edits, motion, logos, feeds, and posters —
         each one a different channel.
@@ -140,7 +156,7 @@
     <!-- ===== JOURNEY ===== -->
     <section class="journey" id="journey">
       <div class="journey-hero">
-        <h2 class="journey-title">Journey</h2>
+        <h2 class="journey-title" data-react>Journey</h2>
         <p class="journey-sub">A few chapters — download the CV for the full story.</p>
       </div>
 
@@ -158,12 +174,18 @@
         <p class="skills-langs">Indonesian &amp; Sundanese native — English intermediate</p>
       </div>
 
-      <div class="journey-contact" id="contact">
+      <!-- CTA besar + jejak stiker (desktop) / 3 stiker statis (HP, reduced motion) -->
+      <div class="journey-contact cta" id="contact">
         <span class="contact-label">Let's Connect</span>
-        <h3 class="contact-heading">Want to work together?</h3>
+        <h3 class="contact-heading cta-heading" data-react>Ada project? <em>Ayo ngobrol</em></h3>
         <div class="contact-actions">
-          <a class="contact-btn" href="mailto:muhammadihsanrizka186@gmail.com">Get in touch ↗&#xFE0E;</a>
-          <a class="contact-btn" href="https://wa.me/62895347178366" target="_blank" rel="noopener">WhatsApp · Business Only ↗&#xFE0E;</a>
+          <a class="contact-btn contact-btn--solid" href="https://wa.me/62895347178366" target="_blank" rel="noopener">WhatsApp · Business Only ↗&#xFE0E;</a>
+          <a class="contact-btn" href="mailto:muhammadihsanrizka186@gmail.com">Email ↗&#xFE0E;</a>
+        </div>
+        <div class="cta-stickers" aria-hidden="true">
+          <img src="assets/img/trail/t3.webp" alt="" loading="lazy" width="142" height="220">
+          <img src="assets/img/trail/t5.webp" alt="" loading="lazy" width="186" height="220">
+          <img src="assets/img/trail/t7.webp" alt="" loading="lazy" width="220" height="219">
         </div>
       </div>
     </section>
@@ -217,6 +239,10 @@
   <dialog class="viewer" id="viewer" data-keep-brand aria-labelledby="ttTitle">
     <div class="viewer-screen">
       <video class="viewer-video" id="viewerVideo" controls playsinline preload="metadata"></video>
+      <div class="viewer-still" id="viewerStill" hidden>
+        <img class="viewer-img" id="viewerImg" alt="" decoding="async">
+      </div>
+      <a class="viewer-doc" id="viewerDoc" target="_blank" rel="noopener" hidden>BUKA PDF ↗&#xFE0E;</a>
       <canvas class="viewer-static" id="viewerStatic" width="160" height="120" aria-hidden="true"></canvas>
       <p class="viewer-osd" id="viewerOsd" aria-hidden="true">CH 01</p>
       <button type="button" class="viewer-unmute" id="viewerUnmute" hidden>🔇&#xFE0E; KETUK UNTUK SUARA</button>
@@ -232,7 +258,7 @@
         <button type="button" id="vChNext" aria-label="Channel berikutnya">CH ▶</button>
       </div>
       <button type="button" class="viewer-copy" id="vCopy">SALIN LINK</button>
-      <p class="tt-keys">↑↓ TAPE · ←→ / 1–8 CHANNEL · ESC TUTUP</p>
+      <p class="tt-keys" id="ttKeys">↑↓ TAPE · ←→ / 1–8 CHANNEL · ESC TUTUP</p>
     </aside>
     <button type="button" class="viewer-close" id="viewerClose" aria-label="Tutup" autofocus>✕</button>
   </dialog>
@@ -303,13 +329,13 @@
   </div>
 
   <script src="js/media.js?v=7"></script>
-  <script src="js/data.js?v=9"></script>
-  <script src="js/tapes.js?v=1"></script>
+  <script src="js/data.js?v=10"></script>
+  <script src="js/tapes.js?v=2"></script>
   <script src="js/fluid.js?v=7"></script>
-  <script src="js/sfx.js?v=12"></script>
+  <script src="js/sfx.js?v=13"></script>
   <script src="js/bgm.js?v=9"></script>
-  <script src="js/fisheye.js?v=1"></script>
-  <script src="js/viewer.js?v=1"></script>
-  <script src="js/main.js?v=11"></script>
+  <script src="js/fisheye.js?v=2"></script>
+  <script src="js/viewer.js?v=2"></script>
+  <script src="js/main.js?v=12"></script>
 </body>
 </html>

@@ -1,5 +1,6 @@
 {
   "_note": "Metadata manual per tape. Isi client/role/year bila sudah pasti — JANGAN ditebak. featured:true = kandidat tape di tengah Wall saat dibuka. Setelah mengubah file ini jalankan: node scripts/build-tapes.mjs",
+  "_trail": ["personal-001", "personal-006", "personal-009", "personal-010", "personal-011", "personal-012", "personal-013", "personal-015"],
   "vinco-tokamak": { "client": "Vinco", "featured": true },
   "sf-malaka": { "client": "Malaka Project", "featured": true },
   "sf-dringky": { "client": "Dr Ingky" },

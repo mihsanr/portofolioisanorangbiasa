@@ -21,7 +21,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="preconnect" href="https://media.giphy.com">
   <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;900&family=Space+Grotesk:wght@400;500;600;700;800&family=VT323&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=11">
+  <link rel="stylesheet" href="css/style.css?v=12">
   <script src="js/theme.js?v=10"></script>
   <style>
     /* ===== Link-in-bio: gaya porto (biru, putih, CRT) + tombol ala Linktree ===== */
@@ -206,7 +206,7 @@
     </button>
 
     <!-- ===== PREVIEW WALL → work.html#tape/<slug> ===== -->
-    <section class="lt-wall" aria-label="Preview portofolio video">
+    <section class="lt-wall" aria-label="Preview karya portofolio">
       <div class="wall" id="wallPreview">
         <div class="wall-fb">
         <!-- tapes:fallback:start -->
@@ -215,17 +215,17 @@
         <a class="wall-fb-item" href="work.html#tape/mg-exora"><img src="assets/video/thumb/mg-exora.webp" alt="Exora League opening" loading="lazy"></a>
         <a class="wall-fb-item" href="work.html#tape/mg-fuccretention"><img src="assets/video/thumb/mg-fuccretention.webp" alt="FUCC Retention" loading="lazy"></a>
         <a class="wall-fb-item" href="work.html#tape/sf-malaka"><img src="assets/video/thumb/sf-malaka.webp" alt="Malaka Project" loading="lazy"></a>
-        <a class="wall-fb-item" href="work.html#tape/vinco-tokamak"><img src="assets/video/thumb/vinco-tokamak.webp" alt="Tokamak" loading="lazy"></a>
         <a class="wall-fb-item" href="work.html#tape/afmedika-reels"><img src="assets/video/thumb/afmedika-reels.webp" alt="AF Medika reel" loading="lazy"></a>
-        <a class="wall-fb-item" href="work.html#tape/chipaws-snack"><img src="assets/video/thumb/chipaws-snack.webp" alt="Cara Memilih Snack" loading="lazy"></a>
-        <a class="wall-fb-item" href="work.html#tape/lutuna-video"><img src="assets/video/thumb/lutuna-video.webp" alt="Lutuna promo" loading="lazy"></a>
-        <a class="wall-fb-item" href="work.html#tape/mg-21sep"><img src="assets/video/thumb/mg-21sep.webp" alt="21 Sep feed" loading="lazy"></a>
-        <a class="wall-fb-item" href="work.html#tape/mg-21story"><img src="assets/video/thumb/mg-21story.webp" alt="21 Sep story" loading="lazy"></a>
-        <a class="wall-fb-item" href="work.html#tape/mg-afmedika-pp"><img src="assets/video/thumb/mg-afmedika-pp.webp" alt="AF Medika profile motion" loading="lazy"></a>
+        <a class="wall-fb-item" href="work.html#tape/pdf-biro-rabbani-006"><img src="assets/img/pdf-biro-rabbani-006.webp" alt="Rabbani 18" loading="lazy"></a>
+        <a class="wall-fb-item" href="work.html#tape/pdf-logofolio-005"><img src="assets/img/pdf-logofolio-005.webp" alt="Logo &amp; Brand 33" loading="lazy"></a>
+        <a class="wall-fb-item" href="work.html#tape/proposal-010"><img src="assets/img/proposal-010.webp" alt="Poster &amp; Campaign 44" loading="lazy"></a>
+        <a class="wall-fb-item" href="work.html#tape/merch-018"><img src="assets/img/merch-018.webp" alt="Merch &amp; Apparel 18" loading="lazy"></a>
+        <a class="wall-fb-item" href="work.html#tape/feeds-069"><img src="assets/img/feeds-069.webp" alt="Social Content 69" loading="lazy"></a>
+        <a class="wall-fb-item" href="work.html#tape/personal-004"><img src="assets/img/personal-004.webp" alt="Personal Project 4" loading="lazy"></a>
         <!-- tapes:fallback:end -->
         </div>
       </div>
-      <p class="lt-wall-hint"><span class="hint-desk">▶&#xFE0E; KLIK VIDEO UNTUK MASUK PORTOFOLIO</span><span class="hint-touch">▶&#xFE0E; KETUK VIDEO UNTUK MASUK PORTOFOLIO</span></p>
+      <p class="lt-wall-hint"><span class="hint-desk">▶&#xFE0E; KLIK KARYA UNTUK MASUK PORTOFOLIO</span><span class="hint-touch">▶&#xFE0E; KETUK KARYA UNTUK MASUK PORTOFOLIO</span></p>
     </section>
 
     <header class="lt-profile">
@@ -335,16 +335,17 @@
 
   <script src="js/fluid.js?v=7"></script>
   <script src="js/chrome.js?v=9"></script>
-  <script src="js/tapes.js?v=1"></script>
-  <script src="js/fisheye.js?v=1"></script>
+  <script src="js/tapes.js?v=2"></script>
+  <script src="js/fisheye.js?v=2"></script>
   <script>
     (function () {
       var el = document.getElementById('wallPreview');
-      if (!el || !window.Fisheye || typeof TAPES === 'undefined') return;
+      if (!el || !window.Fisheye || typeof WALL === 'undefined') return;
       // reduced motion: keep the static strip of thumbnails (links to work.html)
       if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
       Fisheye.mount(el, {
-        tapes: TAPES, atlas: TAPE_ATLAS, variant: 'preview', lazyAtlas: true,
+        // preview = hanya item di halaman atlas pertama + atlas kecil (link-in-bio tetap ringan)
+        tapes: WALL, atlas: WALL_ATLAS, variant: 'preview', lazyAtlas: true,
         href: function (t) { return 'work.html#tape/' + t.s; },
         onOpen: function (t) { location.href = 'work.html#tape/' + t.s; }
       });

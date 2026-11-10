@@ -6,23 +6,35 @@
   const ROOT = new URL('../', document.currentScript.src).href;
 
   // the hover files are level-matched, so they all share this one volume
+  // (file peak ≈ −6.5 dBFS × 0.02 → ≈ −40 dBFS effective)
   const HOVER_VOLUME = 0.02;
+
+  /* Click / close sounds: the files were mastered at very different levels
+     (0 dB … −14 dB peak), so one shared volume made some of them ~32 dB louder
+     than a hover. Every click now lands on the same effective peak instead:
+     volume = 10^((CLICK_PEAK_DB − filePeak) / 20). Tune the one constant
+     (−22 … −30) to make all clicks louder / softer together.
+     File peaks measured with `ffmpeg -af volumedetect` (max_volume). */
+  const CLICK_PEAK_DB = -26;
+  const FILE_PEAK_DB = {
+    'click-player': 0.0, 'click-cv': 0.0, 'click-doc': -0.3,
+    'close-profile': -1.4, 'close-modal': -1.2, 'click-row': -1.6,
+    'click-footer': -2.8, 'click-card': -3.9,
+    'click-contact': -14.0, 'click-nav': -12.5,
+  };
+  const clickVol = (n) => Math.min(1, Math.pow(10, (CLICK_PEAK_DB - FILE_PEAK_DB[n]) / 20));
 
   // name -> volume
   const SOUNDS = {
-    'hover-nav': HOVER_VOLUME, 'click-nav': 0.4,
-    'hover-row': HOVER_VOLUME, 'click-row': 0.45,
-    'close-modal': 0.4,
-    'hover-card': HOVER_VOLUME, 'click-card': 0.5, 'close-profile': 0.45,
-    'hover-journey': HOVER_VOLUME,
-    'hover-cv': HOVER_VOLUME, 'click-cv': 0.4,
-    'hover-contact': HOVER_VOLUME, 'click-contact': 0.5,
-    'hover-skill': HOVER_VOLUME,
-    'hover-footer': HOVER_VOLUME, 'click-footer': 0.4,
-    'click-doc': 0.45,
-    'hover-player': HOVER_VOLUME, 'click-player': 0.4,
-    'channel-switch': 0.16,
+    'hover-nav': HOVER_VOLUME, 'hover-row': HOVER_VOLUME, 'hover-card': HOVER_VOLUME,
+    'hover-journey': HOVER_VOLUME, 'hover-cv': HOVER_VOLUME, 'hover-contact': HOVER_VOLUME,
+    'hover-skill': HOVER_VOLUME, 'hover-footer': HOVER_VOLUME, 'hover-player': HOVER_VOLUME,
+    'channel-switch': 0.16, // file peak −18 dB → ≈ −34 dBFS, already gentle
   };
+  Object.keys(FILE_PEAK_DB).forEach((n) => { SOUNDS[n] = clickVol(n); });
+
+  // one master gain over every sound (0…1); the MUTE button silences all (SFX_MUTED)
+  if (typeof window.SFX_MASTER !== 'number') window.SFX_MASTER = 1;
 
   const cache = {};
   let unlocked = false;
@@ -30,19 +42,24 @@
   const get = (n) => cache[n] || (cache[n] = Object.assign(new Audio(`${ROOT}assets/sfx/${n}.mp3?v=2`), { preload: 'auto' }));
 
   const last = {};
-  function play(n) {
-    if (!unlocked || reduceMotion || window.SFX_MUTED || !(n in SOUNDS)) return;
+  function play(n, force) {
+    if ((!unlocked && !force) || reduceMotion || window.SFX_MUTED || !(n in SOUNDS)) return;
     const now = performance.now();
     if (last[n] && now - last[n] < 140) return;
     last[n] = now;
     const a = get(n);
     try {
       a.currentTime = 0;
-      a.volume = SOUNDS[n];
+      a.volume = Math.max(0, Math.min(1, SOUNDS[n] * window.SFX_MASTER));
       a.play().catch(() => {});
     } catch (e) { /* ignore */ }
   }
   window.SFX = play;
+  window.SFX_LEVELS = SOUNDS; // read-only peek for QA
+
+  /* arriving through a CRT page transition (style.css @view-transition): try the
+     channel-switch zap. Browsers that require a fresh gesture simply refuse it. */
+  addEventListener('pagereveal', (e) => { if (e.viewTransition) play('channel-switch', true); });
 
   function unlock() {
     if (unlocked) return;

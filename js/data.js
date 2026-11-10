@@ -196,6 +196,19 @@ const PROJECTS = [
   },
 ];
 
+// "PRIME TIME" — 3–4 case terpilih di work.html (antara Globe dan daftar channel).
+// s     = slug video (assets/video) atau gambar (assets/img)
+// title = judul besar di kartu · color = warna bingkai
+// role  = peran di proyek itu, mis. 'Edit · Caption · Sound Design'. BELUM DIISI:
+//         pemilik yang mengisi (jangan ditebak). Selama kosong, kartu memakai
+//         kategori channel-nya.
+const PRIME = [
+  { s: 'sf-malaka', title: 'Malaka Project', role: '', color: '#facc15' },
+  { s: 'chipaws-promo', title: 'Chipaws', role: '', color: '#ff3b3b' },
+  { s: 'mg-exora', title: 'Exora League', role: '', color: '#22d3ee' },
+  { s: 'afmedika-brandboard', title: 'AF Medika', role: '', color: '#ff8ad8' },
+];
+
 const JOURNEY = [
   {
     company: 'PT Tanindo Anugerah Nusantara', cat: 'Digital Creator', period: '07/2026 — PRESENT',
