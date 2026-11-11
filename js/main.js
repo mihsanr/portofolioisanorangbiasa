@@ -148,7 +148,8 @@
   let imgX = -500, imgY = -500, rot = 0;
   let magOn = false;
 
-  addEventListener('pointermove', (e) => { mx = e.clientX; my = e.clientY; }, { passive: true });
+  // capture: element handlers (Wall hover → cursor chip) already see the fresh position
+  addEventListener('pointermove', (e) => { mx = e.clientX; my = e.clientY; }, { passive: true, capture: true });
 
   function magLoop() {
     requestAnimationFrame(magLoop);
@@ -247,10 +248,71 @@
     magHide();
   });
 
+  /* ================= CURSOR CHIP ================= */
+  /* Small VT323 box trailing the cursor with a running label ("▶ PUTAR · Tokamak").
+     Desktop only; shown over clickable work, hidden while dragging the Wall. */
+  const chip = (() => {
+    if (!finePointer || reduceMotion) return { show() {}, hide() {} };
+    const el = document.createElement('div');
+    el.className = 'cursor-chip';
+    el.setAttribute('aria-hidden', 'true');
+    el.innerHTML = '<span class="cursor-chip-track"><span></span><span></span></span>';
+    document.body.appendChild(el);
+    const parts = el.querySelectorAll('.cursor-chip-track span');
+    let x = -400, y = -400, on = false, text = '', raf = 0, offAt = 0;
+    function follow(now) {
+      x += (mx - x) * 0.14; y += (my - y) * 0.14;
+      el.style.transform = `translate(${(x + 20).toFixed(1)}px, ${(y + 24).toFixed(1)}px)`;
+      raf = on || now < offAt ? requestAnimationFrame(follow) : 0;
+    }
+    return {
+      show(t) {
+        if (t !== text) { text = t; parts.forEach((p) => { p.textContent = `${t}  ·  `; }); }
+        if (!on) {
+          on = true;
+          if (!raf) { x = mx; y = my; raf = requestAnimationFrame(follow); }
+          el.classList.add('on');
+        }
+      },
+      hide() { if (!on) return; on = false; offAt = performance.now() + 250; el.classList.remove('on'); },
+    };
+  })();
+  list.addEventListener('pointerover', (e) => { if (e.target.closest('.project-row-head')) chip.show('BUKA CHANNEL →'); });
+  list.addEventListener('pointerleave', () => chip.hide());
+
   /* ================= CLIENTS MARQUEE ================= */
+  /* Endless strip that follows the scroll: scrolling down runs it left, up runs it
+     right, and a fast scroll gives it a short push. Reduced motion: static row. */
   const track = document.getElementById('clientsTrack');
   const names = CLIENTS.map((c) => `<span class="client-name">${c}</span>`).join('');
   track.innerHTML = names + names;
+  if (!reduceMotion) {
+    track.classList.add('is-js'); // the CSS keyframes step aside
+    const BASE = 0.07; // px per ms
+    let x = 0, dir = -1, boost = 0, half = 0, seen = false, held = false, lastY = scrollY, then = 0;
+    const measure = () => { half = track.scrollWidth / 2; };
+    measure();
+    addEventListener('resize', measure, { passive: true });
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(measure);
+    new IntersectionObserver(([en]) => { seen = en.isIntersecting; }).observe(track.parentElement);
+    track.addEventListener('pointerenter', (e) => { if (e.pointerType === 'mouse') held = true; });
+    track.addEventListener('pointerleave', () => { held = false; });
+    addEventListener('scroll', () => {
+      const dy = scrollY - lastY; lastY = scrollY;
+      if (!dy) return;
+      dir = dy > 0 ? -1 : 1;
+      boost = Math.min(7, boost + Math.abs(dy) * 0.05);
+    }, { passive: true });
+    (function run(now) {
+      requestAnimationFrame(run);
+      const dt = Math.min(64, now - then); then = now;
+      boost *= Math.pow(0.92, dt / 16.667);
+      if (!seen || !half || held) return;
+      x += dir * BASE * (1 + boost) * dt;
+      x = ((x % half) - half) % half; // keep inside (-half, 0]
+      track.style.transform = `translate3d(${x.toFixed(1)}px, 0, 0)`;
+    })(0);
+  }
 
   /* ================= JOURNEY ================= */
   const jList = document.getElementById('journeyList');
@@ -458,23 +520,233 @@
     })(0);
   }
 
+  /* ================= BUTTONS: icon hops to the other side ================= */
+  document.querySelectorAll('.hero-btn, .cv-btn, .contact-btn').forEach((b) => {
+    const m = b.textContent.trim().match(/^(.*?)\s*([↓↗→▶])︎?$/u);
+    if (!m) return;
+    const ico = `${m[2]}︎`;
+    b.classList.add('btn-swap');
+    b.innerHTML = '<span class="btn-swap-in"><span class="btn-ico btn-ico--in" aria-hidden="true"></span>' +
+      '<span class="btn-label"></span><span class="btn-ico btn-ico--out" aria-hidden="true"></span></span>';
+    b.querySelector('.btn-label').textContent = m[1];
+    b.querySelectorAll('.btn-ico').forEach((i) => { i.textContent = ico; });
+  });
+
+  /* ================= HEADLINES THAT REACT TO THE CURSOR ================= */
+  /* [data-react] headings are split per letter; letters near the cursor cross-fade
+     from Barlow Condensed to VT323 ("kena sinyal") — <em> words go the other way.
+     The heading keeps its full text in aria-label; the letters are aria-hidden.
+     Touch: one sweep when the heading scrolls in. Reduced motion: untouched. */
+  if (!reduceMotion) {
+    const RADIUS = 240;
+    const groups = [];
+    document.querySelectorAll('[data-react]').forEach((el) => {
+      const label = el.textContent.replace(/\s+/g, ' ').trim();
+      const chars = [];
+      const frag = document.createDocumentFragment();
+      const addWord = (word, alt) => {
+        const w = document.createElement('span');
+        w.className = alt ? 'rc-word rc-alt' : 'rc-word';
+        for (const ch of word) {
+          const c = document.createElement('span'); c.className = 'rc';
+          const a = document.createElement('span'); a.className = 'rc-a'; a.textContent = ch;
+          const b = document.createElement('span'); b.className = 'rc-b'; b.textContent = ch;
+          c.append(a, b); w.appendChild(c);
+          chars.push({ el: c, cur: 0, last: 0 });
+        }
+        frag.appendChild(w);
+      };
+      el.childNodes.forEach((n) => {
+        const alt = n.nodeType === 1 && n.tagName === 'EM';
+        if (n.nodeType !== 3 && !alt) return;
+        n.textContent.split(/(\s+)/).forEach((part) => {
+          if (!part) return;
+          if (/^\s+$/.test(part)) frag.appendChild(document.createTextNode(' ')); else addWord(part, alt);
+        });
+      });
+      const inner = document.createElement('span');
+      inner.setAttribute('aria-hidden', 'true');
+      inner.appendChild(frag);
+      el.setAttribute('aria-label', label);
+      el.replaceChildren(inner);
+      el.classList.add('is-react');
+      groups.push({ el, chars, seen: false, sweep: 0, swept: false });
+    });
+    let px = -9999, py = -9999, raf = 0;
+    function tick(now) {
+      raf = 0;
+      let busy = false;
+      for (const g of groups) {
+        if (!g.seen && !g.chars.some((c) => c.cur)) continue;
+        let sx = px, sy = py;
+        if (g.sweep) { // one-off scan line on touch screens
+          const r = g.el.getBoundingClientRect(), t = (now - g.sweep) / 900;
+          if (t >= 1) { g.sweep = 0; sx = sy = -9999; }
+          else { sx = r.left - RADIUS + (r.width + RADIUS * 2) * t; sy = r.top + r.height / 2; busy = true; }
+        }
+        for (const c of g.chars) {
+          let want = 0;
+          if (g.seen && sx > -9000) {
+            const r = c.el.getBoundingClientRect();
+            const d = Math.hypot(sx - (r.left + r.width / 2), sy - (r.top + r.height / 2));
+            want = Math.max(0, 1 - d / RADIUS);
+            want = want * want * (3 - 2 * want);
+          }
+          c.cur += (want - c.cur) * 0.2;
+          if (Math.abs(want - c.cur) < 0.004) c.cur = want; else busy = true;
+          if (c.cur !== c.last) { c.el.style.setProperty('--hit', c.cur.toFixed(3)); c.last = c.cur; }
+        }
+      }
+      if (busy) raf = requestAnimationFrame(tick);
+    }
+    const wake = () => { if (!raf) raf = requestAnimationFrame(tick); };
+    const rio = new IntersectionObserver((ens) => ens.forEach((en) => {
+      const g = groups.find((x) => x.el === en.target);
+      g.seen = en.isIntersecting;
+      if (g.seen && !finePointer && !g.swept) { g.swept = true; g.sweep = performance.now(); }
+      wake();
+    }), { threshold: 0.35 });
+    groups.forEach((g) => rio.observe(g.el));
+    if (finePointer) {
+      addEventListener('pointermove', (e) => { px = e.clientX; py = e.clientY; wake(); }, { passive: true });
+      addEventListener('scroll', wake, { passive: true });
+      document.documentElement.addEventListener('pointerleave', () => { px = py = -9999; wake(); });
+    }
+  }
+
+  /* ================= PRIME TIME (curated cases, stacked cards) ================= */
+  const primeStack = document.getElementById('primeStack');
+  if (primeStack && typeof PRIME !== 'undefined') {
+    const tapeOf = (s) => (typeof TAPES !== 'undefined' ? TAPES.find((t) => t.s === s) : null);
+    const wallOf = (s) => (typeof WALL !== 'undefined' ? WALL.find((t) => t.s === s) : null);
+    const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+    const cards = PRIME.map((c) => ({ c, tape: tapeOf(c.s), still: MEDIA[c.s] })).filter((x) => x.tape || x.still);
+    cards.forEach(({ c, tape, still }, i) => {
+      const w = wallOf(c.s);
+      const ch = tape ? tape.ch : (w ? w.ch : 0);
+      const p = PROJECTS[ch - 1];
+      const li = document.createElement('li');
+      li.className = 'prime-card';
+      li.style.setProperty('--c', c.color || '#fff');
+      li.style.setProperty('--i', i);
+      const ar = tape ? ({ '9:16': 0.5625, '4:5': 0.8, '1:1': 1, '16:9': 1.7778 }[tape.r] || 1) : still.w / still.h;
+      const snip = tape && w; // only Wall tapes have a snippet
+      const media = tape
+        ? `<video muted loop playsinline preload="none" disableremoteplayback data-no-duck
+             poster="${snip ? `assets/video/snip/${c.s}.webp` : `assets/video/thumb/${c.s}.webp`}"${snip ? ` data-src="assets/video/snip/${c.s}.mp4"` : ''}></video>`
+        : `<img src="assets/img/${c.s}.webp" alt="" loading="lazy" decoding="async" width="${still.w}" height="${still.h}">`;
+      li.innerHTML = `
+        <button type="button" class="prime-open" data-tape="${esc(c.s)}" aria-label="Buka ${esc(c.title)}">
+          <span class="prime-media" style="--ar:${ar.toFixed(4)}">${media}</span>
+          <span class="prime-info">
+            <span class="prime-nr">${String(i + 1).padStart(2, '0')} / ${String(cards.length).padStart(2, '0')}${p ? ` · ${esc(p.title)}` : ''}</span>
+            <span class="prime-name">${esc(c.title)}</span>
+            <span class="prime-role">${esc(c.role || (tape && tape.role && tape.role.join(' · ')) || (p ? p.cat : ''))}</span>
+            <span class="prime-btn">${tape ? '▶︎ BUKA' : '▣ BUKA'}</span>
+          </span>
+        </button>`;
+      li.querySelector('.prime-open').dataset.title = c.title;
+      primeStack.appendChild(li);
+    });
+    primeStack.addEventListener('click', (e) => {
+      const b = e.target.closest('.prime-open');
+      if (b && window.Viewer) Viewer.open(b.dataset.tape, { trigger: b });
+    });
+    primeStack.addEventListener('pointerover', (e) => {
+      const b = e.target.closest('.prime-open');
+      if (b) chip.show(`BUKA · ${b.dataset.title} →`);
+    });
+    primeStack.addEventListener('pointerleave', () => chip.hide());
+    // snippets play only while their card is on screen (never with reduced motion / data saver)
+    const lite = reduceMotion || !!(navigator.connection && navigator.connection.saveData);
+    if (!lite) {
+      const vio = new IntersectionObserver((ens) => ens.forEach((en) => {
+        const v = en.target;
+        if (en.isIntersecting) {
+          if (!v.src && v.dataset.src) v.src = v.dataset.src;
+          if (v.src) v.play().catch(() => {});
+        } else if (!v.paused) v.pause();
+      }), { threshold: 0.5 });
+      primeStack.querySelectorAll('video').forEach((v) => vio.observe(v));
+      addEventListener('viewer:open', () => primeStack.querySelectorAll('video').forEach((v) => v.pause()));
+    }
+  }
+
+  /* ================= FOOTER CTA: sticker trail ================= */
+  /* Desktop: a sticker drops every ~120px of cursor travel, fades after 0.8s,
+     max 8 alive. Touch / reduced motion keep the three static stickers (CSS). */
+  const cta = document.querySelector('.cta');
+  if (cta && finePointer && !reduceMotion) {
+    cta.classList.add('has-trail');
+    const N = 8, GAP = 120, LIFE = 800, MAX = 8;
+    const src = (i) => `assets/img/trail/t${i + 1}.webp`;
+    let warmed = false, lx = null, ly = null, n = 0;
+    const alive = [];
+    cta.addEventListener('pointerenter', () => {
+      if (warmed) return;
+      warmed = true;
+      for (let i = 0; i < N; i++) new Image().src = src(i);
+    });
+    cta.addEventListener('pointermove', (e) => {
+      if (e.pointerType !== 'mouse') return;
+      const b = cta.getBoundingClientRect();
+      const x = e.clientX - b.left, y = e.clientY - b.top;
+      if (lx != null && Math.hypot(x - lx, y - ly) < GAP) return;
+      lx = x; ly = y;
+      const im = document.createElement('img');
+      im.className = 'sticker';
+      im.alt = ''; im.draggable = false;
+      im.src = src(n++ % N);
+      im.style.left = `${x}px`; im.style.top = `${y}px`;
+      im.style.setProperty('--rot', `${(Math.random() * 36 - 18).toFixed(1)}deg`);
+      cta.appendChild(im);
+      alive.push(im);
+      if (alive.length > MAX) alive.shift().remove();
+      setTimeout(() => im.classList.add('out'), LIFE);
+      setTimeout(() => { im.remove(); const i = alive.indexOf(im); if (i >= 0) alive.splice(i, 1); }, LIFE + 450);
+    });
+    cta.addEventListener('pointerleave', () => { lx = ly = null; });
+  }
+
   /* ================= IHSAN.TV WALL + DEEP LINKS ================= */
-  document.querySelectorAll('[data-tape-count]').forEach((el) => {
-    if (typeof TAPES !== 'undefined') el.textContent = TAPES.length;
+  const WALL_ITEMS = typeof WALL !== 'undefined' ? WALL : [];
+  document.querySelectorAll('[data-count]').forEach((el) => {
+    const k = el.dataset.count;
+    const n = k === 'ch' ? PROJECTS.length : k === 'all' ? WALL_ITEMS.length : WALL_ITEMS.filter((t) => t.k === k).length;
+    if (n) el.textContent = k === 'ch' ? String(n).padStart(2, '0') : n;
   });
   const wallEl = document.getElementById('wall');
+  const openDoc = (slug) => { // like the .tv-doc cards: the PDF opens in a new tab
+    const a = document.createElement('a');
+    a.href = `assets/docs/${slug}.pdf`; a.target = '_blank'; a.rel = 'noopener';
+    a.click();
+    if (window.SFX) window.SFX('click-doc');
+  };
+  const CHIP_VERB = { v: '▶︎ PUTAR', i: '▣ LIHAT', d: 'PDF · BUKA' };
   let wall = null;
-  if (wallEl && window.Fisheye && typeof TAPES !== 'undefined') {
+  if (wallEl && window.Fisheye && WALL_ITEMS.length) {
     wall = Fisheye.mount(wallEl, {
-      tapes: TAPES, atlas: TAPE_ATLAS, variant: 'full',
-      onOpen(t) { if (window.Viewer) Viewer.open(t.s, { trigger: wallEl }); else location.hash = `tape/${t.s}`; },
+      tapes: WALL_ITEMS, atlas: WALL_ATLAS, variant: 'full',
+      onOpen(t) {
+        chip.hide();
+        if (t.k === 'd') openDoc(t.s);
+        else if (window.Viewer) Viewer.open(t.s, { trigger: wallEl });
+        else location.hash = `tape/${t.s}`;
+      },
+      onHover(t) { if (t) chip.show(`${CHIP_VERB[t.k] || CHIP_VERB.v} · ${t.label}`); else chip.hide(); },
     });
   }
+  // SEMUA · VIDEO · DESAIN — same atlas, the Wall is laid out again with the subset
+  const chips = document.querySelectorAll('.wall-chip');
+  const syncChips = (f) => chips.forEach((c) => c.setAttribute('aria-pressed', String(c.dataset.filter === f)));
+  chips.forEach((c) => c.addEventListener('click', () => { if (wall) { wall.setFilter(c.dataset.filter); syncChips(wall.filter); } }));
+  if (wallEl) wallEl.addEventListener('wall:filter', (e) => syncChips(e.detail.filter));
+  if (!wall) document.querySelectorAll('.wall-filter').forEach((el) => { el.hidden = true; });
   // the fixed ghost header would sit on top of the wall — hide it while the wall is on screen
   const showreel = document.getElementById('showreel');
   if (showreel) new IntersectionObserver(([en]) => document.body.classList.toggle('wall-on', en.isIntersecting), { rootMargin: '-15% 0px' }).observe(showreel);
   let openedTape = null;
-  addEventListener('viewer:open', (e) => { openedTape = e.detail && e.detail.slug; if (wall) wall.setPaused(true); magHide(); });
+  addEventListener('viewer:open', (e) => { openedTape = e.detail && e.detail.slug; if (wall) wall.setPaused(true); magHide(); chip.hide(); });
   addEventListener('viewer:close', (e) => {
     if (!wall) return;
     wall.setPaused(false);

@@ -1,72 +1,87 @@
-/* IHSAN.TV Wall — dinding video fisheye tak berujung.
+/* IHSAN.TV Wall — globe fisheye tak berujung berisi semua karya (video, gambar, dokumen).
    Dipakai work.html (variant 'full') dan index.html (variant 'preview').
 
-     const wall = Fisheye.mount(el, { tapes: TAPES, atlas: TAPE_ATLAS, variant: 'full', onOpen(tape) {} });
-     wall.focus(slug) · wall.setPaused(bool) · wall.destroy()
+     const wall = Fisheye.mount(el, {
+       tapes: WALL, atlas: WALL_ATLAS, variant: 'full',
+       onOpen(item) {}, onHover(item | null) {},
+     });
+     wall.focus(slug) · wall.setFilter('all' | 'v' | 'x') · wall.setPaused(bool) · wall.destroy()
 
+   Item: { s, k: 'v'|'i'|'d', ch, label, r (rasio w/h), p (halaman atlas), a: [x,y,w,h], c }.
    Render: WebGL satu pass — tiap piksel layar dipetakan balik ke "dunia datar"
    (L = R/k · atanh(L'/R)), lalu dicari sel/tile-nya, jadi tepi tile, thumbnail
-   DAN video ikut melengkung per piksel. Fallback Canvas 2D (kotak saja yang
-   dipindah/diskalakan), lalu grid statis. Tidak bergantung main.js. */
+   DAN video ikut melengkung per piksel. Thumbnail dibagi ke ≤ 3 atlas 2048² yang
+   dimuat bertahap (versi kecil dulu); tile yang atlasnya belum datang memakai warna
+   rata-ratanya. Fallback Canvas 2D, lalu grid statis. Tidak bergantung main.js. */
 (() => {
-  const GAP = 10;          // jarak antar video di dunia datar (px)
+  const GAP = 10;          // jarak antar tile di dunia datar (px)
   const K = 1.25;          // pembesaran di tengah
   const CAP = 0.985;       // batas tepi globe (L'/R)
   const RAD = 6;           // radius sudut tile (px datar)
   const FRICTION = 0.93;   // inertia per frame @60fps
   const DRIFT = [0.028, 0.014]; // px datar / ms
-  const SPAN = { '9:16': 1, '4:5': 2, '1:1': 2, '16:9': 3 };
+  const MINS = 3, MAXS = 10;    // lebar tile dalam sel (1 sel = sepertiga tile 9:16)
+  const PAGES = 3;              // jumlah sampler atlas di shader
+  const LOOK = 60;              // seberapa jauh layout boleh melompati urutan
+  const LEGACY = { '9:16': 0.5625, '4:5': 0.8, '1:1': 1, '16:9': 1.7778 };
   const atanh = (x) => 0.5 * Math.log((1 + x) / (1 - x));
   const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
   const fmt = (s) => { s = Math.max(0, s | 0); return `${String((s / 60) | 0).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`; };
   const hexRGB = (h) => [1, 3, 5].map((i) => parseInt((h || '#202020').slice(i, i + 2), 16));
+  const kindOf = (t) => t.k || 'v';
+  const ratioOf = (t) => (typeof t.r === 'number' ? t.r : (LEGACY[t.r] || 0.5625));
+  // sama dengan scripts/build-tapes.mjs (tinggi tile acuan 150px)
+  const UNIT_REF = (150 * 9 / 16 + GAP) / 3;
+  const spanOf = (t) => clamp(Math.round((ratioOf(t) * 150 + GAP) / UNIT_REF), MINS, MAXS);
+  const thumbOf = (t) => (kindOf(t) === 'v' ? `assets/video/thumb/${t.s}.webp` : `assets/img/${kindOf(t) === 'd' ? (t.cv || t.s) : t.s}.webp`);
 
-  function mulberry(a) {
-    return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a);
-      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
-  }
-
-  /* ---------- layout: COLS×ROWS sel, tile horizontal memakai 2–3 sel ---------- */
-  function buildLayout(tapes, cols, rows, seed) {
-    const rnd = mulberry(seed);
-    const shuffled = () => { const a = tapes.map((_, i) => i);
-      for (let i = a.length - 1; i > 0; i--) { const j = (rnd() * (i + 1)) | 0; [a[i], a[j]] = [a[j], a[i]]; } return a; };
-    const cell = new Int16Array(cols * rows).fill(-1); // tape index
-    const part = new Uint8Array(cols * rows);
-    const span = new Uint8Array(cols * rows);
+  /* ---------- layout: baris demi baris, item diambil sesuai urutan data ----------
+     Tetangga kiri/atas (dan sambungan torus) tidak boleh dari channel yang sama bila
+     masih ada pilihan; tiap item dipakai sekali sebelum ada yang diulang. */
+  function buildLayout(tapes, order, cols, rows) {
+    const N = cols * rows;
+    const cell = new Int16Array(N).fill(-1); // index item
+    const part = new Uint8Array(N);
+    const span = new Uint8Array(N);
+    const nat = tapes.map(spanOf);
     const at = (c, r) => cell[((r + rows) % rows) * cols + ((c + cols) % cols)];
-    let bag = [];
+    const placed = new Set();
+    let bag = order.slice();
+    const clash = (t, c, s, r, byCh) => {
+      const same = (o) => o >= 0 && (byCh ? tapes[o].ch === tapes[t].ch : o === t);
+      if (c > 0 && same(at(c - 1, r))) return true;
+      if (c + s === cols && same(at(0, r))) return true;
+      for (let k = 0; k < s; k++) {
+        if (r > 0 && same(at(c + k, r - 1))) return true;
+        if (r === rows - 1 && same(at(c + k, 0))) return true;
+      }
+      return false;
+    };
     for (let r = 0; r < rows; r++) {
-      for (let c = 0; c < cols; c++) {
-        if (cell[r * cols + c] !== -1) continue;
-        let free = 0; while (c + free < cols && cell[r * cols + c + free] === -1 && free < 3) free++;
-        if (bag.length < tapes.length) bag = bag.concat(shuffled());
+      for (let c = 0; c < cols;) {
+        const free = cols - c;
+        if (bag.length < LOOK) bag = bag.concat(order);
+        const fits = (s) => s === free || s <= free - MINS; // sisa baris harus tetap bisa diisi
         let pick = -1;
-        for (let pass = 0; pass < 2 && pick < 0; pass++) {
-          for (let i = 0; i < bag.length; i++) {
-            const t = bag[i], s = SPAN[tapes[t].r] || 1;
-            if (s > free) continue;
-            if (pass === 0) {
-              let bad = at(c - 1, r) === t || (c + s === cols && at(0, r) === t);
-              for (let k = 0; k < s && !bad; k++) bad = at(c + k, r - 1) === t || (r === rows - 1 && at(c + k, 0) === t);
-              if (bad) continue;
-            }
+        for (let pass = 0; pass < 3 && pick < 0; pass++) {
+          const lim = pass < 2 ? Math.min(bag.length, LOOK) : bag.length;
+          for (let i = 0; i < lim; i++) {
+            const t = bag[i];
+            if (!fits(nat[t])) continue;
+            if (pass < 2 && clash(t, c, nat[t], r, pass === 0)) continue;
             pick = i; break;
           }
         }
-        if (pick < 0) continue; // only spans left and 1 free cell: leave the cell for a later single
-        const t = bag.splice(pick, 1)[0], s = SPAN[tapes[t].r] || 1;
+        let s;
+        if (pick < 0) { pick = 0; s = free < MINS * 2 ? free : Math.min(nat[bag[0]], free - MINS); } // tak ada yang pas: dipaskan (crop)
+        else s = nat[bag[pick]];
+        const t = bag.splice(pick, 1)[0];
+        placed.add(t);
         for (let k = 0; k < s; k++) { const i = r * cols + c + k; cell[i] = t; part[i] = k; span[i] = s; }
-      }
-      // any hole left (rare): fill with the next single
-      for (let c = 0; c < cols; c++) {
-        const i = r * cols + c;
-        if (cell[i] !== -1) continue;
-        const t = tapes.findIndex((x, j) => (SPAN[x.r] || 1) === 1 && at(c - 1, r) !== j && at(c, r - 1) !== j);
-        cell[i] = t < 0 ? 0 : t; part[i] = 0; span[i] = 1;
+        c += s;
       }
     }
-    return { cols, rows, cell, part, span };
+    return { cols, rows, cell, part, span, missing: order.filter((t) => !placed.has(t)).length };
   }
 
   /* ================= SHADERS ================= */
@@ -76,8 +91,9 @@
 uniform vec2 uRes; uniform float uDpr;
 uniform vec2 uCam; uniform float uR; uniform float uK; uniform float uCap;
 uniform vec2 uCell; uniform vec2 uGrid; uniform float uGap; uniform float uRad;
-uniform sampler2D uAtlas; uniform sampler2D uLut; uniform sampler2D uVideo;
-uniform vec2 uAtlasSize; uniform vec2 uLutSize; uniform float uReady;
+uniform sampler2D uAtlas0; uniform sampler2D uAtlas1; uniform sampler2D uAtlas2;
+uniform sampler2D uLut; uniform sampler2D uVideo;
+uniform vec2 uAtlasSize; uniform vec2 uLutSize; uniform vec3 uReady;
 uniform vec4 uA; uniform vec4 uAI; uniform vec4 uB; uniform vec4 uBI;
 uniform vec2 uVid; uniform float uCA;
 const vec3 BG = vec3(0.035, 0.035, 0.047);
@@ -89,11 +105,17 @@ float sdBox(vec2 q, vec2 h, float r){ vec2 d = abs(q) - h + r; return length(max
 vec2 cover(vec2 l, float ta, float ia){
   if (ia > ta) l.x = 0.5 + (l.x - 0.5) * ta / ia; else l.y = 0.5 + (l.y - 0.5) * ia / ta;
   return clamp(l, 0.0, 1.0); }
-vec3 tape(float t, vec2 l, float ta, float rev){
+vec3 tape(float t, vec2 l, float ta, float rn){
   vec4 a = aRect(t);
-  vec3 img = TEX(uAtlas, (a.xy + cover(l, ta, a.z / a.w) * a.zw) / uAtlasSize).rgb;
-  return mix(lut(t, uGrid.y + 2.0).rgb, img, rev); }
-vec3 lifted(vec3 col, vec2 p, vec4 R, vec4 I, float px, float rev){
+  vec4 ci = lut(t, uGrid.y + 2.0);
+  float pg = dec(ci.a);
+  vec2 uv = (a.xy + cover(l, ta, a.z / a.w) * a.zw) / uAtlasSize;
+  vec3 img; float rd;
+  if (pg < 0.5) { img = TEX(uAtlas0, uv).rgb; rd = uReady.x; }
+  else if (pg < 1.5) { img = TEX(uAtlas1, uv).rgb; rd = uReady.y; }
+  else { img = TEX(uAtlas2, uv).rgb; rd = uReady.z; }
+  return mix(ci.rgb, img, clamp(rd * 2.0 - rn * 0.9, 0.0, 1.0)); }
+vec3 lifted(vec3 col, vec2 p, vec4 R, vec4 I, float px, float rn){
   if (I.y < 0.5) return col;
   vec2 ws = uGrid * uCell;
   vec2 d = p - (R.xy + 0.5 * R.zw); d -= ws * floor(d / ws + 0.5);
@@ -103,7 +125,7 @@ vec3 lifted(vec3 col, vec2 p, vec4 R, vec4 I, float px, float rev){
   float lift = clamp((I.y - 1.0) * 8.0, 0.0, 1.0);
   col *= 1.0 - (1.0 - smoothstep(0.0, 28.0, sd)) * 0.7 * lift;
   vec2 l = clamp((d + h) / (2.0 * h), 0.0, 1.0);
-  vec3 img = tape(I.x, l, R.z / R.w, rev);
+  vec3 img = tape(I.x, l, R.z / R.w, rn);
   if (I.z > 0.0) img = mix(img, TEX(uVideo, cover(l, R.z / R.w, uVid.x / uVid.y)).rgb, I.z);
   if (I.w >= 0.0) {
     float bar = step(1.0 - 4.0 * px / (2.0 * h.y), l.y) * lift;
@@ -119,17 +141,16 @@ vec3 scene(vec2 s){
   vec2 p = uCam + (r > 0.0001 ? s * (L / r) : vec2(0.0));
   vec2 fw = fwidth(p);
   float px = max(max(fw.x, fw.y), 0.0001);
-  float rev = clamp(uReady * 1.8 - r / uR * 0.8, 0.0, 1.0);
   vec2 cu = floor(p / uCell);
   vec2 ci = mod(cu, uGrid);
   vec4 c = lut(ci.x, ci.y);
-  float t = dec(c.r), part = dec(c.g), span = max(dec(c.b), 1.0);
+  float t = dec(c.r) * 256.0 + dec(c.g), part = dec(c.b), span = max(dec(c.a), 1.0);
   vec2 rmin = vec2((cu.x - part) * uCell.x, cu.y * uCell.y) + 0.5 * uGap;
   vec2 rsz = vec2(span * uCell.x, uCell.y) - uGap;
   float sd = sdBox(p - (rmin + 0.5 * rsz), 0.5 * rsz, uRad);
-  vec3 col = mix(BG, tape(t, (p - rmin) / rsz, rsz.x / rsz.y, rev), clamp(0.5 - sd / px, 0.0, 1.0));
-  col = lifted(col, p, uB, uBI, px, rev);
-  col = lifted(col, p, uA, uAI, px, rev);
+  vec3 col = mix(BG, tape(t, (p - rmin) / rsz, rsz.x / rsz.y, rn), clamp(0.5 - sd / px, 0.0, 1.0));
+  col = lifted(col, p, uB, uBI, px, rn);
+  col = lifted(col, p, uA, uAI, px, rn);
   return col; }
 void main(){
   vec2 s = (gl_FragCoord.xy - 0.5 * uRes) / uDpr; s.y = -s.y;
@@ -144,7 +165,7 @@ void main(){
   const FS2 = '#version 300 es\nprecision highp float;\n#define TEX texture\nout vec4 fragOut;\n#define FRAG fragOut\n' + FS_BODY;
 
   /* ================= WEBGL RENDERER ================= */
-  function glRenderer(canvas) {
+  function glRenderer(canvas, atlasInfo) {
     let gl = canvas.getContext('webgl2', { antialias: false, alpha: false, premultipliedAlpha: false, powerPreference: 'low-power' });
     const v2 = !!gl;
     if (!gl) gl = canvas.getContext('webgl', { antialias: false, alpha: false }) || canvas.getContext('experimental-webgl');
@@ -167,7 +188,7 @@ void main(){
     gl.enableVertexAttribArray(0);
     gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
     const U = {};
-    ['uRes', 'uDpr', 'uCam', 'uR', 'uK', 'uCap', 'uCell', 'uGrid', 'uGap', 'uRad', 'uAtlas', 'uLut', 'uVideo',
+    ['uRes', 'uDpr', 'uCam', 'uR', 'uK', 'uCap', 'uCell', 'uGrid', 'uGap', 'uRad', 'uAtlas0', 'uAtlas1', 'uAtlas2', 'uLut', 'uVideo',
       'uAtlasSize', 'uLutSize', 'uReady', 'uA', 'uAI', 'uB', 'uBI', 'uVid', 'uCA']
       .forEach((n) => { U[n] = gl.getUniformLocation(prog, n); });
     const tex = (unit, filter) => { const t = gl.createTexture(); gl.activeTexture(gl.TEXTURE0 + unit); gl.bindTexture(gl.TEXTURE_2D, t);
@@ -177,26 +198,29 @@ void main(){
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, filter === gl.NEAREST ? gl.NEAREST : gl.LINEAR);
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([10, 10, 12, 255]));
       return t; };
-    const tAtlas = tex(0, gl.LINEAR), tLut = tex(1, gl.NEAREST), tVid = tex(2, gl.LINEAR);
-    gl.uniform1i(U.uAtlas, 0); gl.uniform1i(U.uLut, 1); gl.uniform1i(U.uVideo, 2);
-    gl.uniform2f(U.uAtlasSize, 1, 1);
+    // unit 0–2 = halaman atlas, 3 = LUT, 4 = video
+    const tAtlas = [0, 1, 2].map((u) => tex(u, gl.LINEAR));
+    const tLut = tex(PAGES, gl.NEAREST), tVid = tex(PAGES + 1, gl.LINEAR);
+    gl.uniform1i(U.uAtlas0, 0); gl.uniform1i(U.uAtlas1, 1); gl.uniform1i(U.uAtlas2, 2);
+    gl.uniform1i(U.uLut, PAGES); gl.uniform1i(U.uVideo, PAGES + 1);
+    // koordinat tile selalu dalam ukuran logis atlas, berapa pun resolusi gambar yang dimuat
+    gl.uniform2f(U.uAtlasSize, atlasInfo.w || 2048, atlasInfo.h || 2048);
     gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
     return {
       kind: 'webgl',
-      setAtlas(img) {
-        gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, tAtlas);
+      setAtlas(page, img) {
+        gl.activeTexture(gl.TEXTURE0 + page); gl.bindTexture(gl.TEXTURE_2D, tAtlas[page]);
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
         gl.generateMipmap(gl.TEXTURE_2D);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
-        gl.uniform2f(U.uAtlasSize, img.naturalWidth || img.width, img.naturalHeight || img.height);
       },
       setLut(data, w, h) {
-        gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, tLut);
+        gl.activeTexture(gl.TEXTURE0 + PAGES); gl.bindTexture(gl.TEXTURE_2D, tLut);
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, data);
         gl.uniform2f(U.uLutSize, w, h);
       },
       uploadVideo(video) {
-        gl.activeTexture(gl.TEXTURE2); gl.bindTexture(gl.TEXTURE_2D, tVid);
+        gl.activeTexture(gl.TEXTURE0 + PAGES + 1); gl.bindTexture(gl.TEXTURE_2D, tVid);
         try { gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, video); return true; } catch (e) { return false; }
       },
       draw(st) {
@@ -206,9 +230,9 @@ void main(){
         gl.uniform1f(U.uDpr, dpr);
         gl.uniform2f(U.uCam, st.cam[0], st.cam[1]);
         gl.uniform1f(U.uR, st.R); gl.uniform1f(U.uK, K); gl.uniform1f(U.uCap, CAP);
-        gl.uniform2f(U.uCell, st.CW, st.CH); gl.uniform2f(U.uGrid, st.cols, st.rows);
+        gl.uniform2f(U.uCell, st.UW, st.CH); gl.uniform2f(U.uGrid, st.cols, st.rows);
         gl.uniform1f(U.uGap, GAP); gl.uniform1f(U.uRad, RAD);
-        gl.uniform1f(U.uReady, st.ready);
+        gl.uniform3f(U.uReady, st.ready[0], st.ready[1], st.ready[2]);
         const lift = (s, Lu, Iu, useVid) => {
           if (!s) { gl.uniform4f(Lu, 0, 0, 1, 1); gl.uniform4f(Iu, 0, 0, 0, -1); return; }
           gl.uniform4f(Lu, s.rect[0], s.rect[1], s.rect[2], s.rect[3]);
@@ -226,13 +250,13 @@ void main(){
 
   /* ================= CANVAS 2D FALLBACK ================= */
   /* Hanya posisi & ukuran kotak yang mengikuti lensa (seperti mockup). */
-  function canvasRenderer(canvas, api) {
+  function canvasRenderer(canvas, api, atlasInfo) {
     const g = canvas.getContext('2d');
     if (!g) return null;
-    let atlas = null;
+    const atlases = [];
     return {
       kind: '2d',
-      setAtlas(img) { atlas = img; }, setLut() {}, uploadVideo() { return true; },
+      setAtlas(page, img) { atlases[page] = img; }, setLut() {}, uploadVideo() { return true; },
       draw(st) {
         const { W, H, dpr } = st;
         g.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -241,7 +265,7 @@ void main(){
         g.beginPath(); g.arc(W / 2, H / 2, st.R * CAP, 0, Math.PI * 2); g.clip();
         g.fillStyle = '#09090c'; g.fillRect(0, 0, W, H);
         const ext = api.extent();
-        const c0 = Math.floor((st.cam[0] - ext[0]) / st.CW) - 3, c1 = Math.ceil((st.cam[0] + ext[0]) / st.CW) + 1;
+        const c0 = Math.floor((st.cam[0] - ext[0]) / st.UW) - MAXS, c1 = Math.ceil((st.cam[0] + ext[0]) / st.UW) + 1;
         const r0 = Math.floor((st.cam[1] - ext[1]) / st.CH) - 1, r1 = Math.ceil((st.cam[1] + ext[1]) / st.CH) + 1;
         const drawTile = (t, rect, scale, video, mix) => {
           const cx = rect[0] + rect[2] / 2, cy = rect[1] + rect[3] / 2;
@@ -255,11 +279,12 @@ void main(){
           if (w < 1.5 || h < 1.5) return;
           const x = W / 2 + c[0] - w / 2, y = H / 2 + c[1] - h / 2;
           const tp = st.tapes[t];
+          const atlas = atlases[tp.p || 0];
           const src = video && mix > 0.5 && video.readyState >= 2 ? video : atlas;
           if (src) {
             let sx, sy, sw, sh;
             if (src === video) { sx = 0; sy = 0; sw = video.videoWidth; sh = video.videoHeight; }
-            else { [sx, sy, sw, sh] = tp.a; }
+            else { const k = (atlas.naturalWidth || atlas.width) / (atlasInfo.w || 2048); [sx, sy, sw, sh] = tp.a.map((v) => v * k); }
             const ia = sw / sh, ta = w / h;
             if (ia > ta) { const nw = sh * ta; sx += (sw - nw) / 2; sw = nw; } else { const nh = sw / ta; sy += (sh - nh) / 2; sh = nh; }
             g.drawImage(src, sx, sy, sw, sh, x, y, w, h);
@@ -270,7 +295,7 @@ void main(){
           for (let c = c0; c <= c1; c++) {
             const i = api.cellAt(c, r);
             if (i.part !== 0) continue;
-            drawTile(i.t, [c * st.CW + GAP / 2, r * st.CH + GAP / 2, i.span * st.CW - GAP, st.CH - GAP], 1);
+            drawTile(i.t, [c * st.UW + GAP / 2, r * st.CH + GAP / 2, i.span * st.UW - GAP, st.CH - GAP], 1);
           }
         }
         if (st.B) drawTile(st.B.t, api.near(st.B.rect), st.B.scale);
@@ -287,27 +312,34 @@ void main(){
   /* ================= STATIC FALLBACK ================= */
   function staticGrid(el, tapes, href) {
     el.classList.add('is-static');
+    const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
     el.innerHTML = `<p class="wall-nosignal">NO SIGNAL — showing list</p><div class="wall-fb">${
-      tapes.slice(0, 24).map((t) => `<a class="wall-fb-item" href="${href(t)}"><img src="assets/video/thumb/${t.s}.webp" alt="${t.label}" loading="lazy"></a>`).join('')}</div>`;
+      tapes.slice(0, 24).map((t) => `<a class="wall-fb-item" href="${href(t)}"><img src="${thumbOf(t)}" alt="${esc(t.label)}" loading="lazy"></a>`).join('')}</div>`;
   }
 
   /* ================= MOUNT ================= */
   function mount(el, opts) {
-    const tapes = opts.tapes || window.TAPES || [];
-    const atlasInfo = opts.atlas || window.TAPE_ATLAS;
+    // (const di tapes.js bukan properti window → cek lewat typeof)
+    const atlasInfo = opts.atlas || (typeof WALL_ATLAS !== 'undefined' ? WALL_ATLAS : { w: 2048, h: 2048, pages: [], pagesSm: [] });
     const variant = opts.variant || 'full';
     const preview = variant === 'preview';
+    // link-in-bio preview: hanya item di halaman atlas pertama, supaya tetap ringan
+    const tapes = (opts.tapes || (typeof WALL !== 'undefined' ? WALL : [])).filter((t) => !preview || !(t.p > 0));
+    const channels = opts.channels || (typeof TAPE_CHANNELS !== 'undefined' ? TAPE_CHANNELS : []);
     const coarse = matchMedia('(pointer: coarse)').matches || !matchMedia('(hover: hover)').matches;
     const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
     const saveData = !!(navigator.connection && navigator.connection.saveData);
     const autoplay = !reduce && !saveData;
     const onOpen = opts.onOpen || (() => {});
+    const onHover = opts.onHover || (() => {});
     const hrefFor = opts.href || ((t) => `#tape/${t.s}`);
     if (!tapes.length) return null;
 
     const TH = preview ? (coarse ? 72 : 84) : (coarse ? 118 : 150);
     const CW = TH * 9 / 16 + GAP, CH = TH + GAP;
+    const UW = CW / 3; // lebar satu sel
     const LIFT = preview ? 1.3 : coarse ? 1.35 : 1.18;
+    const HAS_RVFC = 'requestVideoFrameCallback' in HTMLVideoElement.prototype;
 
     /* DOM */
     el.classList.add('wall', preview ? 'wall--preview' : 'wall--full');
@@ -316,8 +348,8 @@ void main(){
       el.setAttribute('role', 'application');
       el.tabIndex = 0;
       el.setAttribute('aria-label', preview
-        ? 'Pratinjau dinding video portofolio. Panah untuk menjelajah, Enter untuk membuka portofolio.'
-        : 'Dinding video portofolio, gunakan panah untuk menjelajah, Enter untuk membuka');
+        ? 'Pratinjau dinding karya portofolio. Panah untuk menjelajah, Enter untuk membuka portofolio.'
+        : 'Dinding karya portofolio: video, desain, dan dokumen. Gunakan panah untuk menjelajah, Enter untuk membuka');
     }
     el.style.touchAction = preview ? 'pan-y' : 'none';
     const fb = el.querySelector('.wall-fb');
@@ -332,18 +364,18 @@ void main(){
     video.className = 'wall-video';
     video.muted = true; video.defaultMuted = true; video.loop = true; video.playsInline = true;
     video.setAttribute('muted', ''); video.setAttribute('playsinline', ''); video.setAttribute('aria-hidden', 'true');
-    video.preload = 'metadata'; video.disableRemotePlayback = true; video.dataset.noDuck = '';
+    video.preload = 'auto'; video.disableRemotePlayback = true; video.dataset.noDuck = '';
     el.append(canvas, ring, hud, cap, live, tuning, video);
     if (coarse) el.classList.add('is-touch');
 
     /* renderer */
     let rd = null, surface = canvas;
     const api = {};
-    try { rd = glRenderer(canvas); } catch (e) { console.warn('[wall] webgl:', e.message); rd = null; }
+    try { rd = glRenderer(canvas, atlasInfo); } catch (e) { console.warn('[wall] webgl:', e.message); rd = null; }
     if (!rd) {
       // a canvas that tried webgl cannot give a 2d context — swap it
       const c2 = canvas.cloneNode(); canvas.replaceWith(c2);
-      rd = canvasRenderer(c2, api);
+      rd = canvasRenderer(c2, api, atlasInfo);
       if (!rd) { staticGrid(el, tapes, hrefFor); return null; }
       surface = c2;
     }
@@ -352,20 +384,23 @@ void main(){
 
     /* state */
     const st = {
-      W: 1, H: 1, dpr: 1, R: 1, CW, CH, cols: 0, rows: 0, cam: [0, 0], tapes,
-      ready: 0, A: null, B: null, ca: 0, vidW: 9, vidH: 16,
+      W: 1, H: 1, dpr: 1, R: 1, UW, CH, cols: 0, rows: 0, cam: [0, 0], tapes,
+      ready: [0, 0, 0], A: null, B: null, ca: 0, vidW: 9, vidH: 16,
     };
-    let layout = null, ext = [0, 0];
+    let layout = null, ext = [0, 0], filter = 'all';
     const vel = [0, 0];
     let mode = 'idle'; // idle | drag | coast | snap
     let snapTo = null, hoverTimer = 0, leaveTimer = 0, playTimer = 0, holdTimer = 0;
-    let pendingKey = null;
-    let pointerIn = false, touched = false, paused = false, visible = true;
+    let pendingKey = null, hovered = null;
+    let pointerIn = false, touched = false, paused = false, visible = true, dead = false;
     let ptr = null; // active pointer gesture
     let lastPtr = null; // last mouse position (for hover refresh)
-    let dirty = true, raf = 0, last = 0, vidReady = false, vidFrame = false, holding = null, snapped = null;
+    let dirty = true, raf = 0, last = 0, holding = null, snapped = null;
+    // vidReady: 'playing' sudah datang · vidFrame: ada frame baru · vidShown: frame-nya sudah di tekstur
+    let vidReady = false, vidFrame = false, vidShown = false, vidSlug = '', rvfcArmed = false;
+    const loaded = [0, 0, 0]; // per halaman atlas: 0 belum, 1 kecil, 2 penuh
 
-    const worldW = () => st.cols * CW, worldH = () => st.rows * CH;
+    const worldW = () => st.cols * UW, worldH = () => st.rows * CH;
     const wrap = (v, m) => ((v % m) + m) % m;
 
     api.cellAt = (c, r) => {
@@ -401,11 +436,11 @@ void main(){
     };
 
     function tileAtFlat(x, y) {
-      const c = Math.floor(x / CW), r = Math.floor(y / CH);
+      const c = Math.floor(x / UW), r = Math.floor(y / CH);
       const i = api.cellAt(c, r);
-      const ox = (c - i.part) * CW;
-      const rect = [wrap(ox + GAP / 2, worldW()), wrap(r * CH + GAP / 2, worldH()), i.span * CW - GAP, CH - GAP];
-      const inside = x >= ox + GAP / 2 && x <= ox + i.span * CW - GAP / 2 && y >= r * CH + GAP / 2 && y <= (r + 1) * CH - GAP / 2;
+      const ox = (c - i.part) * UW;
+      const rect = [wrap(ox + GAP / 2, worldW()), wrap(r * CH + GAP / 2, worldH()), i.span * UW - GAP, CH - GAP];
+      const inside = x >= ox + GAP / 2 && x <= ox + i.span * UW - GAP / 2 && y >= r * CH + GAP / 2 && y <= (r + 1) * CH - GAP / 2;
       return { t: i.t, rect, inside, key: `${rect[0] | 0},${rect[1] | 0}` };
     }
     // hit-test at a screen offset (exact inverse mapping, enlarged tiles first)
@@ -426,10 +461,10 @@ void main(){
     function nearestToCenter(px, py) {
       const x0 = px == null ? st.cam[0] : px, y0 = py == null ? st.cam[1] : py;
       let best = null, bd = Infinity;
-      const c0 = Math.floor(x0 / CW), r0 = Math.floor(y0 / CH);
-      for (let r = r0 - 1; r <= r0 + 1; r++) for (let c = c0 - 3; c <= c0 + 3; c++) {
+      const c0 = Math.floor(x0 / UW), r0 = Math.floor(y0 / CH);
+      for (let r = r0 - 1; r <= r0 + 1; r++) for (let c = c0 - MAXS; c <= c0 + MAXS; c++) {
         const i = api.cellAt(c, r); if (i.part !== 0) continue;
-        const cx = c * CW + i.span * CW / 2, cy = r * CH + CH / 2;
+        const cx = c * UW + i.span * UW / 2, cy = r * CH + CH / 2;
         const d = Math.hypot(cx - x0, cy - y0);
         if (d < bd) { bd = d; best = { cx, cy, h: tileAtFlat(cx, cy) }; }
       }
@@ -454,6 +489,32 @@ void main(){
       }
       return [ex, ey];
     }
+    const inFilter = (t) => filter === 'all' || (filter === 'v' ? kindOf(t) === 'v' : kindOf(t) !== 'v');
+    // smallest world that covers the screen AND holds every item of the current filter once
+    function worldSize() {
+      const order = [];
+      tapes.forEach((t, i) => { if (inFilter(t)) order.push(i); });
+      const need = order.reduce((a, i) => a + spanOf(tapes[i]), 0) * 1.03;
+      const minC = Math.max(MAXS * 2 + 4, Math.ceil((2 * ext[0] + 4 * CW) / UW));
+      const minR = Math.max(5, Math.ceil((2 * ext[1] + 2 * CH) / CH));
+      let cols = minC, rows = minR;
+      if (need > cols * rows) {
+        cols = Math.max(minC, Math.ceil(Math.sqrt(need * CH / UW)));
+        rows = Math.max(minR, Math.ceil(need / cols));
+      }
+      return { order, cols, rows, minC, minR };
+    }
+    function rebuild(w) {
+      let rows = w.rows;
+      for (let i = 0; i < 8; i++) {
+        layout = buildLayout(tapes, w.order, w.cols, rows);
+        if (!layout.missing) break;
+        rows++;
+      }
+      st.cols = layout.cols; st.rows = layout.rows;
+      st.minC = w.minC; st.minR = w.minR;
+      uploadLut();
+    }
     function resize() {
       const b = el.getBoundingClientRect();
       if (b.width < 2 || b.height < 2) return;
@@ -462,14 +523,12 @@ void main(){
       st.R = 0.5 * Math.max(st.W, st.H);
       surface.width = Math.round(st.W * st.dpr); surface.height = Math.round(st.H * st.dpr);
       ext = measureExtent();
-      const cols = Math.max(8, Math.ceil((2 * ext[0] + 4 * CW) / CW));
-      const rows = Math.max(5, Math.ceil((2 * ext[1] + 2 * CH) / CH));
-      if (!layout || cols > st.cols || rows > st.rows) {
+      const w = worldSize();
+      if (!layout || w.minC > st.cols || w.minR > st.rows) {
         const keep = layout && st.A ? tapes[st.A.t].s : null;
-        layout = buildLayout(tapes, Math.max(cols, st.cols), Math.max(rows, st.rows), 0x1415A7);
-        st.cols = layout.cols; st.rows = layout.rows;
-        uploadLut();
-        if (keep) focus(keep, true); else if (!st.A) centreFeatured();
+        rebuild(w);
+        st.A = st.B = null;
+        if (keep) focus(keep, true); else centreFeatured();
       }
       st.ca = rd.kind === 'webgl' && !coarse && !preview && st.W > 700 ? 0.0016 : 0;
       dirty = true;
@@ -478,8 +537,8 @@ void main(){
       const w = Math.max(st.cols, tapes.length), h = st.rows + 3;
       const d = new Uint8Array(w * h * 4);
       for (let r = 0; r < st.rows; r++) for (let c = 0; c < st.cols; c++) {
-        const i = r * st.cols + c, o = (r * w + c) * 4;
-        d[o] = layout.cell[i]; d[o + 1] = layout.part[i]; d[o + 2] = layout.span[i]; d[o + 3] = 255;
+        const i = r * st.cols + c, o = (r * w + c) * 4, t = layout.cell[i];
+        d[o] = t >> 8; d[o + 1] = t & 255; d[o + 2] = layout.part[i]; d[o + 3] = layout.span[i];
       }
       tapes.forEach((t, i) => {
         const a = t.a || [0, 0, 1, 1];
@@ -488,22 +547,30 @@ void main(){
         o = ((st.rows + 1) * w + i) * 4;
         d[o] = a[2] >> 8; d[o + 1] = a[2] & 255; d[o + 2] = a[3] >> 8; d[o + 3] = a[3] & 255;
         o = ((st.rows + 2) * w + i) * 4;
-        const c = hexRGB(t.c); d[o] = c[0]; d[o + 1] = c[1]; d[o + 2] = c[2]; d[o + 3] = 255;
+        const c = hexRGB(t.c); d[o] = c[0]; d[o + 1] = c[1]; d[o + 2] = c[2]; d[o + 3] = Math.min(PAGES - 1, t.p || 0);
       });
       rd.setLut(d, w, h);
     }
-    function centreFeatured() {
-      const feat = tapes.map((t, i) => (t.featured ? i : -1)).filter((i) => i >= 0);
-      const want = feat.length ? feat[(Math.random() * feat.length) | 0] : 0;
-      const idx = layout.cell.findIndex((t, i) => t === want && layout.part[i] === 0);
-      if (idx < 0) return;
+    function centreOn(idx) {
       const r = (idx / st.cols) | 0, c = idx % st.cols;
-      st.cam[0] = c * CW + layout.span[idx] * CW / 2;
+      st.cam[0] = c * UW + layout.span[idx] * UW / 2;
       st.cam[1] = r * CH + CH / 2;
+    }
+    function centreFeatured() {
+      const feat = tapes.map((t, i) => ((t.f || t.featured) && inFilter(t) ? i : -1)).filter((i) => i >= 0);
+      const want = feat.length ? feat[(Math.random() * feat.length) | 0] : layout.cell[0];
+      const idx = layout.cell.findIndex((t, i) => t === want && layout.part[i] === 0);
+      if (idx >= 0) centreOn(idx);
     }
 
     /* ----- active tile (lifted, playing) ----- */
     const lifted = (h, target) => ({ t: h.t, rect: h.rect, key: h.key, scale: 1, target, mix: 0, prog: -1 });
+    const chName = (t) => channels[(t.ch || 0) - 1] || '';
+    const capText = (t) => {
+      const k = kindOf(t);
+      if (k === 'i') return t.label;
+      return [t.label, t.client, chName(t)].filter(Boolean).join(' · ');
+    };
     function setActive(h, { play = true, delay = 0 } = {}) {
       if (st.A && h && st.A.key === h.key) {
         st.A.target = LIFT;
@@ -518,40 +585,45 @@ void main(){
         if (play) schedulePlay(delay);
         const t = tapes[st.A.t];
         clearTimeout(live._t);
-        live._t = setTimeout(() => { live.textContent = t.label + (t.client ? ` — ${t.client}` : ''); }, 350);
+        live._t = setTimeout(() => { live.textContent = capText(t); }, 350);
       }
       dirty = true; kick();
     }
     function clearActive() { setActive(null); }
     function stopVideo() {
       clearTimeout(playTimer); playTimer = 0;
-      vidReady = false;
+      vidReady = false; vidShown = false; vidFrame = false;
       if (st.A) st.A.mix = 0;
       if (!video.paused) video.pause();
     }
     function schedulePlay(delay) {
       clearTimeout(playTimer); playTimer = 0;
-      if (!autoplay || paused) return;
+      if (!autoplay || paused || !st.A || kindOf(tapes[st.A.t]) !== 'v') return;
       playTimer = setTimeout(startVideo, delay);
     }
+    /* hover memutar CUPLIKAN (assets/video/snip, ≤ 350 KB), bukan file penuh */
     function startVideo() {
       playTimer = 0;
       if (!st.A || paused) return;
-      const src = `assets/video/${tapes[st.A.t].s}.mp4`;
-      if (!video.src.endsWith(src)) { vidReady = false; video.src = src; }
+      const t = tapes[st.A.t];
+      if (kindOf(t) !== 'v') return;
+      if (vidSlug !== t.s) { vidReady = false; vidShown = false; vidFrame = false; vidSlug = t.s; video.src = `assets/video/snip/${t.s}.mp4`; }
       video.play().catch(() => {});
     }
+    const armFrame = () => {
+      if (!HAS_RVFC || rvfcArmed) return;
+      rvfcArmed = true;
+      video.requestVideoFrameCallback(() => { rvfcArmed = false; vidFrame = true; dirty = true; kick(); armFrame(); });
+    };
     video.addEventListener('playing', () => {
-      if (!st.A || !video.src.endsWith(`/${tapes[st.A.t].s}.mp4`)) return;
+      if (!st.A || vidSlug !== tapes[st.A.t].s) return;
       vidReady = true; st.vidW = video.videoWidth || 9; st.vidH = video.videoHeight || 16;
-      vidFrame = true; kick();
+      armFrame(); kick();
     });
-    if ('requestVideoFrameCallback' in video) {
-      const onFrame = () => { vidFrame = true; dirty = true; video.requestVideoFrameCallback(onFrame); };
-      video.requestVideoFrameCallback(onFrame);
-    }
+    armFrame();
 
     /* ----- input ----- */
+    const tellHover = (t) => { if (t === hovered) return; hovered = t; onHover(t); };
     const local = (e) => { const b = el.getBoundingClientRect(); return [e.clientX - b.left - st.W / 2, e.clientY - b.top - st.H / 2]; };
     function onDown(e) {
       if (e.button > 0) return;
@@ -579,7 +651,10 @@ void main(){
         const dx = x - ptr.x, dy = y - ptr.y;
         if (!ptr.moved && Math.hypot(x - ptr.x0, y - ptr.y0) > 6) {
           ptr.moved = true; clearTimeout(holdTimer);
-          if (!ptr.hold) { try { el.setPointerCapture(e.pointerId); } catch (_) { /* gone */ } mode = 'drag'; el.classList.add('is-dragging'); }
+          if (!ptr.hold) {
+            try { el.setPointerCapture(e.pointerId); } catch (_) { /* gone */ }
+            mode = 'drag'; el.classList.add('is-dragging'); tellHover(null);
+          }
         }
         if (ptr.moved && !ptr.hold) {
           const a = toFlat(ptr.x, ptr.y), b = toFlat(x, y);
@@ -631,6 +706,7 @@ void main(){
     }
     function hover(x, y) {
       const h = hit(x, y);
+      tellHover(h ? tapes[h.t] : null);
       const cur = st.A && st.A.target > 1 ? st.A.key : null;
       if (h && h.key === cur) { clearTimeout(leaveTimer); clearTimeout(hoverTimer); pendingKey = null; return; }
       if (h && h.key === pendingKey) { clearTimeout(leaveTimer); return; }
@@ -669,6 +745,7 @@ void main(){
       if (e.pointerType !== 'mouse') return;
       pointerIn = false; lastPtr = null;
       clearTimeout(hoverTimer); pendingKey = null;
+      tellHover(null);
       if (!ptr && !coarse) clearActive();
       kick();
     });
@@ -699,7 +776,7 @@ void main(){
     el.addEventListener('focus', () => { if (!st.A && el.matches(':focus-visible')) settle(); });
 
     /* ----- loop ----- */
-    function kick() { if (!raf && visible && !paused) { last = performance.now(); raf = requestAnimationFrame(frame); } }
+    function kick() { if (!raf && visible && !paused && !dead) { last = performance.now(); raf = requestAnimationFrame(frame); } }
     function frame(now) {
       raf = 0;
       const dt = Math.min(64, now - last); last = now;
@@ -755,56 +832,92 @@ void main(){
       if (st.B && st.B.scale <= 1.001) st.B = null;
       if (st.A && st.A.target === 1 && st.A.scale <= 1.001) st.A = null;
       if (st.B) { st.B.mix = Math.max(0, st.B.mix - 0.12 * f); anim = true; }
-      if (st.A) {
-        const want = vidReady ? 1 : 0;
-        if (st.A.mix !== want) { st.A.mix = clamp(st.A.mix + (want ? 0.12 : -0.2) * f, 0, 1); anim = true; }
-        st.A.prog = vidReady && video.duration ? (video.currentTime / video.duration) : -1;
-      }
-      if (st.ready < 1 && atlasLoaded) { st.ready = Math.min(1, st.ready + dt / 700); anim = true; }
 
-      // new video frame → texture
+      // new video frame → texture. The thumbnail stays until a frame of THIS tape
+      // has really been decoded and uploaded (never a black or stale tile).
       const playing = vidReady && !video.paused && video.readyState >= 2;
-      if (playing && (vidFrame || !('requestVideoFrameCallback' in video))) {
+      if (playing && !vidFrame && (!HAS_RVFC || !vidShown) && video.currentTime > 0.04) vidFrame = true;
+      if (playing && vidFrame) {
         vidFrame = false;
-        if (!rd.uploadVideo(video)) vidReady = false;
+        if (rd.uploadVideo(video)) vidShown = true; else { vidReady = false; vidShown = false; }
         dirty = true;
       }
+      if (st.A) {
+        const want = vidReady && vidShown ? 1 : 0;
+        if (st.A.mix !== want) { st.A.mix = clamp(st.A.mix + (want ? 0.12 : -0.2) * f, 0, 1); anim = true; }
+        st.A.prog = want && video.duration ? (video.currentTime / video.duration) : -1;
+      }
+      for (let p = 0; p < PAGES; p++) {
+        if (loaded[p] && st.ready[p] < 1) { st.ready[p] = Math.min(1, st.ready[p] + dt / 700); anim = true; }
+      }
+
       if (moving || anim || dirty || playing) { rd.draw(st); dirty = false; placeHud(); }
       if (!paused && (moving || anim || playing || mode !== 'idle' || ptr)) raf = requestAnimationFrame(frame);
     }
 
+    /* HUD di tile aktif; tanpa tile aktif, tile paling tengah tetap diberi caption
+       supaya karya tidak pernah anonim. */
     function placeHud() {
-      const s = st.A && st.A.target > 1 ? st.A : null;
-      if (!s || s.scale < 1.03) { hud.classList.remove('on'); cap.classList.remove('on'); return; }
+      const s = st.A && st.A.target > 1 && st.A.scale >= 1.03 ? st.A : null;
+      const off = () => { hud.classList.remove('on'); };
+      const capAt = (t, bl) => {
+        cap.textContent = capText(t);
+        const left = st.W / 2 + bl[0];
+        cap.style.maxWidth = `${Math.max(90, st.W - left - 10).toFixed(0)}px`; // never run off the wall (CSS ellipsis)
+        cap.style.transform = `translate(${left.toFixed(1)}px, ${(st.H / 2 + bl[1] + 8).toFixed(1)}px)`;
+        cap.classList.add('on');
+      };
+      if (!s) {
+        off();
+        const n = !preview && layout && (mode === 'idle' || mode === 'snap') && !(st.A && st.A.target > 1) ? nearestToCenter() : null;
+        const r = n && api.near(n.h.rect);
+        const bl = r && api.toScreen(r[0], r[1] + r[3]);
+        if (bl) capAt(tapes[n.h.t], bl); else cap.classList.remove('on');
+        return;
+      }
       const r = api.near(s.rect);
       const cx = r[0] + r[2] / 2, cy = r[1] + r[3] / 2;
       const hw = r[2] / 2 * s.scale, hh = r[3] / 2 * s.scale;
       const tl = api.toScreen(cx - hw, cy - hh), bl = api.toScreen(cx - hw, cy + hh);
-      if (!tl || !bl) { hud.classList.remove('on'); cap.classList.remove('on'); return; }
-      const t = tapes[s.t];
-      const rec = vidReady && !video.paused;
-      hud.textContent = rec ? `● REC ${fmt(video.currentTime)}` : (autoplay ? '◌ TUNING' : '▶ PLAY');
+      if (!tl || !bl) { off(); cap.classList.remove('on'); return; }
+      const t = tapes[s.t], k = kindOf(t);
+      const rec = k === 'v' && vidReady && vidShown && !video.paused;
+      hud.textContent = k === 'i' ? '▣ LIHAT'
+        : k === 'd' ? `PDF · ${t.n || '?'} HAL`
+        : rec ? `● REC ${fmt(video.currentTime)}` : (autoplay ? '◌ TUNING' : '▶ PUTAR');
       hud.classList.toggle('rec', rec);
       hud.style.transform = `translate(${(st.W / 2 + tl[0] + 6).toFixed(1)}px, ${(st.H / 2 + tl[1] + 6).toFixed(1)}px)`;
-      cap.textContent = t.label + (t.client ? ` · ${t.client}` : '');
-      cap.style.transform = `translate(${(st.W / 2 + bl[0]).toFixed(1)}px, ${(st.H / 2 + bl[1] + 8).toFixed(1)}px)`;
-      hud.classList.add('on'); cap.classList.add('on');
+      hud.classList.add('on');
+      capAt(t, bl);
     }
 
-    /* ----- atlas ----- */
-    let atlasLoaded = false;
-    const img = new Image();
-    img.decoding = 'async';
-    img.onload = () => {
-      rd.setAtlas(img); atlasLoaded = true;
-      tuning.classList.add('off');
-      el.classList.add('is-ready');
+    /* ----- atlas: halaman kecil dulu (cepat), lalu versi penuh ----- */
+    const pageCount = preview ? 1 : Math.min(PAGES, (atlasInfo.pages || []).length);
+    const loadImg = (src) => new Promise((res, rej) => {
+      const im = new Image(); im.decoding = 'async';
+      im.onload = () => res(im); im.onerror = rej; im.src = src;
+    });
+    const put = (p, im, lvl) => {
+      if (dead || (rd.lost && rd.lost())) return;
+      rd.setAtlas(p, im); loaded[p] = lvl;
+      if (p === 0) { tuning.classList.add('off'); el.classList.add('is-ready'); }
       dirty = true; kick();
     };
-    img.onerror = () => { tuning.classList.add('off'); };
-    const loadAtlas = () => { img.src = (preview ? atlasInfo.srcSm : atlasInfo.src); };
-    if (opts.lazyAtlas && document.readyState !== 'complete') addEventListener('load', loadAtlas, { once: true });
-    else loadAtlas();
+    async function loadAtlases() {
+      const sm = atlasInfo.pagesSm || [], full = atlasInfo.pages || [];
+      const lite = saveData || (navigator.deviceMemory && navigator.deviceMemory <= 2);
+      try { put(0, await loadImg(sm[0] || full[0]), sm[0] ? 1 : 2); } catch (e) { tuning.classList.add('off'); }
+      if (preview) return;
+      await Promise.all([1, 2].filter((p) => p < pageCount).map((p) =>
+        loadImg(sm[p] || full[p]).then((im) => put(p, im, sm[p] ? 1 : 2), () => {})));
+      if (lite) return;
+      for (let p = 0; p < pageCount; p++) {
+        if (loaded[p] === 2 || !full[p]) continue;
+        try { put(p, await loadImg(full[p]), 2); } catch (e) { /* keep the small one */ }
+      }
+    }
+    if (opts.lazyAtlas && document.readyState !== 'complete') addEventListener('load', loadAtlases, { once: true });
+    else loadAtlases();
 
     /* ----- visibility ----- */
     const io = new IntersectionObserver(([en]) => {
@@ -821,47 +934,64 @@ void main(){
     const ro = new ResizeObserver(() => { resize(); kick(); });
     ro.observe(el);
     resize();
-    surface.addEventListener('webglcontextlost', (e) => { e.preventDefault(); cancelAnimationFrame(raf); raf = 0; staticGrid(el, tapes, hrefFor); });
+    surface.addEventListener('webglcontextlost', (e) => { e.preventDefault(); dead = true; cancelAnimationFrame(raf); raf = 0; staticGrid(el, tapes, hrefFor); });
 
     function focus(slug, quiet) {
       const ti = tapes.findIndex((t) => t.s === slug);
       if (ti < 0 || !layout) return;
+      if (!inFilter(tapes[ti])) setFilter('all');
       // the instance closest to the current camera
       let best = -1, bd = Infinity;
       layout.cell.forEach((t, i) => {
         if (t !== ti || layout.part[i] !== 0) return;
         const r = (i / st.cols) | 0, c = i % st.cols;
-        let dx = c * CW - st.cam[0], dy = r * CH - st.cam[1];
+        let dx = c * UW - st.cam[0], dy = r * CH - st.cam[1];
         dx -= worldW() * Math.round(dx / worldW()); dy -= worldH() * Math.round(dy / worldH());
         const d = Math.hypot(dx, dy); if (d < bd) { bd = d; best = i; }
       });
       if (best < 0) return;
-      const r = (best / st.cols) | 0, c = best % st.cols;
-      st.cam[0] = c * CW + layout.span[best] * CW / 2; st.cam[1] = r * CH + CH / 2;
+      centreOn(best);
       if (!quiet && coarse) { const h = tileAtFlat(st.cam[0], st.cam[1]); touched = true; snapped = h.key; setActive(h, { play: !paused, delay: 300 }); }
       dirty = true; kick();
+    }
+    // 'all' | 'v' (video) | 'x' (desain: gambar + dokumen) — layout ulang, atlas tetap
+    function setFilter(f) {
+      f = f === 'v' || f === 'x' ? f : 'all';
+      if (f === filter || !layout) return;
+      filter = f;
+      clearTimeout(hoverTimer); pendingKey = null; snapTo = null; mode = 'idle'; vel[0] = vel[1] = 0;
+      stopVideo(); st.A = st.B = null; snapped = null;
+      rebuild(worldSize());
+      centreFeatured();
+      tellHover(null); // the tile under the cursor is a different one now
+      el.dispatchEvent(new CustomEvent('wall:filter', { detail: { filter } }));
+      dirty = true; kick();
+      if (lastPtr && pointerIn && !coarse) hover(lastPtr[0], lastPtr[1]);
     }
 
     const inst = {
       el,
       renderer: rd.kind,
       focus,
+      setFilter,
+      get filter() { return filter; },
       setPaused(v) {
         paused = !!v;
         if (paused) { clearTimeout(playTimer); if (!video.paused) video.pause(); }
         else { dirty = true; kick(); if (st.A && st.A.target > 1) schedulePlay(200); }
       },
       destroy() {
+        dead = true;
         cancelAnimationFrame(raf); io.disconnect(); ro.disconnect();
         document.removeEventListener('visibilitychange', onVis);
         video.pause(); video.removeAttribute('src'); video.load();
         el.replaceChildren();
       },
-      _debug: () => ({ st, layout, mode, ext, snapped, touched, paused, raf, visible }),
+      _debug: () => ({ st, layout, mode, ext, snapped, touched, paused, raf, visible, loaded, filter, vidReady, vidShown, vidSlug, frame, hit, hover, nearestToCenter }),
     };
     el.fisheye = inst;
     return inst;
   }
 
-  window.Fisheye = { mount };
+  window.Fisheye = { mount, buildLayout, spanOf };
 })();

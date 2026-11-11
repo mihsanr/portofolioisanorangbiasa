@@ -17,6 +17,21 @@
   }
   apply();
 
+  /* Arriving through a CRT page transition (style.css @view-transition). Registered
+     here because this file loads in <head>: `pagereveal` can fire before the scripts
+     at the end of <body> run. sfx.js plays the channel zap when it sees the flag.
+     A skipped transition (hidden tab, slow load) rejects its promises — swallow
+     that so it never shows up as an unhandled error in the console. */
+  const quiet = (vt) => { if (vt) { vt.ready.catch(() => {}); vt.finished.catch(() => {}); } };
+  addEventListener('pageswap', (e) => quiet(e.viewTransition)); // leaving
+  addEventListener('pagereveal', (e) => {                       // arriving
+    const vt = e.viewTransition;
+    if (!vt) return;
+    quiet(vt);
+    window.VT_ARRIVED = true;
+    dispatchEvent(new Event('vt:arrive'));
+  });
+
   document.addEventListener('click', (e) => {
     // tool UIs take many clicks; keep the colour still there
     if (e.target.closest && e.target.closest('[data-keep-brand]')) return;
