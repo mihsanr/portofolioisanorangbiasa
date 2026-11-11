@@ -203,10 +203,10 @@ const PROJECTS = [
 //         pemilik yang mengisi (jangan ditebak). Selama kosong, kartu memakai
 //         kategori channel-nya.
 const PRIME = [
-  { s: 'sf-malaka', title: 'Malaka Project', role: '', color: '#facc15' },
-  { s: 'chipaws-promo', title: 'Chipaws', role: '', color: '#ff3b3b' },
+  { s: 'mg-fuccretention', title: 'FUCC Retention', role: '', color: '#facc15' },
+  { s: 'mg-idup', title: 'Neon Type Loop', role: '', color: '#ff3b3b' },
   { s: 'mg-exora', title: 'Exora League', role: '', color: '#22d3ee' },
-  { s: 'afmedika-brandboard', title: 'AF Medika', role: '', color: '#ff8ad8' },
+  { s: 'mg-ujumaki', title: 'Ujumaki', role: '', color: '#ff8ad8' },
 ];
 
 const JOURNEY = [

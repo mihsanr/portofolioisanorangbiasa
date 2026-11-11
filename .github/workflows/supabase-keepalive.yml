@@ -1,27 +1,55 @@
 # Supabase free projects are paused after ~7 days without activity, which takes
-# the Next Up waitlist offline. One read-only call every 3 days keeps it awake.
-# Uses only the public publishable key (already shipped in js/supabase-config.js).
+# the Next Up waitlist offline. This runs by itself every day:
+#   1. reads the waitlist with the public publishable key (already shipped in
+#      js/supabase-config.js) — that is the "activity";
+#   2. if the project does not answer (paused), and the repo secret
+#      SUPABASE_ACCESS_TOKEN is set, asks the Management API to restore it and
+#      waits until it is back.
+# Without the secret a paused project only makes the run fail (GitHub e-mails
+# the repo owner) and has to be restored by hand in the dashboard.
 name: Supabase keep-alive
 
 on:
   schedule:
-    - cron: '17 3 */3 * *'   # 03:17 UTC every 3rd day
+    - cron: '17 3 * * *'      # 03:17 UTC every day
   workflow_dispatch:          # "Run workflow" button for a manual ping
 
 permissions: {}
 
+env:
+  REF: hxghzjfthbxgcpxkysxa
+  KEY: sb_publishable_iuvvOWOkk4EXXmJQMdA5sQ_xA4Ea7Br
+
 jobs:
   ping:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 15
     steps:
-      - name: Read the waitlist (no writes)
+      - name: Read the waitlist, restore the project if it is paused
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         run: |
-          code=$(curl -sS -o body.json -w '%{http_code}' --retry 3 --retry-delay 10 \
-            -X POST "https://hxghzjfthbxgcpxkysxa.supabase.co/rest/v1/rpc/list_waitlist" \
-            -H "apikey: sb_publishable_iuvvOWOkk4EXXmJQMdA5sQ_xA4Ea7Br" \
-            -H "Content-Type: application/json" -d '{}')
-          echo "HTTP $code"
-          head -c 300 body.json; echo
-          # a failed run e-mails the repo owner — usually means the project is paused
-          test "$code" = "200"
+          ping() {
+            curl -sS -o body.json -w '%{http_code}' -m 30 \
+              -X POST "https://$REF.supabase.co/rest/v1/rpc/list_waitlist" \
+              -H "apikey: $KEY" -H "Content-Type: application/json" -d '{}' || echo 000
+          }
+          code=$(ping); echo "HTTP $code"
+          if [ "$code" = "200" ]; then head -c 200 body.json; echo; exit 0; fi
+
+          if [ -z "$SUPABASE_ACCESS_TOKEN" ]; then
+            echo "::error::Project does not answer (paused?) and SUPABASE_ACCESS_TOKEN is not set — restore it in the Supabase dashboard."
+            exit 1
+          fi
+          echo "Project does not answer — asking Supabase to restore it"
+          r=$(curl -sS -o restore.json -w '%{http_code}' -m 60 -X POST \
+            "https://api.supabase.com/v1/projects/$REF/restore" \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" -H "Content-Type: application/json" -d '{}')
+          echo "restore HTTP $r"; head -c 300 restore.json; echo
+          for i in $(seq 1 40); do
+            sleep 15
+            code=$(ping)
+            if [ "$code" = "200" ]; then echo "back online after $((i * 15))s"; exit 0; fi
+          done
+          echo "::error::Still not answering 10 minutes after the restore request."
+          exit 1
