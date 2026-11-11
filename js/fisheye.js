@@ -862,7 +862,9 @@ void main(){
       const off = () => { hud.classList.remove('on'); };
       const capAt = (t, bl) => {
         cap.textContent = capText(t);
-        cap.style.transform = `translate(${(st.W / 2 + bl[0]).toFixed(1)}px, ${(st.H / 2 + bl[1] + 8).toFixed(1)}px)`;
+        const left = st.W / 2 + bl[0];
+        cap.style.maxWidth = `${Math.max(90, st.W - left - 10).toFixed(0)}px`; // never run off the wall (CSS ellipsis)
+        cap.style.transform = `translate(${left.toFixed(1)}px, ${(st.H / 2 + bl[1] + 8).toFixed(1)}px)`;
         cap.classList.add('on');
       };
       if (!s) {

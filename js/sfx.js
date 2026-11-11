@@ -57,9 +57,10 @@
   window.SFX = play;
   window.SFX_LEVELS = SOUNDS; // read-only peek for QA
 
-  /* arriving through a CRT page transition (style.css @view-transition): try the
-     channel-switch zap. Browsers that require a fresh gesture simply refuse it. */
-  addEventListener('pagereveal', (e) => { if (e.viewTransition) play('channel-switch', true); });
+  /* arriving through a CRT page transition (theme.js sets the flag from `pagereveal`):
+     try the channel-switch zap. Browsers that require a fresh gesture simply refuse it. */
+  if (window.VT_ARRIVED) play('channel-switch', true);
+  else addEventListener('vt:arrive', () => play('channel-switch', true), { once: true });
 
   function unlock() {
     if (unlocked) return;

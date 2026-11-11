@@ -1646,8 +1646,11 @@ a.tool-row:hover .tool-tag--live, a.tool-row:focus-visible .tool-tag--live { bac
 /* design work reads better with fainter scanlines than a tape */
 .viewer[data-kind="i"] .viewer-screen::after, .viewer[data-kind="d"] .viewer-screen::after { opacity: 0.35; }
 
+.wall-cap { overflow: hidden; text-overflow: ellipsis; }
+
 @media (max-width: 768px) {
   .showreel-head { row-gap: 8px; }
+  .showreel-list { display: none; } /* the ↓ LIHAT DAFTAR CHANNEL button under the wall covers it */
   .wall-filter { order: 3; width: 100%; margin-left: 0; }
   .wall-chip { flex: 1; padding: 4px 6px 2px; }
   .channels-kicker, .prime-kicker { font-size: 1.1rem; }
