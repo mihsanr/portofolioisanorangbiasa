@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en" translate="no">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="google" content="notranslate">
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#000000">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <title>Teleprompter Remote — Muhammad Ihsan Rizka</title>
+  <meta name="description" content="Remote control for the teleprompter: play, pause, back two lines, speed and size from a second phone or laptop.">
+  <link rel="icon" href="../assets/favicon.png" type="image/png">
+  <link rel="apple-touch-icon" href="../assets/icons/tp-maskable.png">
+  <link rel="manifest" href="manifest.webmanifest">
+  <style>
+    :root { --line: #3d3d3d; --dim: #a3a3a3; --btn: #1c1c1c; --accent: #0000ff; color-scheme: dark; }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; }
+    body {
+      min-height: 100dvh;
+      background: #000; color: #fff;
+      font-family: Arial, Helvetica, sans-serif;
+      -webkit-tap-highlight-color: transparent;
+      overscroll-behavior: none;
+      user-select: none; -webkit-user-select: none;
+    }
+    button, input { font: inherit; color: inherit; }
+    button { cursor: pointer; touch-action: manipulation; }
+    [hidden] { display: none !important; }
+    svg { display: block; }
+
+    .rm {
+      min-height: 100dvh; max-width: 560px; margin: 0 auto;
+      display: flex; flex-direction: column; gap: 14px;
+      padding: max(14px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(14px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+    }
+    .rm-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .rm-brand { font-size: 12px; font-weight: 700; letter-spacing: 0.16em; color: var(--dim); }
+    .rm-status { font-size: 14px; font-weight: 700; white-space: nowrap; }
+    .rm-status::before { content: "● "; }
+    [data-tone="ok"] { color: #4ade80; }
+    [data-tone="wait"] { color: #facc15; }
+    [data-tone="bad"] { color: #f87171; }
+
+    /* ---- pairing ---- */
+    .rm-join { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 16px; }
+    .rm-join h1 { margin: 0; font-size: 26px; line-height: 1.2; }
+    .rm-join p { margin: 0; color: var(--dim); font-size: 15px; line-height: 1.5; }
+    .rm-join input {
+      width: 100%; height: 72px; padding: 0 12px;
+      border: 2px solid var(--line); border-radius: 14px; background: #0b0b0b;
+      font: 700 34px/1 ui-monospace, Consolas, monospace; letter-spacing: 0.3em; text-align: center; text-transform: uppercase;
+      user-select: text; -webkit-user-select: text; outline: none;
+    }
+    .rm-join input:focus { border-color: #fff; }
+    .rm-go { height: 60px; border: 0; border-radius: 14px; background: #fff; color: #000; font-size: 18px; font-weight: 700; }
+    .rm-go:disabled { opacity: 0.35; }
+
+    /* ---- controls ---- */
+    .rm-pad { flex: 1; display: flex; flex-direction: column; gap: 14px; min-height: 0; }
+    .rm-now { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+    .rm-title { min-width: 0; font-size: 18px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .rm-pct { font-size: 15px; font-weight: 700; color: var(--dim); font-variant-numeric: tabular-nums; }
+    .rm-prog { display: flex; align-items: center; gap: 12px; }
+    .rm-bar { flex: 1; height: 28px; position: relative; touch-action: none; cursor: pointer; }
+    .rm-bar::before, .rm-bar i { content: ""; position: absolute; left: 0; top: 11px; height: 6px; border-radius: 3px; }
+    .rm-bar::before { right: 0; background: #2a2a2a; }
+    .rm-bar i { width: calc(var(--p, 0) * 100%); background: #fff; }
+    .rm-left { font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; min-width: 4.2ch; text-align: right; }
+    .rm-secs { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; margin: 0 -16px; padding: 0 16px; }
+    .rm-secs::-webkit-scrollbar { display: none; }
+    .rm-sec {
+      flex: none; height: 44px; padding: 0 14px;
+      border: 1px solid var(--line); border-radius: 22px; background: var(--btn);
+      font-size: 13px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; white-space: nowrap;
+    }
+    .rm-sec[aria-current="true"] { background: #fff; color: #000; border-color: #fff; }
+
+    .rm-btn {
+      min-height: 60px; padding: 0 12px;
+      border: 1px solid var(--line); border-radius: 14px; background: var(--btn);
+      font-size: 17px; font-weight: 700;
+      display: grid; place-items: center;
+    }
+    .rm-btn:active, .rm-btn.is-held { background: #3a3a3a; transform: scale(0.97); }
+    .rm-play {
+      flex: 1; min-height: 132px;
+      display: grid; place-items: center;
+      border: 0; border-radius: 24px; background: var(--accent);
+    }
+    .rm-play:active { transform: scale(0.98); }
+    .rm-play svg { width: 84px; height: 84px; fill: #fff; }
+    .rm-play .i-pause { display: none; }
+    .is-on .rm-play { background: #e11d48; }
+    .is-on .rm-play .i-play { display: none; }
+    .is-on .rm-play .i-pause { display: block; }
+    .rm-two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .rm-top-btn { grid-column: 1 / -1; order: 9; }
+    .rm-step { display: grid; grid-template-columns: 58px 1fr 1.2fr 1fr; align-items: center; gap: 10px; }
+    .rm-step span { font-size: 11px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--dim); }
+    .rm-step output { text-align: center; font-size: 24px; font-weight: 700; font-variant-numeric: tabular-nums; }
+    .rm-step .rm-btn { font-size: 24px; }
+    .rm-side { display: flex; flex-direction: column; gap: 10px; }
+    .rm-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; color: var(--dim); font-size: 13px; }
+    .rm-foot b { color: #fff; font-family: ui-monospace, Consolas, monospace; letter-spacing: 0.14em; }
+    .rm-foot button { height: 44px; padding: 0 14px; border: 1px solid var(--line); border-radius: 10px; background: none; font-size: 13px; font-weight: 700; }
+    .is-away .rm-play, .is-away .rm-side, .is-away .rm-secs { opacity: 0.4; }
+
+    /* landscape phone: play on the right, everything else on the left */
+    @media (orientation: landscape) and (max-height: 520px) {
+      .rm { max-width: none; gap: 6px; padding-top: max(8px, env(safe-area-inset-top)); padding-bottom: max(8px, env(safe-area-inset-bottom)); }
+      .rm-pad { display: grid; grid-template-columns: 1fr 34%; grid-template-rows: auto auto auto 1fr; gap: 6px 14px; }
+      .rm-now, .rm-prog, .rm-secs, .rm-side { grid-column: 1; }
+      .rm-secs { margin: 0; padding: 0; }
+      .rm-play { grid-column: 2; grid-row: 1 / -1; min-height: 0; }
+      .rm-btn { min-height: 44px; font-size: 15px; }
+      .rm-sec { height: 36px; }
+      .rm-side { gap: 6px; justify-content: end; }
+      .rm-two { grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+      .rm-top-btn { grid-column: auto; }
+      .rm-step { gap: 6px; }
+      .rm-foot button { height: 36px; }
+    }
+    @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+  </style>
+</head>
+<body>
+  <main class="rm" id="rm">
+    <header class="rm-top">
+      <span class="rm-brand">IHSAN.TV REMOTE</span>
+      <span class="rm-status" id="status" data-tone="wait" aria-live="polite">Not connected</span>
+    </header>
+
+    <!-- ===== PAIRING: type the code shown on the prompter ===== -->
+    <form class="rm-join" id="join" hidden>
+      <h1>Enter the code on your prompter</h1>
+      <p>On the teleprompter: Settings → Pro → Remote. Scan its QR code, or type the 6 characters here.</p>
+      <input id="codeIn" inputmode="text" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="6" placeholder="······" aria-label="Remote code">
+      <button class="rm-go" id="go" disabled>Connect</button>
+      <p>Only button presses are sent. The script never leaves the prompter.</p>
+    </form>
+
+    <!-- ===== CONTROLS ===== -->
+    <section class="rm-pad" id="pad" hidden>
+      <div class="rm-now">
+        <span class="rm-title" id="title">—</span>
+        <span class="rm-pct" id="pct">0%</span>
+      </div>
+      <div class="rm-prog">
+        <div class="rm-bar" id="bar" role="slider" aria-label="Position in the script" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i></i></div>
+        <output class="rm-left" id="left">−0:00</output>
+      </div>
+      <div class="rm-secs" id="secs" hidden></div>
+
+      <button class="rm-play" id="play" aria-label="Play">
+        <svg class="i-play" viewBox="0 0 24 24"><path d="M7 4.5v15L19 12z"/></svg>
+        <svg class="i-pause" viewBox="0 0 24 24"><path d="M7 4.5h3.5v15H7zM13.5 4.5H17v15h-3.5z"/></svg>
+      </button>
+
+      <div class="rm-side">
+        <div class="rm-two">
+          <button class="rm-btn" data-cmd="nudge" data-v="-2">⟲ 2 lines</button>
+          <button class="rm-btn" data-cmd="nudge" data-v="2">2 lines ⟳</button>
+          <button class="rm-btn rm-top-btn" data-cmd="top">⤒ To start</button>
+        </div>
+        <div class="rm-step">
+          <span>Speed</span>
+          <button class="rm-btn" data-cmd="speed" data-v="-1" data-hold aria-label="Slower">−</button>
+          <output id="speed">–</output>
+          <button class="rm-btn" data-cmd="speed" data-v="1" data-hold aria-label="Faster">+</button>
+        </div>
+        <div class="rm-step">
+          <span>Size</span>
+          <button class="rm-btn" data-cmd="size" data-v="-1" data-hold aria-label="Smaller text">−</button>
+          <output id="size">–</output>
+          <button class="rm-btn" data-cmd="size" data-v="1" data-hold aria-label="Bigger text">+</button>
+        </div>
+      </div>
+    </section>
+
+    <footer class="rm-foot" id="foot" hidden>
+      <span>Code <b id="code"></b></span>
+      <button id="leave">Disconnect</button>
+    </footer>
+  </main>
+
+  <script src="../js/supabase-config.js?v=4"></script>
+  <script src="../js/rt.js?v=4"></script>
+  <script src="../js/remote.js?v=4"></script>
+</body>
+</html>

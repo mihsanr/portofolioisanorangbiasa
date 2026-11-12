@@ -100,7 +100,8 @@ svg { display: block; }
 .tp-chip + .tp-home { margin-left: 0; }
 /* Pro adds its own icon group, set apart by a rule */
 .tp-group { display: flex; align-items: center; gap: 6px; margin-left: auto; padding-left: 14px; border-left: 1px solid var(--ui-line); }
-.tp-group ~ .tp-chip { margin-left: 0; }
+.is-pro .tp-group ~ .tp-chip { margin-left: 0; }
+body:not(.is-pro) .pro-only { display: none !important; }
 
 body.is-expanded .tp-bar { margin-top: calc(-1 * var(--bar-h, 52px)); }
 
@@ -191,6 +192,18 @@ body.dim-read.flip-y .tp-scroll {
   transform: scale(var(--sx), var(--sy));   /* stays readable through a mirror */
 }
 .tp-left:empty { display: none; }
+/* ● REMOTE — readable from a metre away: green = a remote is on, yellow = reconnecting, red = nobody there */
+.tp-remote { letter-spacing: 0.06em; }
+[data-tone="ok"] { color: #4ade80; }
+[data-tone="wait"] { color: #facc15; }
+[data-tone="bad"] { color: #f87171; }
+[data-tone="off"] { color: var(--ui-dim); }
+.tp-remote-btn { position: relative; }
+.tp-remote-btn i {
+  position: absolute; right: 3px; top: 3px; width: 8px; height: 8px; border-radius: 50%;
+  background: currentColor;
+}
+.tp-remote-btn[data-tone="off"] i { display: none; }
 
 /* a quiet notice that waits to be tapped (new version, remote joined) */
 .tp-toast {
@@ -420,6 +433,44 @@ body.dim-read.flip-y .tp-scroll {
 }
 .sh-steps li span { flex: 1; }
 .sh-steps svg { flex: none; width: 30px; height: 30px; fill: none; stroke: #fff; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+/* ---- Remote sheet ---- */
+.rm-state { font-size: 15px; font-weight: 700; margin-top: -6px; }
+.rm-pair { display: grid; grid-template-columns: minmax(0, 200px) 1fr; gap: 16px; align-items: center; }
+.rm-qr { width: 100%; height: auto; border-radius: 10px; image-rendering: pixelated; }
+.rm-how { display: grid; gap: 8px; justify-items: start; min-width: 0; }
+.rm-url { font: 700 14px/1.3 ui-monospace, Consolas, monospace; overflow-wrap: anywhere; }
+.rm-code { font: 700 clamp(30px, 9vw, 44px)/1 ui-monospace, Consolas, monospace; letter-spacing: 0.14em; }
+@media (max-width: 420px) {
+  .rm-pair { grid-template-columns: 1fr; justify-items: center; text-align: center; }
+  .rm-qr { max-width: 220px; }
+  .rm-how { justify-items: center; }
+}
+/* ---- Pro bits ---- */
+.pro-tgt { min-width: 5ch; }
+.pro-chips { display: flex; gap: 8px; margin-top: -6px; }
+.pro-chips .sh-chip { flex: 1; min-width: 0; padding: 0 6px; }
+.pro-sample {
+  margin: 0; padding: 12px 14px;
+  border: 1px dashed #444; border-radius: 12px;
+  font: 14px/1.5 ui-monospace, Consolas, monospace; color: #ddd; white-space: pre-wrap;
+}
+.pro-card { margin: 0; font-size: 17px; line-height: 1.5; }
+.sh-row.is-current { border-color: #fff; }
+.key-row {
+  display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 6px 10px;
+  padding: 10px 12px; border: 1px solid #3d3d3d; border-radius: 12px; background: #1c1c1c;
+}
+.key-name { font-size: 15px; font-weight: 700; }
+.key-list { grid-column: 1; display: flex; flex-wrap: wrap; gap: 6px; }
+.key-row .sh-chip { grid-column: 2; grid-row: 1 / span 2; }
+.key-row .sh-chip.is-live { background: #fff; color: #000; border-color: #fff; }
+.key-chip {
+  min-height: 28px; padding: 0 8px;
+  display: inline-grid; place-items: center;
+  border: 1px solid #444; border-radius: 6px; background: #111;
+  font: 700 12px/1 ui-monospace, Consolas, monospace; color: var(--ui-dim);
+}
+.key-chip--mine { min-height: 32px; color: #000; background: #fff; border-color: #fff; }
 .sh-note { margin: 0; font-size: 13px; line-height: 1.5; color: var(--ui-dim); text-transform: none; letter-spacing: 0; font-weight: 400; }
 /* dragging the eye line: the sheet steps aside so the line itself can be seen */
 .tp-more.is-peek { background: transparent; border-color: transparent; }
