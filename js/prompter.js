@@ -695,6 +695,7 @@
     'recent-close': () => recent.close(),
     new: newScript,
     file: () => $('fileIn').click(),
+    install: () => install(),
   };
   document.addEventListener('click', (e) => {
     const b = e.target.closest('[data-act]');
@@ -834,6 +835,63 @@
     return { added, updated };
   }
 
+  /* ================= INSTALL + OFFLINE (PWA) ================= */
+  const toastEl = $('toast');
+  let toastFn = null;
+  function toast(msg, onTap) {
+    toastEl.textContent = msg;
+    toastEl.hidden = !msg;
+    toastFn = onTap || null;
+  }
+  toastEl.addEventListener('click', () => { const fn = toastFn; toast(''); fn?.(); });
+
+  const standalone = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const installBtn = $('installBtn');
+  let installEvt = null;
+  const showInstall = () => { installBtn.hidden = standalone() || !(installEvt || isIOS); };
+  addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); installEvt = e; showInstall(); });
+  addEventListener('appinstalled', () => { installEvt = null; showInstall(); flash('Installed', 1200); });
+  async function install() {
+    if (installEvt) {
+      const evt = installEvt; installEvt = null;
+      evt.prompt();
+      await evt.userChoice.catch(() => {});
+      return showInstall();
+    }
+    // iPhone has no install prompt — show where Apple hides the button
+    const el = document.createElement('div');
+    el.className = 'sh-steps';
+    el.innerHTML = `
+      <ol>
+        <li><span>Tap <b>Share</b> in Safari's toolbar</span>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V3M8 7l4-4 4 4M6 11H5v10h14V11h-1"/></svg></li>
+        <li><span>Scroll down and tap <b>Add to Home Screen</b></span>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="4"/><path d="M12 8v8M8 12h8"/></svg></li>
+        <li><span>Tap <b>Add</b>. The prompter then opens full screen and works offline.</span></li>
+      </ol>`;
+    panel('Install on iPhone', el);
+  }
+  showInstall();
+
+  // localhost stays uncached while developing; add ?sw=1 to try the offline behaviour there
+  const dev = ['localhost', '127.0.0.1'].includes(location.hostname);
+  if ('serviceWorker' in navigator && (!dev || /[?&]sw=1/.test(location.search))) {
+    let wantReload = false;
+    const offer = (reg) => {
+      if (!reg.waiting || !navigator.serviceWorker.controller) return;
+      toast('New version — tap to reload', () => { wantReload = true; reg.waiting?.postMessage('skip'); });
+    };
+    navigator.serviceWorker.register(new URL('../tools/sw.js', HERE)).then((reg) => {
+      offer(reg);
+      reg.addEventListener('updatefound', () => {
+        const sw = reg.installing;
+        sw?.addEventListener('statechange', () => { if (sw.state === 'installed') offer(reg); });
+      });
+    }).catch(() => { /* offline support is a bonus */ });
+    navigator.serviceWorker.addEventListener('controllerchange', () => { if (wantReload) location.reload(); });
+  }
+
   /* ================= PUBLIC API ================= */
   window.TP = {
     get state() { return state; },
@@ -847,7 +905,7 @@
     text: () => script.textContent,   // stays on this device — never sent to a remote
     title: () => titleOf(cur().text),
     words: () => (cur().text.match(/\S+/g) || []).length,
-    flash, on, load,
+    flash, toast, on, load,
     commands, defaultKeys: KEYS,
     trapKey: (fn) => { keyTrap = fn; },
     setStops,

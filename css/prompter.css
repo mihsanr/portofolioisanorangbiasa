@@ -192,6 +192,19 @@ body.dim-read.flip-y .tp-scroll {
 }
 .tp-left:empty { display: none; }
 
+/* a quiet notice that waits to be tapped (new version, remote joined) */
+.tp-toast {
+  position: absolute; left: 50%; top: max(14px, env(safe-area-inset-top));
+  translate: -50% 0;
+  max-width: calc(100% - 24px);
+  min-height: 44px; padding: 0 18px;
+  border: 1px solid #555; border-radius: 22px;
+  background: #fff; color: #000;
+  font-size: 14px; font-weight: 700; white-space: nowrap;
+  z-index: 4;
+}
+.is-playing .tp-toast { display: none; }   /* never interrupts a take */
+
 .tp-hud {
   position: absolute; left: 50%; top: 50%;
   translate: -50% -50%;
@@ -391,6 +404,22 @@ body.dim-read.flip-y .tp-scroll {
 .sh-row small { display: block; margin-top: 2px; font-size: 12px; font-weight: 400; color: var(--ui-dim); }
 .sh-row-go { flex: none; color: var(--ui-dim); font-size: 13px; font-weight: 700; white-space: nowrap; }
 .sh-row:active { background: #2a2a2a; }
+.sh-steps ol { margin: 0; padding: 0; list-style: none; counter-reset: step; display: grid; gap: 10px; }
+.sh-steps li {
+  counter-increment: step;
+  display: flex; align-items: center; gap: 12px;
+  min-height: 60px; padding: 10px 14px;
+  border: 1px solid #3d3d3d; border-radius: 12px; background: #1c1c1c;
+  font-size: 15px; line-height: 1.4;
+}
+.sh-steps li::before {
+  content: counter(step);
+  flex: none; width: 28px; height: 28px; border-radius: 50%;
+  display: grid; place-items: center;
+  background: #fff; color: #000; font-weight: 700; font-size: 14px;
+}
+.sh-steps li span { flex: 1; }
+.sh-steps svg { flex: none; width: 30px; height: 30px; fill: none; stroke: #fff; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
 .sh-note { margin: 0; font-size: 13px; line-height: 1.5; color: var(--ui-dim); text-transform: none; letter-spacing: 0; font-weight: 400; }
 /* dragging the eye line: the sheet steps aside so the line itself can be seen */
 .tp-more.is-peek { background: transparent; border-color: transparent; }
