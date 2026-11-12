@@ -17,7 +17,9 @@
   --ui-dim: #a3a3a3;
   --accent: #0000ff;
   --vvh: 100dvh;
-  --lead: 38dvh;   /* where the first line sits = the eye line */
+  --lead: 38dvh;   /* where the first line sits = the eye line (JS overrides it once the reader moves it) */
+  --line: 1.3;
+  --font: Arial, Helvetica, sans-serif;
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
@@ -43,7 +45,8 @@ svg { display: block; }
   grid-area: bar;
   display: flex;
   align-items: center;
-  gap: 14px;
+  flex-wrap: wrap;
+  gap: 6px 14px;
   padding: 8px 14px;
   background: var(--ui);
   border-bottom: 1px solid var(--ui-line);
@@ -84,6 +87,21 @@ svg { display: block; }
   padding: 8px 10px; border: 1px solid var(--ui-line); border-radius: 4px;
 }
 .tp-home:hover { color: #fff; border-color: #777; }
+/* SIMPLE / PRO chip: says which mode is on, opens Settings */
+.tp-chip {
+  margin-left: auto;
+  height: 30px; padding: 0 10px;
+  border: 1px solid var(--ui-line); border-radius: 4px;
+  background: none; color: var(--ui-dim);
+  font-size: 11px; font-weight: 700; letter-spacing: 0.12em;
+}
+.tp-chip:hover { color: #fff; border-color: #777; }
+.is-pro .tp-chip { background: #fff; color: #000; border-color: #fff; }
+.tp-chip + .tp-home { margin-left: 0; }
+/* Pro adds its own icon group, set apart by a rule */
+.tp-group { display: flex; align-items: center; gap: 6px; margin-left: auto; padding-left: 14px; border-left: 1px solid var(--ui-line); }
+.is-pro .tp-group ~ .tp-chip { margin-left: 0; }
+body:not(.is-pro) .pro-only { display: none !important; }
 
 body.is-expanded .tp-bar { margin-top: calc(-1 * var(--bar-h, 52px)); }
 
@@ -108,7 +126,8 @@ body.is-expanded .tp-bar { margin-top: calc(-1 * var(--bar-h, 52px)); }
   padding: var(--lead) var(--margin) 100dvh;
   color: var(--fg);
   font-size: var(--size);
-  line-height: 1.3;
+  font-family: var(--font);
+  line-height: var(--line);
   text-align: var(--align);
   white-space: pre-wrap;
   overflow-wrap: break-word;
@@ -121,7 +140,7 @@ body.is-expanded .tp-bar { margin-top: calc(-1 * var(--bar-h, 52px)); }
 /* eye line: where your eyes should rest while reading */
 .tp-guide {
   position: absolute; left: 0; right: 0; top: var(--lead);
-  height: calc(var(--size) * 1.3);
+  height: calc(var(--size) * var(--line));
   pointer-events: none;
   display: none;
   border-block: 1px solid color-mix(in srgb, var(--fg) 22%, transparent);
@@ -133,8 +152,71 @@ body.is-expanded .tp-bar { margin-top: calc(-1 * var(--bar-h, 52px)); }
 }
 .tp-guide::before { left: 2px; border-left-color: #e11d48; }
 .tp-guide::after { right: 2px; border-right-color: #e11d48; }
-body.show-guide .tp-guide { display: block; }
+body.show-guide .tp-guide, body.peek-guide .tp-guide { display: block; }
 body.flip-y .tp-guide { top: auto; bottom: var(--lead); }
+
+/* lines above the eye line are already said — fade them so the eyes don't wander back */
+body.dim-read .tp-scroll {
+  -webkit-mask-image: linear-gradient(to bottom, rgb(0 0 0 / 0.35) calc(var(--lead) - var(--size) * 0.5), #000 var(--lead));
+  mask-image: linear-gradient(to bottom, rgb(0 0 0 / 0.35) calc(var(--lead) - var(--size) * 0.5), #000 var(--lead));
+}
+body.dim-read.flip-y .tp-scroll {
+  -webkit-mask-image: linear-gradient(to top, rgb(0 0 0 / 0.35) calc(var(--lead) - var(--size) * 0.5), #000 var(--lead));
+  mask-image: linear-gradient(to top, rgb(0 0 0 / 0.35) calc(var(--lead) - var(--size) * 0.5), #000 var(--lead));
+}
+
+/* progress hairline + time left: on the edge, never over the words */
+.tp-progress {
+  position: absolute; inset: 0 0 auto 0; height: 3px;
+  background: color-mix(in srgb, var(--fg) 14%, transparent);
+  pointer-events: none; z-index: 3;
+}
+.tp-progress::after {
+  content: ""; position: absolute; inset: 0;
+  background: var(--fg); opacity: 0.75;
+  transform-origin: left center;
+  transform: scaleX(var(--p, 0));
+}
+.tp-status {
+  position: absolute; top: max(10px, env(safe-area-inset-top)); right: 10px;
+  display: flex; align-items: center; gap: 8px;
+  pointer-events: none; z-index: 3;
+  opacity: 0.5;
+}
+.is-playing .tp-status { opacity: 0.92; }
+.tp-left, .tp-pill {
+  padding: 5px 8px; border-radius: 8px;
+  background: rgb(0 0 0 / 0.6); color: #fff;
+  font: 700 clamp(15px, 3.6vmin, 24px)/1 Arial, Helvetica, sans-serif;
+  font-variant-numeric: tabular-nums;
+  transform: scale(var(--sx), var(--sy));   /* stays readable through a mirror */
+}
+.tp-left:empty { display: none; }
+/* ● REMOTE — readable from a metre away: green = a remote is on, yellow = reconnecting, red = nobody there */
+.tp-remote { letter-spacing: 0.06em; }
+[data-tone="ok"] { color: #4ade80; }
+[data-tone="wait"] { color: #facc15; }
+[data-tone="bad"] { color: #f87171; }
+[data-tone="off"] { color: var(--ui-dim); }
+.tp-remote-btn { position: relative; }
+.tp-remote-btn i {
+  position: absolute; right: 3px; top: 3px; width: 8px; height: 8px; border-radius: 50%;
+  background: currentColor;
+}
+.tp-remote-btn[data-tone="off"] i { display: none; }
+
+/* a quiet notice that waits to be tapped (new version, remote joined) */
+.tp-toast {
+  position: absolute; left: 50%; top: max(14px, env(safe-area-inset-top));
+  translate: -50% 0;
+  max-width: calc(100% - 24px);
+  min-height: 44px; padding: 0 18px;
+  border: 1px solid #555; border-radius: 22px;
+  background: #fff; color: #000;
+  font-size: 14px; font-weight: 700; white-space: nowrap;
+  z-index: 4;
+}
+.is-playing .tp-toast { display: none; }   /* never interrupts a take */
 
 .tp-hud {
   position: absolute; left: 50%; top: 50%;
@@ -211,6 +293,7 @@ body.flip-y .tp-guide { top: auto; bottom: var(--lead); }
   .dk-main .dk-btn { flex: 1; padding: 0 4px; }
   .dk-main .dk-play { flex: 1.6; }
   :root { --lead: 26dvh; }
+  .tp-scroll { touch-action: pan-y; }   /* a double tap means "back two lines", not zoom */
   /* while reading the dock steps back so it doesn't pull focus */
   body.is-playing .tp-dock { opacity: 0.55; }
   body.is-playing .tp-dock:focus-within, body.is-playing .tp-dock:active { opacity: 1; }
@@ -283,12 +366,117 @@ body.flip-y .tp-guide { top: auto; bottom: var(--lead); }
   font-size: 17px; line-height: 1.5;   /* ≥16px: iOS won't zoom on focus */
 }
 .sh-foot {
-  display: flex; align-items: center; justify-content: space-between;
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+  gap: 6px 10px;
   padding: 8px 12px; border-top: 1px solid #262626;
 }
 .sh-count { color: var(--ui-dim); font-size: 13px; }
 
-.sh-body { overflow-y: auto; padding: 14px; display: grid; gap: 16px; }
+.sh-body { overflow-y: auto; padding: 14px; display: grid; gap: 16px; align-content: start; }
+.tp-sheet [hidden] { display: none; }
+.sh-back { visibility: hidden; }
+.has-panel .sh-back { visibility: visible; }
+.sh-sub {
+  margin: 4px 0 -6px; padding-top: 12px;
+  border-top: 1px solid #262626;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--ui-dim);
+}
+.sh-section { display: grid; gap: 12px; }
+/* segmented control: SIMPLE | PRO, font choice */
+.sh-seg {
+  display: flex; padding: 3px; gap: 3px;
+  border: 1px solid #3d3d3d; border-radius: 12px; background: #1c1c1c;
+}
+.sh-seg button {
+  flex: 1; min-height: 44px; padding: 0 8px;
+  border: 0; border-radius: 9px; background: none;
+  font-size: 14px; font-weight: 700; letter-spacing: 0.06em;
+}
+.sh-seg button[aria-pressed="true"] { background: #fff; color: #000; }
+.sh-mode button { text-transform: uppercase; letter-spacing: 0.14em; }
+.sh-line-head { display: flex; justify-content: space-between; align-items: baseline; }
+.sh-line-head output { font-variant-numeric: tabular-nums; }
+.sh-lead { display: flex; align-items: center; gap: 8px; }
+.sh-lead input { flex: 1; min-width: 0; height: 44px; margin: 0; accent-color: #fff; }
+.sh-chip, .sh-toggle {
+  min-width: 56px; height: 44px; padding: 0 12px;
+  border: 1px solid #3d3d3d; border-radius: 10px;
+  background: #1c1c1c; font-size: 14px; font-weight: 700;
+}
+.sh-toggle { min-width: 72px; letter-spacing: 0.08em; }
+.sh-toggle[aria-pressed="true"] { background: #fff; color: #000; border-color: #fff; }
+/* a row that opens something */
+.sh-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  width: 100%; min-height: 52px; padding: 8px 14px;
+  border: 1px solid #3d3d3d; border-radius: 12px;
+  background: #1c1c1c; color: #fff; text-align: left; text-decoration: none;
+  font-size: 15px; font-weight: 700;
+}
+.sh-row small { display: block; margin-top: 2px; font-size: 12px; font-weight: 400; color: var(--ui-dim); }
+.sh-row-go { flex: none; color: var(--ui-dim); font-size: 13px; font-weight: 700; white-space: nowrap; }
+.sh-row:active { background: #2a2a2a; }
+.sh-steps ol { margin: 0; padding: 0; list-style: none; counter-reset: step; display: grid; gap: 10px; }
+.sh-steps li {
+  counter-increment: step;
+  display: flex; align-items: center; gap: 12px;
+  min-height: 60px; padding: 10px 14px;
+  border: 1px solid #3d3d3d; border-radius: 12px; background: #1c1c1c;
+  font-size: 15px; line-height: 1.4;
+}
+.sh-steps li::before {
+  content: counter(step);
+  flex: none; width: 28px; height: 28px; border-radius: 50%;
+  display: grid; place-items: center;
+  background: #fff; color: #000; font-weight: 700; font-size: 14px;
+}
+.sh-steps li span { flex: 1; }
+.sh-steps svg { flex: none; width: 30px; height: 30px; fill: none; stroke: #fff; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+/* ---- Remote sheet ---- */
+.rm-state { font-size: 15px; font-weight: 700; margin-top: -6px; }
+.rm-pair { display: grid; grid-template-columns: minmax(0, 200px) 1fr; gap: 16px; align-items: center; }
+.rm-qr { width: 100%; height: auto; border-radius: 10px; image-rendering: pixelated; }
+.rm-how { display: grid; gap: 8px; justify-items: start; min-width: 0; }
+.rm-url { font: 700 14px/1.3 ui-monospace, Consolas, monospace; overflow-wrap: anywhere; }
+.rm-code { font: 700 clamp(30px, 9vw, 44px)/1 ui-monospace, Consolas, monospace; letter-spacing: 0.14em; }
+@media (max-width: 420px) {
+  .rm-pair { grid-template-columns: 1fr; justify-items: center; text-align: center; }
+  .rm-qr { max-width: 220px; }
+  .rm-how { justify-items: center; }
+}
+/* ---- Pro bits ---- */
+.pro-tgt { min-width: 5ch; }
+.pro-chips { display: flex; gap: 8px; margin-top: -6px; }
+.pro-chips .sh-chip { flex: 1; min-width: 0; padding: 0 6px; }
+.pro-sample {
+  margin: 0; padding: 12px 14px;
+  border: 1px dashed #444; border-radius: 12px;
+  font: 14px/1.5 ui-monospace, Consolas, monospace; color: #ddd; white-space: pre-wrap;
+}
+.pro-card { margin: 0; font-size: 17px; line-height: 1.5; }
+.sh-row.is-current { border-color: #fff; }
+.key-row {
+  display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 6px 10px;
+  padding: 10px 12px; border: 1px solid #3d3d3d; border-radius: 12px; background: #1c1c1c;
+}
+.key-name { font-size: 15px; font-weight: 700; }
+.key-list { grid-column: 1; display: flex; flex-wrap: wrap; gap: 6px; }
+.key-row .sh-chip { grid-column: 2; grid-row: 1 / span 2; }
+.key-row .sh-chip.is-live { background: #fff; color: #000; border-color: #fff; }
+.key-chip {
+  min-height: 28px; padding: 0 8px;
+  display: inline-grid; place-items: center;
+  border: 1px solid #444; border-radius: 6px; background: #111;
+  font: 700 12px/1 ui-monospace, Consolas, monospace; color: var(--ui-dim);
+}
+.key-chip--mine { min-height: 32px; color: #000; background: #fff; border-color: #fff; }
+.sh-note { margin: 0; font-size: 13px; line-height: 1.5; color: var(--ui-dim); text-transform: none; letter-spacing: 0; font-weight: 400; }
+/* dragging the eye line: the sheet steps aside so the line itself can be seen */
+.tp-more.is-peek { background: transparent; border-color: transparent; }
+.tp-more.is-peek::backdrop { background: transparent; }
+.tp-more.is-peek .sh-head, .tp-more.is-peek .sh-body > :not(.sh-peek-keep) { opacity: 0.05; }
+.tp-more.is-peek .sh-peek-keep { background: #111; box-shadow: 0 0 0 10px #111; border-radius: 4px; }
 .sh-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
 .sh-tile {
   min-height: 56px; padding: 6px;
@@ -328,6 +516,7 @@ body.flip-y .tp-guide { top: auto; bottom: var(--lead); }
     padding-left: max(12px, env(safe-area-inset-left));
     padding-right: max(12px, env(safe-area-inset-right));
   }
+  .tp-editor .sh-foot .sh-btn { padding: 0 12px; }
   .tp-more {
     inset: auto auto 0 0;
     max-height: 86dvh;

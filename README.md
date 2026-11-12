@@ -34,13 +34,29 @@ Tidak ada konfigurasi khusus. Total ±44 MB (39 MB video).
 - `next.html` — "Next Up": ide proyek yang bisa di-Join Waitlist, urut dari waitlist terbanyak.
   Halaman baru sengaja ada di root supaya semua path relatif (`assets/`, `css/`, `js/`) tetap jalan.
 - `tools.html` — daftar Free Tools. Tiap tool satu halaman di `tools/`:
-  - `tools/teleprompter.html` (+ `css/prompter.css`, `js/prompter.js`) — layar penuh, tanpa chrome situs.
+  - `tools/teleprompter.html` (+ `css/prompter.css`, `js/prompter.js`) — layar penuh, tanpa chrome situs. Dua mode: **SIMPLE** (default) dan **PRO** (saklar di Settings). Lihat "Teleprompter" di bawah.
+  - `tools/remote.html` (+ `js/remote.js`, `js/rt.js`) — remote untuk teleprompter, dibuka di HP kedua / laptop.
   - `tools/bpm-frame.html` (`js/bpm.js`) — BPM ↔ frame: beat map, tap tempo, metronome (Web Audio, BGM dibisukan lewat event `bgm:hush`), clean-BPM.
   - `tools/timecode.html` (`js/timecode.js`) — frame ↔ timecode ↔ detik, drop-frame 29.97/59.94, retime & conform, durasi in/out.
   - Kalkulator berbagi `js/framecore.js` (daftar FPS + matematika timecode) dan `css/calc.css`.
     Area tool diberi `data-keep-brand` supaya klik di dalamnya tidak mengganti warna brand (theme.js).
     `sfx.js`/`bgm.js` mencari `assets/` relatif ke lokasi skripnya, jadi halaman di subfolder tetap bersuara.
 - `js/data.js` — daftar proyek & media. Tambah/kurangi karya di sini.
+
+### Teleprompter
+| File | Isi | Dimuat |
+|---|---|---|
+| `js/prompter.js` | Inti: scroll, naskah (localStorage, maks 30), eye line yang bisa digeser, redup baris lewat, sisa waktu, tombol clicker, install. Membuka API `window.TP` + event (`play`, `stop`, `tick`, `change`, `script`, `layout`, `mode`). | Selalu |
+| `js/prompter-pro.js` | Sections (`## Judul`), jeda otomatis (`[jeda]` atau `//`), target durasi, map clicker, backup `.json` | Hanya saat mode PRO |
+| `js/prompter-remote.js`, `js/rt.js`, `js/vendor/qrcode.min.js` | Remote sisi prompter: kode 6 karakter + QR, presence, terima `cmd`, kirim `st` | Hanya saat Remote dibuka / dibiarkan menyala |
+| `tools/sw.js`, `tools/manifest.webmanifest`, `assets/icons/tp-*.png` | PWA: bisa di-install, jalan offline. Scope `/tools/`, hanya menjawab untuk file teleprompter. | — |
+
+- **Cara pakai Remote:** di prompter buka Settings → PRO → Remote. Di HP kedua / laptop scan QR-nya, atau buka `isanorgbiasa.com/tools/remote.html` lalu ketik kodenya. Status `● REMOTE` hijau = remote tersambung, kuning = menyambung ulang, merah = tidak ada. `New code` memutus semua remote lama. Refresh salah satu sisi → tersambung lagi sendiri.
+- **Transport:** Supabase Realtime Broadcast + Presence pada channel publik `tp:<KODE>` (project & key yang sama dengan Next Up, `js/supabase-config.js`). Tanpa tabel, tanpa penyimpanan. `js/rt.js` adalah klien WebSocket kecil buatan sendiri (protokol Phoenix: join, heartbeat 25 dtk, broadcast, presence) — bukan SDK Supabase. Syarat di dashboard: Realtime → Settings → **Allow public access** aktif.
+- **Privasi:** isi naskah tidak pernah dikirim. Yang lewat hanya: perintah tombol, progres, speed, size, sisa waktu, baris pertama naskah (judul), dan nama section.
+- **Rilis perubahan:** naikkan angka versi di **tiga tempat sekaligus** — `?v=` di `tools/teleprompter.html` + `tools/remote.html`, konstanta `V` di `js/prompter.js`, dan `V` di `tools/sw.js`. Service worker menyimpan css/js secara cache-first; tanpa menaikkan versi, pengguna yang sudah install tetap memakai file lama.
+- **Uji di localhost:** service worker sengaja tidak aktif di `localhost` (supaya file tidak ter-cache saat mengubah kode). Tambahkan `?sw=1` untuk mencoba perilaku offline.
+- **Ikon app** dibuat dari `assets/favicon.svg` (sharp). `js/vendor/qrcode.min.js` = qrcode-generator 1.4.4 (MIT, Kazuhiko Arase), di-minify dengan esbuild.
 - `js/media.js` — hasil generate: dimensi gambar + placeholder blur (LQIP). Regenerate dengan skrip sharp bila menambah gambar.
 - `js/fluid.js` — simulasi fluid WebGL2 (efek liquid hover). Otomatis mati jika WebGL2 tidak ada atau `prefers-reduced-motion`.
 - `js/main.js` — render channel, modal galeri TV, kursor kustom, grain CRT, preloader (sekali per sesi), pemasangan Wall + routing hash.
