@@ -15,7 +15,7 @@
   <meta property="og:type" content="website">
   <link rel="icon" href="../assets/favicon.png" type="image/png">
   <link rel="apple-touch-icon" href="../assets/favicon.png">
-  <link rel="stylesheet" href="../css/prompter.css?v=3">
+  <link rel="stylesheet" href="../css/prompter.css?v=4">
 </head>
 <body>
 
@@ -66,6 +66,11 @@
       <span>Speed: <b id="tbSpeedVal"></b></span>
     </label>
 
+    <button class="tp-icon" data-act="more" title="Settings" aria-label="Settings" aria-haspopup="dialog">
+      <svg viewBox="0 0 24 24"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg>
+    </button>
+
+    <button class="tp-chip" id="modeChip" data-act="mode" title="Simple / Pro mode" aria-haspopup="dialog">SIMPLE</button>
     <a class="tp-home" href="../tools.html" title="Back to Free Tools">← FREE TOOLS</a>
   </header>
 
@@ -75,6 +80,8 @@
       <div class="tp-text" id="script" spellcheck="false" aria-label="Script"></div>
     </div>
     <div class="tp-guide" id="guide" aria-hidden="true"></div>
+    <div class="tp-progress" id="progress" aria-hidden="true"></div>
+    <div class="tp-status" id="status" aria-hidden="true"><span class="tp-left" id="timeLeft"></span></div>
     <div class="tp-hud" id="hud" aria-live="polite"></div>
   </main>
 
@@ -120,6 +127,7 @@
       <span class="sh-foot-btns">
         <button class="sh-btn" data-act="clear">Clear</button>
         <button class="sh-btn" data-act="new">New</button>
+        <button class="sh-btn" data-act="file">Open file</button>
       </span>
       <span class="sh-count"><span id="wordCount"></span><span class="sh-saved">· Autosaved</span></span>
     </div>
@@ -134,18 +142,25 @@
     </div>
     <div class="sh-body">
       <ul class="rc-list" id="recentList" role="list"></ul>
+      <button class="sh-row" data-act="file"><span>Open a .txt file</span><span class="sh-row-go">›</span></button>
       <p class="rc-note" id="recentNote"></p>
     </div>
   </dialog>
 
-  <!-- ===== MORE SETTINGS ===== -->
+  <!-- ===== SETTINGS ===== -->
   <dialog class="tp-sheet tp-more" id="more" aria-labelledby="moreTitle">
     <div class="sh-head">
-      <span></span>
+      <button class="sh-btn sh-back" data-act="panel-back">‹ Back</button>
       <h2 id="moreTitle">Settings</h2>
       <button class="sh-btn sh-btn--primary" data-act="close">Close</button>
     </div>
-    <div class="sh-body">
+    <div class="sh-body" id="moreMain">
+      <div class="sh-seg sh-mode" role="group" aria-label="Mode">
+        <button data-mode="simple" aria-pressed="true">Simple</button>
+        <button data-mode="pro" aria-pressed="false">Pro</button>
+      </div>
+
+      <h3 class="sh-sub">Display</h3>
       <div class="sh-grid">
         <button class="sh-tile" data-act="align" aria-pressed="false">Center text</button>
         <button class="sh-tile" data-act="flipx" aria-pressed="false">Mirror ↔</button>
@@ -153,6 +168,38 @@
         <button class="sh-tile" data-act="guide" aria-pressed="false">Eye line</button>
         <button class="sh-tile" data-act="expand">Fullscreen</button>
         <button class="sh-tile" data-act="countdown" aria-pressed="false">3-2-1 start</button>
+      </div>
+
+      <div class="sh-line sh-line--col sh-peek-keep">
+        <span class="sh-line-head"><span>Eye line position</span><output id="mLeadVal"></output></span>
+        <div class="sh-lead">
+          <input type="range" id="mLead" min="10" max="70" step="1" aria-label="Eye line position">
+          <button class="sh-chip" data-lead="18">Top</button>
+          <button class="sh-chip" data-lead="50">Mid</button>
+        </div>
+      </div>
+
+      <div class="sh-line">
+        <span>Dim read lines</span>
+        <button class="sh-toggle" id="mDim" data-act="dim" aria-pressed="true">ON</button>
+      </div>
+
+      <div class="sh-line">
+        <span>Line spacing</span>
+        <div class="dk-row">
+          <button class="dk-btn" data-step="line" data-dir="-1" aria-label="Tighter lines">−</button>
+          <output class="dk-val" id="dkLine"></output>
+          <button class="dk-btn" data-step="line" data-dir="1" aria-label="Looser lines">+</button>
+        </div>
+      </div>
+
+      <div class="sh-line sh-line--col">
+        <span>Font</span>
+        <div class="sh-seg" role="group" aria-label="Font">
+          <button data-font="sans" aria-pressed="true">Sans</button>
+          <button data-font="condensed" aria-pressed="false" style="font-stretch:condensed">Condensed</button>
+          <button data-font="serif" aria-pressed="false" style="font-family:Georgia,serif">Serif</button>
+        </div>
       </div>
 
       <div class="sh-line">
@@ -179,10 +226,18 @@
         </div>
       </div>
 
-      <a class="sh-home" href="../tools.html">← Back to Free Tools</a>
+      <!-- the Pro section is inserted here by js/prompter-pro.js, only in Pro mode -->
+
+      <div class="sh-section" id="appSection">
+        <h3 class="sh-sub">App</h3>
+        <a class="sh-home" href="../tools.html">← Back to Free Tools</a>
+      </div>
     </div>
+    <div class="sh-body" id="morePanel" hidden></div>
   </dialog>
 
-  <script src="../js/prompter.js?v=3"></script>
+  <input type="file" id="fileIn" accept=".txt,.md,text/plain" hidden>
+
+  <script src="../js/prompter.js?v=4"></script>
 </body>
 </html>
