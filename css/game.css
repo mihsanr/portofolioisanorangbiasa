@@ -1,0 +1,11 @@
+/* Pemburu Kaset — halaman game standalone */
+:root { --blue: #0000ff; --ink: #0d0d0d; }
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; overflow: hidden; background: #8fc4f5; overscroll-behavior: none; }
+body { font-family: 'Space Grotesk', system-ui, sans-serif; color: #fff; -webkit-user-select: none; user-select: none; touch-action: none; }
+#game { position: fixed; inset: 0; width: 100%; height: 100%; display: block; outline: none; }
+#debug {
+  position: fixed; left: 8px; bottom: 8px; margin: 0; padding: 6px 9px; z-index: 20;
+  font: 15px/1.15 'VT323', ui-monospace, monospace; color: #b8ffcf;
+  background: rgba(0, 0, 0, .62); border-radius: 4px; pointer-events: none; white-space: pre;
+}
