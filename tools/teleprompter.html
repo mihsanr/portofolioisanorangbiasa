@@ -14,7 +14,8 @@
   <meta property="og:description" content="Free online teleprompter for desktop and mobile.">
   <meta property="og:type" content="website">
   <link rel="icon" href="../assets/favicon.png" type="image/png">
-  <link rel="apple-touch-icon" href="../assets/favicon.png">
+  <link rel="apple-touch-icon" href="../assets/icons/tp-maskable.png">
+  <link rel="manifest" href="manifest.webmanifest">
   <link rel="stylesheet" href="../css/prompter.css?v=4">
 </head>
 <body>
@@ -83,6 +84,7 @@
     <div class="tp-progress" id="progress" aria-hidden="true"></div>
     <div class="tp-status" id="status" aria-hidden="true"><span class="tp-left" id="timeLeft"></span></div>
     <div class="tp-hud" id="hud" aria-live="polite"></div>
+    <button class="tp-toast" id="toast" hidden></button>
   </main>
 
   <!-- ===== MOBILE DOCK (portrait: bottom · landscape: right rail) ===== -->
@@ -230,6 +232,10 @@
 
       <div class="sh-section" id="appSection">
         <h3 class="sh-sub">App</h3>
+        <button class="sh-row" id="installBtn" data-act="install" hidden>
+          <span>Install app<small>Opens full screen from the home screen, works offline</small></span>
+          <span class="sh-row-go">Install</span>
+        </button>
         <a class="sh-home" href="../tools.html">← Back to Free Tools</a>
       </div>
     </div>
