@@ -4,7 +4,7 @@
    The core exposes a small API (window.TP) so the optional Pro and Remote
    files can add features without living inside this closure. */
 (() => {
-  const V = '4';   // keep in step with the ?v= in teleprompter.html and tools/sw.js
+  const V = '5';   // keep in step with the ?v= in teleprompter.html and tools/sw.js
   const HERE = document.currentScript ? new URL('.', document.currentScript.src) : new URL('../js/', location.href);
   const KEY = 'ihsan.prompter';
   const LIB_KEY = 'ihsan.prompter.scripts';   // recent scripts, newest first
@@ -32,6 +32,7 @@
   };
   const LAYOUT_KEYS = ['size', 'margin', 'line', 'font', 'lead'];   // these reflow the text
   const PX_PER_SPEED = 4;   // speed 10 → 40px per second
+  const PRO_LEAD = 18;      // Pro: the phone sits under the camera lens, so the eye line starts near the top
 
   const $ = (id) => document.getElementById(id);
   const root = document.documentElement;
@@ -140,12 +141,14 @@
 
   /* eye line: a % of the stage, so it can sit next to wherever the lens is */
   function applyLead() {
-    if (state.lead == null) root.style.removeProperty('--lead');
-    else root.style.setProperty('--lead', Math.round(stage.clientHeight * state.lead / 100) + 'px');
+    const lead = wantLead();
+    if (lead == null) root.style.removeProperty('--lead');
+    else root.style.setProperty('--lead', Math.round(stage.clientHeight * lead / 100) + 'px');
     measure();
   }
-  const leadPct = () => (state.lead != null ? state.lead
-    : Math.round(clamp('lead', stage.clientHeight ? metrics.lead / stage.clientHeight * 100 : 38)));
+  // the reader's own choice wins; otherwise Pro has its default and Simple keeps the layout's
+  const wantLead = () => state.lead ?? (state.mode === 'pro' ? PRO_LEAD : null);
+  const leadPct = () => wantLead() ?? Math.round(clamp('lead', stage.clientHeight ? metrics.lead / stage.clientHeight * 100 : 38));
 
   /* lead = where the first line rests; textH = height of the words alone */
   const metrics = { lead: 0, textH: 0 };
@@ -387,11 +390,11 @@
   /* the text block or the stage changed size → eye line + offsets moved */
   let layoutTimer = 0;
   new ResizeObserver(() => {
-    if (state.lead != null) applyLead(); else measure();
+    if (wantLead() != null) applyLead(); else measure();
     clearTimeout(layoutTimer);
     layoutTimer = setTimeout(() => { measure(); aimStop(); tick(true); emit('layout'); }, 60);
   }).observe(script);
-  new ResizeObserver(() => { if (state.lead != null) applyLead(); }).observe(stage);
+  new ResizeObserver(() => { if (wantLead() != null) applyLead(); }).observe(stage);
 
   /* ================= INLINE EDITING (desktop) ================= */
   const plainOnly = (() => {
@@ -647,8 +650,7 @@
   function setMode(m) {
     if (m !== 'simple' && m !== 'pro') return;
     if (state.mode === m) return;
-    state.mode = m;
-    applyStyle();
+    keepPlace(() => { state.mode = m; applyStyle(); });   // the eye line may move with the mode
     persist();
     if (m === 'pro') loadPro();
     emit('mode', m);

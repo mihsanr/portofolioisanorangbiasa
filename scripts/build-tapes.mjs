@@ -19,6 +19,7 @@
    Butuh: ffmpeg + ffprobe di PATH, paket `sharp` (node_modules di folder induk). */
 import { readFileSync, writeFileSync, readdirSync, mkdirSync, existsSync, statSync, rmSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import vm from 'node:vm';
@@ -255,13 +256,16 @@ for (const it of packOrder) {
 }
 for (const f of ['atlas.webp', 'atlas-sm.webp']) rmSync(join(THUMB, f), { force: true }); // atlas lama (1 halaman)
 let atlasBytes = 0;
+const atlasHash = createHash('sha1');   // tile positions move whenever work is added: the URL must change with them
 for (let p = 0; p < pages.length; p++) {
   const png = await sharp({ create: { width: AW, height: AH, channels: 3, background: '#0a0a0c' } })
     .composite(pages[p].comps).png().toBuffer();
   await sharp(png).webp({ quality: 72 }).toFile(join(THUMB, `atlas-${p}.webp`));
   await sharp(png).resize(AW / 2, AH / 2).webp({ quality: 74 }).toFile(join(THUMB, `atlas-${p}-sm.webp`));
   atlasBytes += statSync(join(THUMB, `atlas-${p}.webp`)).size;
+  atlasHash.update(readFileSync(join(THUMB, `atlas-${p}.webp`)));
 }
+const ATLAS_V = atlasHash.digest('hex').slice(0, 8);
 
 /* ---------- urutan tampil: aliran per channel digabung merata (seed tetap) ----------
    Tiap channel disebar rata sepanjang urutan (kunci = (i + offset) / n), jadi 147 feed
@@ -288,7 +292,7 @@ const TAPE_CHANNELS = ${JSON.stringify(CH)};
 const TAPES = [
 ${tapes.map(line).join('\n')}
 ];
-const WALL_ATLAS = { w: ${AW}, h: ${AH}, pages: [${pages.map((_, p) => `'assets/video/thumb/atlas-${p}.webp'`).join(', ')}], pagesSm: [${pages.map((_, p) => `'assets/video/thumb/atlas-${p}-sm.webp'`).join(', ')}] };
+const WALL_ATLAS = { w: ${AW}, h: ${AH}, pages: [${pages.map((_, p) => `'assets/video/thumb/atlas-${p}.webp?v=${ATLAS_V}'`).join(', ')}], pagesSm: [${pages.map((_, p) => `'assets/video/thumb/atlas-${p}-sm.webp?v=${ATLAS_V}'`).join(', ')}] };
 const WALL = [
 ${wall.map(line).join('\n')}
 ];

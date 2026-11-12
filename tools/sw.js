@@ -5,7 +5,7 @@
 
    Releasing a change: bump V here together with the ?v= in the HTML files
    and the V constant in js/prompter.js. The old cache is dropped on activate. */
-const V = '4';
+const V = '5';
 const CACHE = 'tp-v' + V;
 
 const PAGES = ['teleprompter.html', 'remote.html'];
