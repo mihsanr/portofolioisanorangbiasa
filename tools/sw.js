@@ -8,11 +8,16 @@
 const V = '4';
 const CACHE = 'tp-v' + V;
 
-const PAGES = ['teleprompter.html'];
+const PAGES = ['teleprompter.html', 'remote.html'];
 const ASSETS = [
   `../css/prompter.css?v=${V}`,
   `../js/prompter.js?v=${V}`,
   `../js/prompter-pro.js?v=${V}`,
+  `../js/prompter-remote.js?v=${V}`,
+  `../js/rt.js?v=${V}`,
+  `../js/remote.js?v=${V}`,
+  `../js/supabase-config.js?v=${V}`,
+  `../js/vendor/qrcode.min.js?v=${V}`,
   'manifest.webmanifest',
   '../assets/favicon.png',
   '../assets/icons/tp-192.png',

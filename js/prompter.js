@@ -266,7 +266,8 @@
 
   function frame(now) {
     if (!playing) return;
-    const dt = Math.min(0.1, (now - last) / 1000);
+    // the frame's timestamp can be a hair older than the moment play was pressed: never step backwards
+    const dt = Math.max(0, Math.min(0.1, (now - last) / 1000));
     last = now;
     // user dragged/wheeled the text mid-read: continue from where they left it
     if (Math.abs(scroller.scrollTop - pos) > 3) { pos = scroller.scrollTop; aimStop(); }
@@ -282,7 +283,7 @@
         return;
       }
     }
-    if (pos >= max || pos <= 0) {
+    if (state.flipy ? pos <= 0 : pos >= max) {   // ran out of script
       pos = Math.min(max, Math.max(0, pos));
       scroller.scrollTop = pos;
       return stop();

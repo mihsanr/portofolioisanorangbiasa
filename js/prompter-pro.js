@@ -1,6 +1,7 @@
 /* Teleprompter — Pro features. Fetched only when Pro mode is switched on.
    Sections (## Title), auto-pause ([jeda] or //), target duration,
-   clicker key mapping, backup. Everything stays on this device. */
+   clicker key mapping, backup, and the door to Remote.
+   Everything stays on this device. */
 (() => {
   const TP = window.TP;
   if (!TP || TP.pro) return;
@@ -115,6 +116,17 @@
     if (k === 'restore') rescan();
   });
 
+  /* ================= REMOTE (its own files) =================
+     Fetched the first time Remote is opened, or at start if it was left on. */
+  function loadRemote() {
+    return Promise.all([TP.load('supabase-config.js'), TP.load('rt.js')])
+      .then(() => TP.load('prompter-remote.js'))
+      .catch((e) => { TP.flash('Remote needs internet', 1600); throw e; });
+  }
+  const openRemote = () => loadRemote().then(() => TP.remote?.open(), () => {});
+  const remoteRow = row('Remote', openRemote);
+  remoteRow.sub('Control from a second phone or laptop');
+
   /* ================= SETTINGS SECTION ================= */
   const secRow = row('Sections', () => openSections());
   const keysRow = row('Map clicker', () => openKeys());
@@ -136,6 +148,7 @@
 
   const section = h('div', { className: 'sh-section pro-only', id: 'proSection' },
     h('h3', { className: 'sh-sub', textContent: 'Pro' }),
+    remoteRow.el,
     secRow.el,
     h('div', { className: 'sh-line' }, h('span', { textContent: 'Target duration' }), h('div', { className: 'dk-row' }, tgtMinus, tgtVal, tgtPlus)),
     tgtChips, tgtNote,
@@ -147,7 +160,10 @@
   /* desktop toolbar: icons only, set apart from the Simple controls */
   const tbSections = h('button', { className: 'tp-icon', title: 'Sections', ariaLabel: 'Sections', onclick: () => openSections() });
   tbSections.innerHTML = '<svg viewBox="0 0 24 24"><path d="M4 6h3M10 6h10M4 12h3M10 12h10M4 18h3M10 18h10"/></svg>';
-  const group = h('div', { className: 'tp-group pro-only' }, tbSections);
+  const tbRemote = h('button', { className: 'tp-icon tp-remote-btn', title: 'Remote', ariaLabel: 'Remote', onclick: openRemote });
+  tbRemote.dataset.tone = 'off';
+  tbRemote.innerHTML = '<svg viewBox="0 0 24 24"><rect x="8" y="3" width="8" height="18" rx="3"/><circle cx="12" cy="8" r="1.6"/><path d="M12 13v3"/></svg><i></i>';
+  const group = h('div', { className: 'tp-group pro-only' }, tbSections, tbRemote);
   TP.addToolbarGroup(group);
 
   function render() {
@@ -274,7 +290,7 @@
   TP.on('mode', (m) => { if (m === 'pro') welcome(); });
 
   TP.pro = {
-    section,
+    section, remoteRow, remoteBtn: tbRemote,
     toolbar: group,
     sections: () => sections,
     currentSection, jumpSection, rescan: scan,
@@ -283,4 +299,5 @@
 
   scan();
   welcome();
+  if (isPro() && S().remote) loadRemote().catch(() => {});
 })();
