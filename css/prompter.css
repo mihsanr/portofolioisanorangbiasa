@@ -192,6 +192,18 @@ body.dim-read.flip-y .tp-scroll {
   transform: scale(var(--sx), var(--sy));   /* stays readable through a mirror */
 }
 .tp-left:empty { display: none; }
+/* ● REMOTE — readable from a metre away: green = a remote is on, yellow = reconnecting, red = nobody there */
+.tp-remote { letter-spacing: 0.06em; }
+[data-tone="ok"] { color: #4ade80; }
+[data-tone="wait"] { color: #facc15; }
+[data-tone="bad"] { color: #f87171; }
+[data-tone="off"] { color: var(--ui-dim); }
+.tp-remote-btn { position: relative; }
+.tp-remote-btn i {
+  position: absolute; right: 3px; top: 3px; width: 8px; height: 8px; border-radius: 50%;
+  background: currentColor;
+}
+.tp-remote-btn[data-tone="off"] i { display: none; }
 
 /* a quiet notice that waits to be tapped (new version, remote joined) */
 .tp-toast {
@@ -421,6 +433,18 @@ body.dim-read.flip-y .tp-scroll {
 }
 .sh-steps li span { flex: 1; }
 .sh-steps svg { flex: none; width: 30px; height: 30px; fill: none; stroke: #fff; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+/* ---- Remote sheet ---- */
+.rm-state { font-size: 15px; font-weight: 700; margin-top: -6px; }
+.rm-pair { display: grid; grid-template-columns: minmax(0, 200px) 1fr; gap: 16px; align-items: center; }
+.rm-qr { width: 100%; height: auto; border-radius: 10px; image-rendering: pixelated; }
+.rm-how { display: grid; gap: 8px; justify-items: start; min-width: 0; }
+.rm-url { font: 700 14px/1.3 ui-monospace, Consolas, monospace; overflow-wrap: anywhere; }
+.rm-code { font: 700 clamp(30px, 9vw, 44px)/1 ui-monospace, Consolas, monospace; letter-spacing: 0.14em; }
+@media (max-width: 420px) {
+  .rm-pair { grid-template-columns: 1fr; justify-items: center; text-align: center; }
+  .rm-qr { max-width: 220px; }
+  .rm-how { justify-items: center; }
+}
 /* ---- Pro bits ---- */
 .pro-tgt { min-width: 5ch; }
 .pro-chips { display: flex; gap: 8px; margin-top: -6px; }
