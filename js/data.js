@@ -133,11 +133,14 @@ const PROJECTS = [
     ],
   },
   {
-    title: 'Poster & Campaign', cat: 'Print & Promo', year: '2021 — 2025',
+    title: 'Poster & Campaign', cat: 'Print & Promo', year: '2021 — 2026',
     tags: ['Poster', 'Banner', 'Backdrop', 'Menu Design', 'Guidebook', 'Promo Video'],
     desc: 'Posters, backdrops, banners, menu design, a competition guidebook, and a snack-brand promo video. Made for print shops and street corners, not just feeds.',
     cover: 'poster-chipaws',
     media: [
+      { t: 'i', s: 'poster-blinded' },
+      { t: 'i', s: 'poster-creative-block' },
+      { t: 'i', s: 'poster-card' },
       { t: 'i', s: 'poster-selfpromo' },
       { t: 'v', s: 'chipaws-promo', label: 'Chipaws promo video' },
       { t: 'i', s: 'poster-chipaws' },
@@ -211,9 +214,9 @@ const PRIME = [
 
 const JOURNEY = [
   {
-    company: 'PT Tanindo Anugerah Nusantara', cat: 'Digital Creator', period: '07/2026 — PRESENT',
-    role: 'Digital Creator',
-    desc: 'A one-person content unit: product design, brand collateral, social media management, video campaigns shot and edited solo, and content analytics.',
+    company: 'PT Tanindo Anugerah Nusantara', cat: 'Content Marketing', period: '07/2026 — PRESENT',
+    role: 'Content Marketing Specialist',
+    desc: 'Content strategy and scripts for water-treatment and bottled-water plant videos, the YouTube channel run end to end, on-site filming and long-form edits with motion graphics, social design, lead-generating CTAs, and monthly performance reports.',
   },
   {
     company: 'CV Rabbani Asysa', cat: 'Graphic Design', period: '03/2025 — 12/2025',
