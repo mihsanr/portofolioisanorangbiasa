@@ -902,10 +902,12 @@
     progress: readProgress,
     offset: dist,
     secondsLeft,
+    duration: () => metrics.textH / (state.speed * PX_PER_SPEED),   // seconds for the whole script at this speed
+    speedFor: (secs) => metrics.textH / (secs * PX_PER_SPEED),      // speed that finishes in that many seconds
     text: () => script.textContent,   // stays on this device — never sent to a remote
     title: () => titleOf(cur().text),
     words: () => (cur().text.match(/\S+/g) || []).length,
-    flash, toast, on, load,
+    flash, toast, on, emit, load,
     commands, defaultKeys: KEYS,
     trapKey: (fn) => { keyTrap = fn; },
     setStops,
