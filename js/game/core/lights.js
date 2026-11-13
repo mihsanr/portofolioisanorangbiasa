@@ -2,7 +2,7 @@ import * as THREE from 'three';
 
 /* Matahari (bayangan selektif, frustum sempit mengikuti target) + hemisphere + rim tanpa bayangan. */
 export function createLights(scene, quality, sunDir) {
-  const hemi = new THREE.HemisphereLight('#cfe4ff', '#7a8a5c', 1.15);
+  const hemi = new THREE.HemisphereLight('#cfe4ff', '#a9b6c6', 1.15);
   const sun = new THREE.DirectionalLight('#fff0d2', 2.45);
   const rim = new THREE.DirectionalLight('#9fc6ff', 0.7);
   rim.position.set(-sunDir.x, 0.35, -sunDir.z).normalize().multiplyScalar(10);

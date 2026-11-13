@@ -13,8 +13,8 @@ export function createFollowCamera(track) {
   const s = { yaw: Math.PI, pitch: 0.3, dist: 5.0, idle: 9 };
   let init = false;
 
-  return {
-    camera, state: s,
+  const api = {
+    camera, state: s, ground: null,
     snap(target, yaw) { s.yaw = yaw; focus.set(target.x, target.y + 1.05, target.z); init = true; },
     update(dt, target, vel, input) {
       const portrait = camera.aspect < 1;
@@ -39,8 +39,12 @@ export function createFollowCamera(track) {
       focus.y = damp(focus.y, target.y + 1.05, 6, dt);
 
       const dist = s.dist, cp = Math.cos(s.pitch);
-      camera.position.set(focus.x + Math.sin(s.yaw) * cp * dist, focus.y + Math.sin(s.pitch) * dist, focus.z + Math.cos(s.yaw) * cp * dist);
+      const cx = focus.x + Math.sin(s.yaw) * cp * dist, cz = focus.z + Math.cos(s.yaw) * cp * dist;
+      let cy = focus.y + Math.sin(s.pitch) * dist;
+      if (api.ground) { const g = api.ground(cx, cz); if (g > -1e8 && cy < g + 0.45) cy = g + 0.45; }
+      camera.position.set(cx, cy, cz);
       camera.lookAt(focus.x, focus.y + 0.15, focus.z);
     },
   };
+  return api;
 }
