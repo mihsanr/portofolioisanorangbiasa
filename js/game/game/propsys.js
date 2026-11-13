@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { createAtlas } from '../gen/atlas.js';
-import { createVhsGeometry, createVhsGlassGeometry, createPadGeometry, createSpringGeometry, createCartGeometry, createRailGeometry } from '../gen/props.js';
+import { createVhsGeometry, createVhsLiteGeometry, createVhsGlassGeometry, createPadGeometry, createSpringGeometry, createCartGeometry, createRailGeometry } from '../gen/props.js';
 import { createGlowMaterial, createHaloMaterial } from '../shaders/glow.js';
 import { withSurfaceNoise } from '../shaders/surface.js';
 
@@ -10,9 +10,11 @@ import { withSurfaceNoise } from '../shaders/surface.js';
 const LAUNCH = { pad: 16.5, spring: 24.5 };
 const PICK_R2 = 1.05 * 1.05;
 const TAPE_SCALE = 1.45;
+const TAPE_RANGE2 = 60 * 60;      // kaset lebih jauh dari ini tidak digambar (masih punya halo sebagai penanda)
+const TAPE_NEAR2 = 15 * 15;       // di dalam jarak ini: versi detail penuh + kaca; di luar: versi ringan
 const GOLD = new THREE.Color('#ffc233'), BLUE = new THREE.Color('#3f8dff'), VIOLET = new THREE.Color('#b565ff');
 
-export function createProps({ renderer, env, world, uTime }) {
+export function createProps({ renderer, env, world, uTime, quality }) {
   const group = new THREE.Group();
   const atlas = createAtlas(renderer);
   const prop = withSurfaceNoise(new THREE.MeshStandardMaterial({
@@ -23,10 +25,10 @@ export function createProps({ renderer, env, world, uTime }) {
   const glow = createGlowMaterial(uTime);
   const halo = createHaloMaterial(uTime);
 
-  const tapes = [], pads = [], springs = [], carts = [], rails = [];
+  const tapes = [], pads = [], springs = [], carts = [], rails = [], extraHalos = [];
   const disposables = [atlas, prop, glass, glow, halo];
   const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), v = new THREE.Vector3(), s = new THREE.Vector3(1, 1, 1);
-  let vhs, vhsGlass, padMesh, padGlow, springMesh, springGlow, cartMesh, haloPts, haloPos, haloSize;
+  let vhs, vhsLite, vhsGlass, padMesh, padGlow, springMesh, springGlow, cartMesh, haloPts, haloPos, haloSize;
   let time = 0;
   const state = { collected: 0, total: 0 };
 
@@ -43,7 +45,9 @@ export function createProps({ renderer, env, world, uTime }) {
   };
 
   const api = {
-    group, state, tapes, pads, springs, carts,
+    group, state, tapes, pads, springs, carts, material: prop, glassMaterial: glass, glowMaterial: glow, geo: {},
+    /* sumber cahaya tambahan (mis. lampu menara) ikut dalam Points halo yang sama */
+    addHalo(x, y, z, color, size = 2, k = 0.3) { extraHalos.push({ x, y, z, color: new THREE.Color(color), size, k }); },
     addCassette(x, y, z) { tapes.push({ x, y, z, phase: tapes.length * 1.7, alive: true, pop: -1 }); },
     addPad(x, y, z, ry = 0) { pads.push({ x, y, z, ry, kick: 0, cool: 0, box: null }); },
     addSpring(x, y, z) { springs.push({ x, y, z, kick: 0, cool: 0, cyl: null }); },
@@ -53,8 +57,10 @@ export function createProps({ renderer, env, world, uTime }) {
     build() {
       state.total = tapes.length;
       if (tapes.length) {
-        vhs = inst(createVhsGeometry(), prop, tapes.length, true);
-        vhsGlass = inst(createVhsGlassGeometry(), glass, tapes.length, false);
+        api.geo.vhs = createVhsGeometry(); api.geo.glass = createVhsGlassGeometry();
+        vhs = inst(api.geo.vhs, prop, tapes.length, true);
+        vhsGlass = inst(api.geo.glass, glass, tapes.length, false);
+        vhsLite = inst(createVhsLiteGeometry(), prop, tapes.length, false);
         vhsGlass.renderOrder = 2;
       }
       if (pads.length) {
@@ -101,19 +107,22 @@ export function createProps({ renderer, env, world, uTime }) {
         s.set(1, 1, 1);
       }
       /* halo: kaset (bergerak), lalu pad & pegas (diam) */
-      const n = tapes.length + pads.length + springs.length;
+      const n = tapes.length + pads.length + springs.length + extraHalos.length;
       haloPos = new Float32Array(n * 3); haloSize = new Float32Array(n);
       const hc = new Float32Array(n * 3);
       const put = (i, c, k) => { hc[i * 3] = c.r * k; hc[i * 3 + 1] = c.g * k; hc[i * 3 + 2] = c.b * k; };
       tapes.forEach((t, i) => { put(i, GOLD, 0.26); haloSize[i] = 1.9; });
       pads.forEach((p, j) => { const i = tapes.length + j; put(i, BLUE, 0.2); haloSize[i] = 2.6; haloPos.set([p.x, p.y + 0.5, p.z], i * 3); });
       springs.forEach((p, j) => { const i = tapes.length + pads.length + j; put(i, VIOLET, 0.22); haloSize[i] = 2.8; haloPos.set([p.x, p.y + 0.9, p.z], i * 3); });
+      extraHalos.forEach((h, j) => { const i = tapes.length + pads.length + springs.length + j; put(i, h.color, h.k); haloSize[i] = h.size; haloPos.set([h.x, h.y, h.z], i * 3); });
       const hg = new THREE.BufferGeometry();
       hg.setAttribute('position', new THREE.BufferAttribute(haloPos, 3).setUsage(THREE.DynamicDrawUsage));
       hg.setAttribute('color', new THREE.BufferAttribute(hc, 3));
       hg.setAttribute('aSize', new THREE.BufferAttribute(haloSize, 1).setUsage(THREE.DynamicDrawUsage));
       haloPts = new THREE.Points(hg, halo); haloPts.frustumCulled = false; haloPts.renderOrder = 3;
       group.add(haloPts); disposables.push(hg);
+      const shadows = (p) => { const on = p.name === 'high'; if (vhs) vhs.castShadow = on; if (cartMesh) cartMesh.castShadow = on; };
+      if (quality) { quality.onChange(shadows); shadows(quality.profile); }
       api.update(0, null, {});
       return api;
     },
@@ -159,6 +168,7 @@ export function createProps({ renderer, env, world, uTime }) {
       }
       if (springGlow) springGlow.instanceMatrix.needsUpdate = true;
 
+      let drawn = 0, lite = 0;
       for (let i = 0; i < tapes.length; i++) {
         const t = tapes[i];
         let sc = TAPE_SCALE;
@@ -174,12 +184,21 @@ export function createProps({ renderer, env, world, uTime }) {
           if (t.pop < 0) sc = 0;
           else { t.pop += dt / 0.22; sc = t.pop >= 1 ? 0 : TAPE_SCALE * (1 + 0.6 * Math.sin(t.pop * Math.PI)) * (1 - t.pop * t.pop); if (t.pop >= 1) t.pop = -1; }
         }
-        const spin = time * 1.9 + t.phase + (t.alive ? 0 : 9 * Math.max(0, t.pop));
-        setAt(vhs, i, t.x, y, t.z, spin, sc, 0.22); setAt(vhsGlass, i, t.x, y, t.z, spin, sc, 0.22);
         haloPos[i * 3] = t.x; haloPos[i * 3 + 1] = y; haloPos[i * 3 + 2] = t.z;
         haloSize[i] = t.alive ? 1.9 : 2.2 * sc;
+        /* hanya kaset yang masih ada dan cukup dekat yang masuk daftar gambar (instance dipadatkan) */
+        if (sc <= 0) continue;
+        let e2 = 0;
+        if (body) { const ex = body.pos.x - t.x, ey = body.pos.y - t.y, ez = body.pos.z - t.z; e2 = ex * ex + ey * ey + ez * ez; if (e2 > TAPE_RANGE2) continue; }
+        const spin = time * 1.9 + t.phase + (t.alive ? 0 : 9 * Math.max(0, t.pop));
+        if (e2 > TAPE_NEAR2) { setAt(vhsLite, lite++, t.x, y, t.z, spin, sc, 0.22); continue; }
+        setAt(vhs, drawn, t.x, y, t.z, spin, sc, 0.22); setAt(vhsGlass, drawn, t.x, y, t.z, spin, sc, 0.22);
+        drawn++;
       }
-      if (vhs) { vhs.instanceMatrix.needsUpdate = true; vhsGlass.instanceMatrix.needsUpdate = true; }
+      if (vhs) {
+        vhs.count = drawn; vhsGlass.count = drawn; vhsLite.count = lite;
+        vhs.instanceMatrix.needsUpdate = true; vhsGlass.instanceMatrix.needsUpdate = true; vhsLite.instanceMatrix.needsUpdate = true;
+      }
       if (haloPts) { haloPts.geometry.attributes.position.needsUpdate = true; haloPts.geometry.attributes.aSize.needsUpdate = true; }
     },
     setViewport(heightPx, fovDeg) { halo.uniforms.uScale.value = heightPx / (2 * Math.tan(fovDeg * Math.PI / 360)); },

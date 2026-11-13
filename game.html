@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;900&family=Space+Grotesk:wght@500;700&family=VT323&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/game.css?v=1">
+  <link rel="stylesheet" href="css/game.css?v=2">
   <script type="importmap">
   { "imports": {
       "three": "./js/vendor/three/three.module.min.js",
@@ -25,8 +25,13 @@
     <div id="joy"><i id="joy-knob"></i></div>
     <button id="btn-jump" type="button" aria-label="Lompat">LOMPAT</button>
   </div>
+  <div id="loading" role="status" aria-live="polite">
+    <b>PEMBURU KASET</b>
+    <span>MEMUAT <i id="loading-pct">0%</i></span>
+    <div class="track"><div id="loading-bar"></div></div>
+  </div>
   <pre id="debug" hidden></pre>
   <noscript>Game ini butuh JavaScript.</noscript>
-  <script type="module" src="js/game/main.js?v=1"></script>
+  <script type="module" src="js/game/main.js?v=2"></script>
 </body>
 </html>

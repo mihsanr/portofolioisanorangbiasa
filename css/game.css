@@ -30,3 +30,15 @@ body { font-family: 'Space Grotesk', system-ui, sans-serif; color: #fff; -webkit
   box-shadow: 0 4px 0 rgba(0, 0, 0, .28); -webkit-tap-highlight-color: transparent;
 }
 #btn-jump:active { transform: translateY(3px); box-shadow: 0 1px 0 rgba(0, 0, 0, .28); }
+
+/* layar memuat: level dibangun bertahap di perangkat */
+#loading {
+  position: fixed; inset: 0; z-index: 30; display: grid; place-content: center; justify-items: center; gap: 14px;
+  background: #0000ff; color: #fff; transition: opacity .4s;
+}
+#loading.done { opacity: 0; pointer-events: none; }
+#loading b { font: 900 clamp(34px, 9vw, 72px)/.9 'Barlow Condensed', sans-serif; letter-spacing: .01em; }
+#loading span { font: 22px/1 'VT323', monospace; letter-spacing: .08em; }
+#loading i { font-style: normal; }
+#loading .track { width: min(260px, 60vw); height: 6px; background: rgba(255, 255, 255, .25); }
+#loading-bar { height: 100%; background: #fff; transform: scaleX(0); transform-origin: left; }

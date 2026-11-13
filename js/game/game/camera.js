@@ -10,12 +10,12 @@ export function createFollowCamera(track) {
   const camera = new THREE.PerspectiveCamera(55, 1, 0.1, 600);
   track(camera);
   const focus = new THREE.Vector3(), look = { dx: 0, dy: 0, active: false };
-  const s = { yaw: Math.PI, pitch: 0.3, dist: 5.0, idle: 9 };
+  const s = { yaw: Math.PI, pitch: 0.3, dist: 5.0, idle: 9, cur: 5.0 };
   let init = false;
 
   const api = {
-    camera, state: s, ground: null,
-    snap(target, yaw) { s.yaw = yaw; focus.set(target.x, target.y + 1.05, target.z); init = true; },
+    camera, state: s, ground: null, blocked: null,
+    snap(target, yaw) { s.yaw = yaw; s.cur = s.dist; focus.set(target.x, target.y + 1.05, target.z); init = true; },
     update(dt, target, vel, input) {
       const portrait = camera.aspect < 1;
       const fov = portrait ? 72 : 55;
@@ -38,9 +38,17 @@ export function createFollowCamera(track) {
       focus.z = damp(focus.z, target.z, 14, dt);
       focus.y = damp(focus.y, target.y + 1.05, 6, dt);
 
-      const dist = s.dist, cp = Math.cos(s.pitch);
-      const cx = focus.x + Math.sin(s.yaw) * cp * dist, cz = focus.z + Math.cos(s.yaw) * cp * dist;
-      let cy = focus.y + Math.sin(s.pitch) * dist;
+      /* kalau ada pulau di antara pemain dan kamera, kamera merapat (cepat) lalu menjauh lagi (pelan) */
+      const cp = Math.cos(s.pitch), dx = Math.sin(s.yaw) * cp, dy = Math.sin(s.pitch), dz = Math.cos(s.yaw) * cp;
+      let want = s.dist;
+      if (api.blocked) for (let k = 1; k <= 6; k++) {
+        const t = s.dist * k / 6;
+        if (api.blocked(focus.x + dx * t, focus.y + dy * t, focus.z + dz * t)) { want = Math.max(1.3, t - s.dist / 6 - 0.2); break; }
+      }
+      s.cur = damp(s.cur, want, want < s.cur ? 20 : 3.5, dt);
+      const dist = s.cur;
+      const cx = focus.x + dx * dist, cz = focus.z + dz * dist;
+      let cy = focus.y + dy * dist;
       if (api.ground) { const g = api.ground(cx, cz); if (g > -1e8 && cy < g + 0.45) cy = g + 0.45; }
       camera.position.set(cx, cy, cz);
       camera.lookAt(focus.x, focus.y + 0.15, focus.z);

@@ -8,7 +8,7 @@ import { swatchUV, rectUV } from './atlas.js';
 const HALF = Math.PI / 2;
 
 /* satu bagian: bahan = nama swatch, atau { rect, map(x,y,z) -> [s,t] } untuk gambar di atlas */
-function piece(geo, hex, mat, { p, r, s, ao } = {}) {
+export function piece(geo, hex, mat, { p, r, s, ao } = {}) {
   geo = prep(geo);
   const pos = geo.attributes.position, uv = new Float32Array(pos.count * 2);
   for (let i = 0; i < pos.count; i++) {
@@ -20,7 +20,7 @@ function piece(geo, hex, mat, { p, r, s, ao } = {}) {
   return paint(geo, hex, ao);
 }
 
-function glowPiece(geo, hex, kind, { p, r, uv } = {}) {
+export function glowPiece(geo, hex, kind, { p, r, uv } = {}) {
   if (p || r) place(geo, p, r);
   const n = geo.attributes.position.count, k = new Float32Array(n).fill(kind);
   if (uv) { const a = geo.attributes.uv; for (let i = 0; i < n; i++) a.setXY(i, uv[0], uv[1]); }
@@ -33,31 +33,42 @@ const cylZ = (r0, r1, h, seg) => { const g = new THREE.CylinderGeometry(r0, r1, 
 /* ——— kaset VHS: cangkang + pelat depan berjendela, dua reel dan gulungan pita di dalam, label, rusuk, sekrup ——— */
 export function createVhsGeometry() {
   const P = [], BLK = '#1c1d21', BLK2 = '#25262b';
-  P.push(piece(new RoundedBoxGeometry(0.56, 0.32, 0.048, 2, 0.012), BLK, 'matte', { p: [0, 0, -0.014] }));
+  P.push(piece(new RoundedBoxGeometry(0.56, 0.32, 0.048, 1, 0.012), BLK, 'matte', { p: [0, 0, -0.014] }));
   const sh = roundRect(new THREE.Shape(), 0.56, 0.32, 0.014);
   sh.holes.push(roundRect(new THREE.Path(), 0.31, 0.112, 0.02, 0, 0.04));
-  P.push(piece(new THREE.ExtrudeGeometry(sh, { depth: 0.02, bevelEnabled: true, bevelThickness: 0.004, bevelSize: 0.004, bevelSegments: 2, curveSegments: 6 }), BLK2, 'matte', { p: [0, 0, 0.012] }));
+  P.push(piece(new THREE.ExtrudeGeometry(sh, { depth: 0.02, bevelEnabled: true, bevelThickness: 0.004, bevelSize: 0.004, bevelSegments: 1, curveSegments: 3 }), BLK2, 'matte', { p: [0, 0, 0.012] }));
   P.push(piece(new RoundedBoxGeometry(0.5, 0.026, 0.07, 1, 0.006), BLK2, 'gloss', { p: [0, 0.158, -0.002] }));     // pintu pita
   [[-0.082, 0.07], [0.082, 0.046]].forEach(([x, roll]) => {
-    P.push(piece(cylZ(roll, roll, 0.012, 22), '#2d2019', 'gloss', { p: [x, 0.04, 0.016] }));                       // gulungan pita
-    P.push(piece(cylZ(0.034, 0.034, 0.018, 18), '#efeee9', 'gloss', { p: [x, 0.04, 0.019] }));                     // reel
+    P.push(piece(cylZ(roll, roll, 0.012, 14), '#2d2019', 'gloss', { p: [x, 0.04, 0.016] }));                       // gulungan pita
+    P.push(piece(cylZ(0.034, 0.034, 0.018, 12), '#efeee9', 'gloss', { p: [x, 0.04, 0.019] }));                     // reel
     for (let k = 0; k < 3; k++) P.push(piece(new THREE.BoxGeometry(0.066, 0.011, 0.019), '#efeee9', 'gloss', { p: [x, 0.04, 0.0195], r: [0, 0, k * Math.PI / 3] }));
-    P.push(piece(cylZ(0.012, 0.012, 0.021, 10), '#15161a', 'matte', { p: [x, 0.04, 0.02] }));
+    P.push(piece(cylZ(0.012, 0.012, 0.021, 8), '#15161a', 'matte', { p: [x, 0.04, 0.02] }));
   });
   P.push(piece(new THREE.BoxGeometry(0.44, 0.1, 0.003), '#ffffff', { rect: 'label', map: (x, y) => [x / 0.44 + 0.5, y / 0.1 + 0.5] }, { p: [0, -0.087, 0.0372] }));
   P.push(piece(new THREE.BoxGeometry(0.34, 0.003, 0.034), '#efeae0', 'paper', { p: [0, -0.1605, -0.004] }));        // label punggung
   for (const sx of [-1, 1]) {
     for (let i = 0; i < 5; i++) P.push(piece(new THREE.BoxGeometry(0.034, 0.007, 0.004), '#34353c', 'matte', { p: [sx * 0.232, 0.008 + i * 0.016, 0.0375] }));
-    for (const sy of [-1, 1]) P.push(piece(cylZ(0.008, 0.008, 0.004, 8), '#a3a6ae', 'metal', { p: [sx * 0.258, sy * 0.138, 0.0365] }));
+    for (const sy of [-1, 1]) P.push(piece(cylZ(0.008, 0.008, 0.004, 6), '#a3a6ae', 'metal', { p: [sx * 0.258, sy * 0.138, 0.0365] }));
   }
   /* sisi belakang: dua lubang spindel bercincin, alur bawah, sekrup tengah */
   for (const sx of [-1, 1]) {
-    P.push(piece(cylZ(0.046, 0.046, 0.004, 18), BLK2, 'matte', { p: [sx * 0.082, 0.04, -0.0385] }));
-    P.push(piece(cylZ(0.03, 0.03, 0.006, 14), '#0c0c0f', 'matte', { p: [sx * 0.082, 0.04, -0.0388] }));
-    for (const sy of [-1, 1]) P.push(piece(cylZ(0.008, 0.008, 0.004, 8), '#a3a6ae', 'metal', { p: [sx * 0.258, sy * 0.138, -0.0385] }));
+    P.push(piece(cylZ(0.046, 0.046, 0.004, 12), BLK2, 'matte', { p: [sx * 0.082, 0.04, -0.0385] }));
+    P.push(piece(cylZ(0.03, 0.03, 0.006, 10), '#0c0c0f', 'matte', { p: [sx * 0.082, 0.04, -0.0388] }));
+    for (const sy of [-1, 1]) P.push(piece(cylZ(0.008, 0.008, 0.004, 6), '#a3a6ae', 'metal', { p: [sx * 0.258, sy * 0.138, -0.0385] }));
   }
   P.push(piece(new THREE.BoxGeometry(0.5, 0.022, 0.004), BLK2, 'matte', { p: [0, -0.12, -0.0385] }));
   P.push(piece(new THREE.BoxGeometry(0.2, 0.06, 0.003), '#efeae0', 'paper', { p: [0, -0.06, -0.0388] }));
+  return merge(P);
+}
+
+/* kaset versi jauh (LOD): siluet + label + jendela gelap + dua reel; tanpa kaca transparan */
+export function createVhsLiteGeometry() {
+  const P = [];
+  P.push(piece(new RoundedBoxGeometry(0.56, 0.32, 0.074, 1, 0.012), '#1f2024', 'matte'));
+  P.push(piece(new THREE.BoxGeometry(0.31, 0.112, 0.003), '#2b3542', 'gloss', { p: [0, 0.04, 0.0375] }));
+  for (const sx of [-1, 1]) P.push(piece(cylZ(0.034, 0.034, 0.004, 8), '#efeee9', 'gloss', { p: [sx * 0.082, 0.04, 0.039] }));
+  P.push(piece(new THREE.BoxGeometry(0.44, 0.1, 0.003), '#ffffff', { rect: 'label', map: (x, y) => [x / 0.44 + 0.5, y / 0.1 + 0.5] }, { p: [0, -0.087, 0.0375] }));
+  P.push(piece(new THREE.BoxGeometry(0.2, 0.06, 0.003), '#efeae0', 'paper', { p: [0, -0.06, -0.0375] }));
   return merge(P);
 }
 

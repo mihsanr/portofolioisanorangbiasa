@@ -19,15 +19,15 @@ export function getHeadGeometry() {
   const rb = (bw, bh, bd, seg, rad) => new RoundedBoxGeometry(bw, bh, bd, seg, rad);
 
   /* casing utama: sisi bawah sedikit digelapkan (AO terhadap kerah hoodie) */
-  P.push(part(rb(w, h, d, 6, 0.05), C.case, { p: [0, cy, 0], ao: (x, y) => 0.72 + 0.28 * Math.min(1, Math.max(0, (y - 0.03) / 0.09)) }));
+  P.push(part(rb(w, h, d, 4, 0.05), C.case, { p: [0, cy, 0], ao: (x, y) => 0.72 + 0.28 * Math.min(1, Math.max(0, (y - 0.03) / 0.09)) }));
   /* punuk tabung di belakang */
-  P.push(part(rb(0.40, 0.32, 0.18, 5, 0.06), C.hump, { p: [0, cy, -0.26], ao: (x, y, z) => (z > -0.215 ? 0.7 : 1) }));
-  for (let i = 0; i < 5; i++) P.push(part(rb(0.24, 0.014, 0.016, 1, 0.006), C.rib, { p: [0, cy - 0.08 + i * 0.04, -0.351] }));
+  P.push(part(rb(0.40, 0.32, 0.18, 3, 0.06), C.hump, { p: [0, cy, -0.26], ao: (x, y, z) => (z > -0.215 ? 0.7 : 1) }));
+  for (let i = 0; i < 5; i++) P.push(part(new THREE.BoxGeometry(0.24, 0.014, 0.016), C.rib, { p: [0, cy - 0.08 + i * 0.04, -0.351] }));
 
   /* bezel: bingkai ber-bevel dengan lubang layar */
   const shape = roundRect(new THREE.Shape(), 0.50, 0.40, 0.045, 0, 0);
   shape.holes.push(roundRect(new THREE.Path(), holeW, holeH, 0.042, 0, holeY - cy));
-  const bezel = new THREE.ExtrudeGeometry(shape, { depth: 0.018, bevelEnabled: true, bevelThickness: 0.008, bevelSize: 0.008, bevelSegments: 3, curveSegments: 10 });
+  const bezel = new THREE.ExtrudeGeometry(shape, { depth: 0.018, bevelEnabled: true, bevelThickness: 0.008, bevelSize: 0.008, bevelSegments: 2, curveSegments: 6 });
   P.push(part(bezel, C.bezel, { p: [0, cy, 0.196] }));
 
   /* dagu: pelat nama + tiga tombol */
@@ -37,14 +37,14 @@ export function getHeadGeometry() {
   });
 
   /* sisi kiri karakter (+X): kisi ventilasi */
-  for (let i = 0; i < 6; i++) P.push(part(rb(0.016, 0.014, 0.22, 1, 0.006), C.rib, { p: [0.2705, cy - 0.09 + i * 0.036, -0.01] }));
+  for (let i = 0; i < 6; i++) P.push(part(new THREE.BoxGeometry(0.016, 0.014, 0.22), C.rib, { p: [0.2705, cy - 0.09 + i * 0.036, -0.01] }));
   /* sisi kanan karakter (−X): dua kenop + kisi speaker */
   [0.345, 0.235].forEach((y, i) => {
-    P.push(part(new THREE.CylinderGeometry(0.052, 0.052, 0.008, 28), C.knobDark, { p: [-0.272, y, 0.06], r: [0, 0, Math.PI / 2] }));
-    P.push(part(new THREE.CylinderGeometry(0.038, 0.043, 0.032, 28), C.knob, { p: [-0.289, y, 0.06], r: [0, 0, Math.PI / 2] }));
+    P.push(part(new THREE.CylinderGeometry(0.052, 0.052, 0.008, 20), C.knobDark, { p: [-0.272, y, 0.06], r: [0, 0, Math.PI / 2] }));
+    P.push(part(new THREE.CylinderGeometry(0.038, 0.043, 0.032, 20), C.knob, { p: [-0.289, y, 0.06], r: [0, 0, Math.PI / 2] }));
     P.push(part(rb(0.006, 0.034, 0.008, 1, 0.002), C.knobDark, { p: [-0.3065, y + 0.016, 0.06], r: [i ? 0.7 : -0.4, 0, 0] }));
   });
-  for (let i = 0; i < 4; i++) P.push(part(rb(0.016, 0.012, 0.15, 1, 0.005), C.rib, { p: [-0.2705, 0.085 + i * 0.03, 0.02] }));
+  for (let i = 0; i < 4; i++) P.push(part(new THREE.BoxGeometry(0.016, 0.012, 0.15), C.rib, { p: [-0.2705, 0.085 + i * 0.03, 0.02] }));
 
   /* leher + dudukan antena */
   P.push(part(new THREE.CylinderGeometry(0.078, 0.09, 0.08, 24), C.neck, { p: [0, 0.0, 0] }));

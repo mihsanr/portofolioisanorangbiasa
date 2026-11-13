@@ -139,7 +139,7 @@ function shoe(x) {
     { c: [x, 0.030, 0.168], rx: 0.050, rz: 0.020 },
     { c: [x, 0.036, 0.188], rx: 0.018, rz: 0.010 },
   ].map((k) => ({ e: 3.6, ...k })), 3);
-  P.push(loft(sole, 22, { frame: 'z', skinFn: () => [[B.footL, 1]], colorFn: (r, a, px, py) => (py < 0.013 ? C.outsole : C.sole), aoFn: (px, py) => (py < 0.006 ? 0.6 : 1) }));
+  P.push(loft(sole, 16, { frame: 'z', skinFn: () => [[B.footL, 1]], colorFn: (r, a, px, py) => (py < 0.013 ? C.outsole : C.sole), aoFn: (px, py) => (py < 0.006 ? 0.6 : 1) }));
 
   const upper = spline([
     { c: [x, 0.075, -0.104], rx: 0.020, rz: 0.030, rzb: 0.030 },
@@ -152,7 +152,7 @@ function shoe(x) {
     { c: [x, 0.055, 0.166], rx: 0.040, rz: 0.022, rzb: 0.026 },
     { c: [x, 0.052, 0.180], rx: 0.014, rz: 0.010, rzb: 0.012 },
   ].map((k) => ({ e: 2.5, ...k })), 3);
-  P.push(loft(upper, 22, {
+  P.push(loft(upper, 16, {
     frame: 'z', skinFn: () => [[B.footL, 1]],
     colorFn: (r, a, px, py, pz) => {
       if (pz > 0.118) return C.sole;                       // toe cap karet
@@ -179,13 +179,13 @@ function hand(x) {
   const P = [], z = 0.008;
   const g = (geo, o) => part(geo, C.glove, { bone: B.handL, ...o });
   P.push(g(new THREE.CylinderGeometry(0.049, 0.044, 0.032, 20), { p: [x, 0.548, z - 0.002], s: [0.88, 1, 1] }));
-  P.push(g(new THREE.SphereGeometry(1, 20, 14), { p: [x - 0.002, 0.502, z], s: [0.034, 0.052, 0.05] }));
+  P.push(g(new THREE.SphereGeometry(1, 14, 10), { p: [x - 0.002, 0.502, z], s: [0.034, 0.052, 0.05] }));
   for (let i = 0; i < 4; i++) {
     const fz = z - 0.0345 + i * 0.023, dy = (i === 0 || i === 3) ? 0.005 : 0;
-    P.push(g(new THREE.CapsuleGeometry(0.0155, 0.022, 4, 10), { p: [x - 0.006, 0.462 + dy, fz], r: [0, 0, -0.3] }));
-    P.push(g(new THREE.CapsuleGeometry(0.0145, 0.016, 4, 10), { p: [x - 0.024, 0.443 + dy, fz], r: [0, 0, -1.25] }));
+    P.push(g(new THREE.CapsuleGeometry(0.0155, 0.022, 3, 7), { p: [x - 0.006, 0.462 + dy, fz], r: [0, 0, -0.3] }));
+    P.push(g(new THREE.CapsuleGeometry(0.0145, 0.016, 3, 7), { p: [x - 0.024, 0.443 + dy, fz], r: [0, 0, -1.25] }));
   }
-  P.push(g(new THREE.CapsuleGeometry(0.017, 0.026, 4, 10), { p: [x - 0.012, 0.49, z + 0.05], r: [-0.5, 0, -0.5] }));
+  P.push(g(new THREE.CapsuleGeometry(0.017, 0.026, 3, 8), { p: [x - 0.012, 0.49, z + 0.05], r: [-0.5, 0, -0.5] }));
   return P;
 }
 
@@ -200,14 +200,14 @@ function getBodyGeometry() {
   const P = [];
 
   const torso = spline(TORSO, 3);
-  P.push(loft(torso, 30, { bumpFn: foldTorso, skinFn: (x, y) => { const w = smooth((y - 0.76) / 0.18); return [[B.hips, 1 - w], [B.chest, w]]; } }));
+  P.push(loft(torso, 26, { bumpFn: foldTorso, skinFn: (x, y) => { const w = smooth((y - 0.76) / 0.18); return [[B.hips, 1 - w], [B.chest, w]]; } }));
   P.push(loft(spline(PELVIS, 3), 22, { color: C.pants, skinFn: () => [[B.hips, 1]] }));
   P.push(pocket(torso));
 
   /* tudung: kerah tebal mengelilingi leher + gumpalan tudung di punggung */
   const inner = (x, y, z) => 0.62 + 0.38 * smooth((Math.hypot(x, z + 0.015) - 0.075) / 0.07);
-  P.push(part(new THREE.TorusGeometry(0.105, 0.043, 14, 32), C.hoodie, { p: [0, 1.046, -0.012], r: [Math.PI / 2 + 0.16, 0, 0], s: [1.27, 1, 1], bone: B.chest, ao: inner }));
-  P.push(part(new THREE.SphereGeometry(1, 24, 16), C.hoodie, { p: [0, 0.992, -0.135], r: [-0.32, 0, 0], s: [0.172, 0.105, 0.085], bone: B.chest, ao: (x, y) => 0.82 + 0.18 * smooth((y - 0.93) / 0.08) }));
+  P.push(part(new THREE.TorusGeometry(0.105, 0.043, 10, 26), C.hoodie, { p: [0, 1.046, -0.012], r: [Math.PI / 2 + 0.16, 0, 0], s: [1.27, 1, 1], bone: B.chest, ao: inner }));
+  P.push(part(new THREE.SphereGeometry(1, 18, 12), C.hoodie, { p: [0, 0.992, -0.135], r: [-0.32, 0, 0], s: [0.172, 0.105, 0.085], bone: B.chest, ao: (x, y) => 0.82 + 0.18 * smooth((y - 0.93) / 0.08) }));
   /* tali tudung */
   [-1, 1].forEach((sg) => {
     const yc = 0.94, tilt = -0.27, r = torsoAt(torso, yc), zc = r.cz + r.rz * 0.99 + 0.005;

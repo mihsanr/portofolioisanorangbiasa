@@ -8,7 +8,7 @@ const TAU = Math.PI * 2;
 
 export function createTuftGeometry(seed = 5) {
   const rnd = rng(seed), P = [], N = [], C = [], I = [];
-  const BL = 5;
+  const BL = 4;
   for (let k = 0; k < BL; k++) {
     const a = k / BL * TAU + rnd() * 0.8, h = 0.2 + rnd() * 0.18, lean = 0.3 + rnd() * 0.4, w = 0.024 + rnd() * 0.01;
     const dx = Math.cos(a), dz = Math.sin(a), px = -dz, pz = dx, cx = dx * 0.045, cz = dz * 0.045, b = P.length / 3;
@@ -45,15 +45,16 @@ function paintTrunk(g, skew) {
 }
 
 /* Pohon: batang melengkung berakar lebar + 2 dahan (loft), tajuk = beberapa gumpalan bola terdeformasi. */
-export function createTreeGeometry(seed = 1) {
+/* low = versi jauh (LOD): bentuk & warna sama, segitiga ±1/4 */
+export function createTreeGeometry(seed = 1, low = false) {
   const rnd = rng(seed * 131 + 7), parts = [];
   const bend = (rnd() - 0.5) * 0.9, bz = (rnd() - 0.5) * 0.5, H = 2.9 + rnd() * 0.7;
   const trunk = spline([
     { c: [0, -0.25, 0], rx: 0.52, rz: 0.5 }, { c: [0, 0.05, 0], rx: 0.4, rz: 0.38 },
     { c: [bend * 0.12, 0.5, bz * 0.1], rx: 0.27, rz: 0.26 }, { c: [bend * 0.45, H * 0.45, bz * 0.4], rx: 0.21, rz: 0.2 },
     { c: [bend * 0.3, H * 0.75, bz * 0.7], rx: 0.17, rz: 0.16 }, { c: [bend * 0.55, H, bz], rx: 0.1, rz: 0.1 },
-  ], 3);
-  parts.push(paintTrunk(loft(trunk, 12, { bumpFn: (r, a) => 1 + 0.13 * Math.sin(a * 5 + r.c[1] * 3) * smooth((0.9 - r.c[1]) / 0.9) }), 0));
+  ], low ? 1 : 3);
+  parts.push(paintTrunk(loft(trunk, low ? 6 : 12, { bumpFn: (r, a) => 1 + 0.13 * Math.sin(a * 5 + r.c[1] * 3) * smooth((0.9 - r.c[1]) / 0.9) }), 0));
   /* tajuk = gugus: tiap gugus berisi beberapa gumpalan bola halus. Normal tiap gumpalan dicampur dengan arah
      keluar dari pusat gugus, jadi cahaya membacanya sebagai satu volume lembut dengan detail gumpalan. */
   const clusters = [[bend * 0.55, H + 0.3, bz, 1.25, 6]];
@@ -63,12 +64,12 @@ export function createTreeGeometry(seed = 1) {
       { c: [bend * 0.38, y0, bz * 0.5], rx: 0.13, rz: 0.13 },
       { c: [bend * 0.4 + Math.cos(a) * len * 0.5, y0 + 0.35, bz * 0.5 + Math.sin(a) * len * 0.5], rx: 0.1, rz: 0.1 },
       { c: [bx, y0 + 0.85, bzz], rx: 0.06, rz: 0.06 },
-    ], 3);
-    parts.push(paintTrunk(loft(br, 8), 3 + k));
+    ], low ? 1 : 3);
+    parts.push(paintTrunk(loft(br, low ? 5 : 8), 3 + k));
     clusters.push([bx, y0 + 1.0, bzz, 0.8 + rnd() * 0.15, 4]);
   }
   const c = new THREE.Color(), n = new THREE.Vector3(), o = new THREE.Vector3();
-  const puffSrc = prep(new THREE.IcosahedronGeometry(1, 2));
+  const puffSrc = prep(new THREE.IcosahedronGeometry(1, low ? 1 : 2));
   clusters.forEach(([cx, cy, cz, cr, count], ci) => {
     for (let k = 0; k < count; k++) {
       /* satu gumpalan besar di tengah-atas, sisanya mengelilingi sedikit lebih rendah */
