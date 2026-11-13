@@ -23,6 +23,11 @@ export function installLeanShadows() {
   const from = src.indexOf('float getShadow(');
   const a = src.indexOf(START, from), b = src.indexOf(END, from);
   if (from < 0 || a < 0 || b < 0) return false;      // struktur chunk berubah: biarkan bawaan
-  ShaderChunk.shadowmap_pars_fragment = src.slice(0, a + START.length) + LEAN + src.slice(b);
+  let out = src.slice(0, a + START.length) + LEAN + src.slice(b);
+  /* semua mode: bayangan memudar menjelang tepi jangkauan shadow map, jadi tidak ada garis potong */
+  const ret = 'return mix( 1.0, shadow, shadowIntensity );', r = out.indexOf(ret, out.indexOf('float getShadow('));
+  const FADE = 'vec2 sfd = abs( shadowCoord.xy - 0.5 ); shadow = mix( shadow, 1.0, smoothstep( 0.38, 0.5, max( sfd.x, sfd.y ) ) ); ';
+  if (r > 0) out = out.slice(0, r) + FADE + out.slice(r);
+  ShaderChunk.shadowmap_pars_fragment = out;
   return true;
 }

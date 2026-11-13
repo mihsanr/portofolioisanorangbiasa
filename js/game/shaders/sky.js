@@ -2,10 +2,10 @@ import * as THREE from 'three';
 
 /* Langit gradien + piringan matahari. Dipakai sebagai latar dan sumber environment map (PMREM). */
 export const SKY = {
-  zenith: new THREE.Color('#1f6fd6'),
-  mid: new THREE.Color('#5aa9ee'),
-  horizon: new THREE.Color('#cfe9fb'),
-  ground: new THREE.Color('#8fa7b8'),
+  zenith: new THREE.Color('#1a66d2'),
+  mid: new THREE.Color('#4fa3ee'),
+  horizon: new THREE.Color('#cfeafc'),
+  ground: new THREE.Color('#8fc2f0'),
   sun: new THREE.Color('#fff3d8'),
 };
 
@@ -31,7 +31,7 @@ export function createSky(sunDir) {
         float h = d.y;
         vec3 c = mix(uHorizon, uMid, smoothstep(0.0, 0.28, h));
         c = mix(c, uZenith, smoothstep(0.22, 0.95, h));
-        c = mix(c, uGround, smoothstep(0.0, -0.35, h));
+        c = mix(c, uGround, smoothstep(0.0, -0.45, h));
         float s = max(dot(d, uSunDir), 0.0);
         c += uSun * (pow(s, 900.0) * 6.0 + pow(s, 48.0) * 0.35 + pow(s, 6.0) * 0.12);
         gl_FragColor = vec4(c, 1.0);

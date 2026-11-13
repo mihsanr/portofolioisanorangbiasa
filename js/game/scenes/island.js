@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { createLights } from '../core/lights.js';
-import { createSky, SKY } from '../shaders/sky.js';
+import { createAtmosphere } from '../core/atmosphere.js';
+import { createBlobShadow } from '../game/blob.js';
 import { createWorldMaterials } from '../shaders/terrain.js';
 import { createMaterials } from '../gen/materials.js';
 import { createCharacter } from '../gen/character.js';
@@ -27,10 +28,9 @@ export function createIslandScene(ctx) {
   const t0 = performance.now();
 
   const scene = new THREE.Scene();
-  scene.fog = new THREE.Fog(SKY.horizon, 60, 260);
-  scene.add(createSky(sunDir));
+  const atmo = createAtmosphere(ctx, scene);
   const lights = createLights(scene, quality, sunDir);
-  lights.setRange(13);
+  lights.setRange(17);
 
   const wm = createWorldMaterials();
   const island = createIsland({ radius: 11, seed: 4, relief: 1.25, pos: [0, 0, 0] });
@@ -42,7 +42,7 @@ export function createIslandScene(ctx) {
   ground.receiveShadow = true;
   root.add(ground);
 
-  const world = { floorY: null, killY: -30, boxes: [], cyls: [], terrains: [island] };
+  const world = { floorY: null, killY: atmo.seaY - 6, boxes: [], cyls: [], terrains: [island] };
   const wcyl = (c) => world.cyls.push({ x: c.x + island.pos.x, z: c.z + island.pos.z, r: c.r, y0: c.y0 + island.pos.y, y1: c.y1 + island.pos.y });
   const local = (x, z) => island.localHeight(x, z);
   const disposables = [];
@@ -124,7 +124,8 @@ export function createIslandScene(ctx) {
   scene.add(character.root);
   const dust = createDust(quality);
   const sparks = createDust(quality, { color: '#ffd77a', additive: true, opacity: 0.95 });
-  scene.add(dust.object, sparks.object);
+  const blob = createBlobShadow(world);
+  scene.add(dust.object, sparks.object, blob.object);
   const input = createInput(renderer.domElement);
   const cam = createFollowCamera(track);
   cam.ground = (x, z) => groundBelow(world, x, z);
@@ -167,12 +168,14 @@ export function createIslandScene(ctx) {
       player.render(alpha);
       cam.update(dt, character.root.position, player.body.vel, input);
       lights.follow(character.root.position);
+      blob.update(character.root.position);
+      atmo.update(cam.camera, time);
       dust.setViewport(renderer.domElement.height, cam.camera.fov);
       sparks.setViewport(renderer.domElement.height, cam.camera.fov);
       props.setViewport(renderer.domElement.height, cam.camera.fov);
       character.tick(time);
       renderer.render(scene, cam.camera);
     },
-    dispose() { wm.dispose(); mats.dispose(); character.dispose(); dust.dispose(); sparks.dispose(); props.dispose(); island.dispose(); disposables.forEach((d) => d.dispose()); },
+    dispose() { wm.dispose(); mats.dispose(); character.dispose(); dust.dispose(); sparks.dispose(); blob.dispose(); atmo.dispose(); props.dispose(); island.dispose(); disposables.forEach((d) => d.dispose()); },
   };
 }
