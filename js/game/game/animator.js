@@ -19,6 +19,7 @@ export function createAnimator(c, hooks = {}) {
       sqv += 2.6;
       if (double) { flip = 0; face = FACE.wow; faceT = 0.5; }
     },
+    cheer() { face = FACE.wow; faceT = 0.45; sqv += 1.4; },
     onLand(impact) {
       sqv -= Math.min(impact, 24) * 0.2;
       if (impact > 19) { face = FACE.dizzy; faceT = 0.7; }

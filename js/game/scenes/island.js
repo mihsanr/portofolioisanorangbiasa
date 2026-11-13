@@ -15,10 +15,12 @@ import { createAnimator } from '../game/animator.js';
 import { createFollowCamera } from '../game/camera.js';
 import { createDust } from '../game/fx.js';
 import { groundBelow } from '../game/physics.js';
+import { createProps } from '../game/propsys.js';
 
-/* Tahap 4: satu pulau hero yang bisa dijelajahi. Per pulau: 1 draw call medan, 1 rumput, 1 pohon,
+/* Tahap 4–5: satu pulau hero yang bisa dijelajahi + prop interaktif (kaset, jump pad, pegas, troli). Per pulau: 1 draw call medan, 1 rumput, 1 pohon,
    1 batu, 1 reruntuhan (semua instancing). Hanya pohon, batu, reruntuhan, dan karakter yang memancarkan bayangan. */
 const GRASS_MAX = 3400;
+const GOLD = new THREE.Color('#ffd77a');
 
 export function createIslandScene(ctx) {
   const { renderer, quality, env, sunDir, track } = ctx;
@@ -45,6 +47,19 @@ export function createIslandScene(ctx) {
   const local = (x, z) => island.localHeight(x, z);
   const disposables = [];
   const avoid = [];
+
+  /* prop interaktif: didaftarkan dulu supaya rumput menghindarinya */
+  const props = createProps({ renderer, env, world, uTime: wm.uTime });
+  const gy = (x, z) => island.heightAt(x, z);
+  const ox = island.outline(0);
+  props.addPad(-1.6, gy(-1.6, 6.2) - 0.04, 6.2); avoid.push({ x: -1.6, z: 6.2, r: 1.35 });
+  props.addSpring(4.3, gy(4.3, 6.3) - 0.04, 6.3); avoid.push({ x: 4.3, z: 6.3, r: 1.0 });
+  props.addCart([ox + 1.75, -0.22, 0.3], [ox + 12, -0.22, 0.3], 8);
+  [[2.6, 1.15, 1.2], [-4.6, 1.6, -3.4], [3.2, 3.7, -6.2], [-1.6, 5.0, 6.2], [4.3, 10.5, 6.3], [-7.5, 1.15, 2.0]]
+    .forEach(([x, up, z]) => { props.addCassette(x, gy(x, z) + up, z); avoid.push({ x, z, r: 0.2 }); });
+  props.addCassette(ox + 7, 1.0, 0.3); props.addCassette(ox + 13.2, 1.05, 0.3);
+  props.build();
+  scene.add(props.group);
 
   /* reruntuhan */
   const ruin = createRuinBuilder(local, 12);
@@ -81,9 +96,12 @@ export function createIslandScene(ctx) {
   const BOULDERS = 16, q = { x: 0, y: 0, z: 0, rho: 0 };
   const boulders = new THREE.InstancedMesh(boulderGeo, wm.matte, BOULDERS);
   for (let i = 0; i < BOULDERS; i++) {
-    island.sample(rnd, q, 0.93);
-    if (Math.hypot(q.x, q.z) < 2.2) { q.x += 3; q.y = local(q.x, q.z); }
     const s = i < 4 ? 0.9 + rnd() * 0.6 : 0.3 + rnd() * 0.35;
+    for (let tries = 0; tries < 30; tries++) {
+      island.sample(rnd, q, 0.93);
+      if (Math.hypot(q.x - 0.6, q.z - 3.4) < 2.6) continue;
+      if (!avoid.some((a) => Math.hypot(q.x - a.x, q.z - a.z) < a.r + 0.9 * s + 0.5)) break;
+    }
     quat.setFromAxisAngle(up, rnd() * 6.28);
     m4.compose(v3.set(q.x, q.y - 0.12 * s, q.z), quat, sc.set(s, s * (0.8 + rnd() * 0.4), s));
     boulders.setMatrixAt(i, m4);
@@ -105,7 +123,8 @@ export function createIslandScene(ctx) {
   const character = createCharacter(mats);
   scene.add(character.root);
   const dust = createDust(quality);
-  scene.add(dust.object);
+  const sparks = createDust(quality, { color: '#ffd77a', additive: true, opacity: 0.95 });
+  scene.add(dust.object, sparks.object);
   const input = createInput(renderer.domElement);
   const cam = createFollowCamera(track);
   cam.ground = (x, z) => groundBelow(world, x, z);
@@ -121,6 +140,10 @@ export function createIslandScene(ctx) {
     onJump(double) { animator.onJump(double); if (!double) dust.ring(player.body.pos.x, player.body.pos.y, player.body.pos.z, 0.55); },
     onLand(impact) { animator.onLand(impact); dust.ring(player.body.pos.x, player.body.pos.y, player.body.pos.z, Math.min(1.3, 0.35 + impact / 18)); },
   });
+  const propHooks = {
+    onCollect(t) { sparks.setColor(GOLD); sparks.burst(t.x, t.y, t.z, 16, 3.4); animator.cheer(); },
+    onLaunch(p, color) { sparks.setColor(color); sparks.burst(p.x, p.y + 0.5, p.z, 14, 4.2); },
+  };
   const sx = 0.6, sz = 3.4, sy = island.heightAt(sx, sz);
   player.setSpawn(sx, sy, sz);
   player.teleport(sx, sy, sz, Math.PI);
@@ -130,13 +153,14 @@ export function createIslandScene(ctx) {
   let time = 0;
   const buildMs = Math.round(performance.now() - t0);
   return {
-    scene, camera: cam.camera, player, input, cam, world, island, buildMs,
+    scene, camera: cam.camera, player, input, cam, world, island, props, buildMs,
     update(dt) {
       time += dt;
+      props.update(dt, player, propHooks);
       player.update(dt, input.poll(), cam.state.yaw, world);
       anim.speed = player.state.speed; anim.grounded = player.body.grounded; anim.vy = player.body.vel.y; anim.turn = player.state.turn;
       animator.update(dt, anim);
-      dust.update(dt);
+      dust.update(dt); sparks.update(dt);
     },
     render(dt, alpha) {
       wm.uTime.value = time;
@@ -144,9 +168,11 @@ export function createIslandScene(ctx) {
       cam.update(dt, character.root.position, player.body.vel, input);
       lights.follow(character.root.position);
       dust.setViewport(renderer.domElement.height, cam.camera.fov);
+      sparks.setViewport(renderer.domElement.height, cam.camera.fov);
+      props.setViewport(renderer.domElement.height, cam.camera.fov);
       character.tick(time);
       renderer.render(scene, cam.camera);
     },
-    dispose() { wm.dispose(); mats.dispose(); character.dispose(); dust.dispose(); island.dispose(); disposables.forEach((d) => d.dispose()); },
+    dispose() { wm.dispose(); mats.dispose(); character.dispose(); dust.dispose(); sparks.dispose(); props.dispose(); island.dispose(); disposables.forEach((d) => d.dispose()); },
   };
 }

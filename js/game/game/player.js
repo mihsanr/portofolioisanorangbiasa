@@ -16,7 +16,7 @@ export function createPlayer(character, hooks = {}) {
   const body = { pos: new THREE.Vector3(), vel: new THREE.Vector3(), radius: 0.28, height: 1.5, grounded: true, ground: null };
   const prev = new THREE.Vector3();
   const spawn = new THREE.Vector3();
-  const s = { yaw: 0, turn: 0, coyote: 0, buffer: 0, airJumps: 0, speed: 0, held: false };
+  const s = { yaw: 0, turn: 0, coyote: 0, buffer: 0, airJumps: 0, speed: 0, held: false, boost: false };
 
   function teleport(x, y, z, yaw = s.yaw) {
     body.pos.set(x, y, z); prev.copy(body.pos); body.vel.set(0, 0, 0); s.yaw = yaw;
@@ -25,7 +25,15 @@ export function createPlayer(character, hooks = {}) {
   return {
     body, state: s, character, spawn, teleport,
     setSpawn(x, y, z) { spawn.set(x, y, z); },
+    /* dilontarkan jump pad / pegas: tinggi penuh tanpa perlu menahan tombol, double jump tersedia lagi */
+    launch(vy) {
+      body.vel.y = vy; body.grounded = false; body.ground = null;
+      s.coyote = 0; s.buffer = 0; s.held = true; s.boost = true; s.airJumps = 0;
+      hooks.onJump && hooks.onJump(false);
+    },
     update(dt, input, camYaw, world) {
+      /* berdiri di platform bergerak: ikut terbawa */
+      if (body.grounded && body.ground && body.ground.delta) body.pos.add(body.ground.delta);
       prev.copy(body.pos);
       /* arah gerak relatif kamera: maju = menjauhi kamera */
       const fx = -Math.sin(camYaw), fz = -Math.cos(camYaw);
@@ -56,7 +64,8 @@ export function createPlayer(character, hooks = {}) {
           hooks.onJump && hooks.onJump(true);
         }
       }
-      if (!input.jump) s.held = false;
+      if (body.vel.y <= 0) s.boost = false;
+      if (!input.jump && !s.boost) s.held = false;
       let g = body.vel.y > 0 ? MOVE.gravityUp : MOVE.gravityDown;
       if (body.vel.y > 0 && !s.held) g *= MOVE.cutGravity;      // lepas tombol = lompatan pendek
       body.vel.y = Math.max(body.vel.y - g * dt, -MOVE.terminal);

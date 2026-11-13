@@ -4,7 +4,7 @@ import * as THREE from 'three';
    alokasi saat bermain. Jumlah yang dipancarkan mengikuti profil kualitas. */
 const MAX = 96;
 
-export function createDust(quality) {
+export function createDust(quality, { color = '#f1ece2', additive = false, opacity = 0.6 } = {}) {
   const pos = new Float32Array(MAX * 3), dat = new Float32Array(MAX * 2);   // dat: umur 0..1, ukuran
   const vel = new Float32Array(MAX * 3), life = new Float32Array(MAX), span = new Float32Array(MAX), size = new Float32Array(MAX);
   let next = 0;
@@ -13,8 +13,8 @@ export function createDust(quality) {
   aPos.setUsage(THREE.DynamicDrawUsage); aDat.setUsage(THREE.DynamicDrawUsage);
   geo.setAttribute('position', aPos); geo.setAttribute('aDat', aDat);
   const mat = new THREE.ShaderMaterial({
-    transparent: true, depthWrite: false,
-    uniforms: { uScale: { value: 600 }, uColor: { value: new THREE.Color('#f1ece2') } },
+    transparent: true, depthWrite: false, blending: additive ? THREE.AdditiveBlending : THREE.NormalBlending,
+    uniforms: { uScale: { value: 600 }, uColor: { value: new THREE.Color(color) }, uOpacity: { value: opacity } },
     vertexShader: /* glsl */`
       attribute vec2 aDat;
       uniform float uScale;
@@ -27,11 +27,12 @@ export function createDust(quality) {
       }`,
     fragmentShader: /* glsl */`
       uniform vec3 uColor;
+      uniform float uOpacity;
       varying float vAge;
       void main() {
         if (vAge >= 1.0) discard;
         float d = length(gl_PointCoord - 0.5) * 2.0;
-        float a = smoothstep(1.0, 0.25, d) * (1.0 - vAge) * (1.0 - vAge) * 0.6;
+        float a = smoothstep(1.0, 0.25, d) * (1.0 - vAge) * (1.0 - vAge) * uOpacity;
         gl_FragColor = vec4(uColor, a);
         #include <tonemapping_fragment>
         #include <colorspace_fragment>
@@ -69,6 +70,15 @@ export function createDust(quality) {
           0.24 + Math.random() * 0.16, 0.5 + Math.random() * 0.3);
       }
     },
+    /* semburan ke segala arah */
+    burst(x, y, z, n = 12, speed = 3) {
+      const count = Math.max(4, Math.round(n * quality.profile.particles));
+      for (let k = 0; k < count; k++) {
+        const a = Math.random() * Math.PI * 2, u = Math.random() * 2 - 1, r = Math.sqrt(1 - u * u), sp = speed * (0.5 + Math.random() * 0.7);
+        spawn(x, y, z, Math.cos(a) * r * sp, u * sp + 1.2, Math.sin(a) * r * sp, 0.12 + Math.random() * 0.12, 0.4 + Math.random() * 0.35);
+      }
+    },
+    setColor(c) { mat.uniforms.uColor.value.copy(c); },
     update(dt) {
       const drag = Math.exp(-3.2 * dt);
       for (let i = 0; i < MAX; i++) {
