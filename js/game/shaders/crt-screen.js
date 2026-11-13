@@ -62,9 +62,9 @@ const EMIT = /* glsl */`
   totalEmissiveRadiance = (mix(off, on, lit) * dotMask + on * lit * 0.10) * scan * vig;
 }`;
 
-export function createScreenMaterial() {
+export function createScreenMaterial(env) {
   const uniforms = { uFaces: { value: getFaces() }, uFrame: { value: 0 }, uTime: { value: 0 } };
-  const mat = new THREE.MeshStandardMaterial({ color: '#06080b', roughness: 0.1, metalness: 0.0, envMapIntensity: 1.35 });
+  const mat = new THREE.MeshStandardMaterial({ color: '#06080b', roughness: 0.1, metalness: 0.0, envMap: env, envMapIntensity: 0.75 });
   mat.defines = Object.assign({}, mat.defines, { USE_UV: '' });
   mat.onBeforeCompile = (sh) => {
     Object.assign(sh.uniforms, uniforms);

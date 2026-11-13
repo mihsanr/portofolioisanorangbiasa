@@ -253,14 +253,17 @@ export function createCharacter(mats) {
   body.add(bones[0]);
   body.updateMatrixWorld(true);
   body.bind(new THREE.Skeleton(bones));
-  root.add(body);
+  /* pivot di tengah badan (untuk salto); kaki tetap di titik asal root */
+  const pivot = new THREE.Group(); pivot.position.y = 0.8;
+  const inner = new THREE.Group(); inner.position.y = -0.8;
+  pivot.add(inner); inner.add(body); root.add(pivot);
 
   const hg = getHeadGeometry();
   const head = new THREE.Group();
   const casing = new THREE.Mesh(hg.plastic, mats.plastic);
   casing.castShadow = true; casing.receiveShadow = true;
   const antenna = new THREE.Mesh(hg.metal, mats.metal);
-  const screenMat = createScreenMaterial();
+  const screenMat = createScreenMaterial(mats.env);
   const screen = new THREE.Mesh(hg.screen, screenMat);
   head.add(casing, antenna, screen);
   bones[B.head].add(head);
@@ -269,7 +272,7 @@ export function createCharacter(mats) {
   bones.forEach((b) => { byName[b.name] = b; });
   const u = screenMat.userData.uniforms;
   return {
-    root, body, head, bones: byName,
+    root, pivot, body, head, bones: byName,
     setFace(i) { u.uFrame.value = i; },
     tick(time) { u.uTime.value = time; },
     dispose() { screenMat.dispose(); body.skeleton.dispose(); },

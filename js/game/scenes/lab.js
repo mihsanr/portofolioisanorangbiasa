@@ -15,8 +15,6 @@ export function createLab(ctx) {
   const bg = new THREE.Color('#2c2f3d');
   scene.background = bg;
   scene.fog = new THREE.Fog(bg, 9, 20);
-  scene.environment = env;
-  scene.environmentIntensity = 0.55;
 
   const camera = new THREE.PerspectiveCamera(num('fov', 28), 1, 0.1, 100);
   camera.position.set(num('cx', 0), num('cy', 1.15), num('cz', 7.4));
@@ -32,7 +30,7 @@ export function createLab(ctx) {
   floor.receiveShadow = true;
   scene.add(floor);
 
-  const mats = createMaterials();
+  const mats = createMaterials(env);
   const single = params.has('solo');
   const setups = single
     ? [{ x: 0, yaw: num('yaw', 0), pose: params.get('pose') || 'idle' }]

@@ -1,7 +1,7 @@
 /* Profil kualitas grafis. Low hanya menurunkan biaya render — art direction tetap sama. */
 export const PROFILES = {
   high:   { name: 'high',   dpr: 2.0,  msaa: true,  shadowSize: 2048, softShadows: true,  particles: 1.0,  vegetation: 1.0,  lod: 1.0 },
-  medium: { name: 'medium', dpr: 1.5,  msaa: true,  shadowSize: 1024, softShadows: true,  particles: 0.6,  vegetation: 0.65, lod: 0.75 },
+  medium: { name: 'medium', dpr: 1.5,  msaa: true,  shadowSize: 1024, softShadows: false, particles: 0.6,  vegetation: 0.65, lod: 0.75 },
   low:    { name: 'low',    dpr: 1.15, msaa: false, shadowSize: 512,  softShadows: false, particles: 0.35, vegetation: 0.4,  lod: 0.55 },
 };
 const ORDER = ['high', 'medium', 'low'];
@@ -35,6 +35,7 @@ export function createQuality() {
     },
     /* dipanggil tiap frame; turun satu tingkat kalau FPS rata-rata rendah dua jendela berturut-turut */
     sample(dt) {
+      if (dt > 0.1) return;              // sendatan sesaat bukan alasan menurunkan kualitas
       warm += dt;
       if (warm < 3) return;              // lewati kompilasi shader di awal
       acc += dt; frames++;
