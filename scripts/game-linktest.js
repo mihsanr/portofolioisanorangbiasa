@@ -1,4 +1,6 @@
 // Uji keterjangkauan tiap sambungan level dengan masukan simulasi (dijalankan di dalam halaman).
+// Buka game.html?autostart supaya layar judul dilewati, lalu tempel skrip ini di console.
+// Hasil ada di window.__links setelah window.__linksDone bernilai true (±70 detik).
 (async () => {
   const s = __game.stage, I = s.islands, P = s.player, B = P.body, cam = s.cam.state, inp = s.input.state;
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));

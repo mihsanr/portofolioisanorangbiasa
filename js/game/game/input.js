@@ -18,6 +18,7 @@ export function createInput(canvas) {
   if (matchMedia('(pointer: coarse)').matches) showTouch();
 
   window.addEventListener('keydown', (e) => {
+    if (e.target && /INPUT|TEXTAREA/.test(e.target.tagName)) return;      // sedang mengetik nama
     const k = KEYS[e.code];
     if (!k) return;
     e.preventDefault();

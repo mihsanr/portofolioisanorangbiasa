@@ -280,15 +280,17 @@ export async function createLevel(ctx, progress = async () => {}) {
       dust.puff(p.x + Math.cos(y) * 0.1 * side - fwd.x * 0.15, p.y, p.z - Math.sin(y) * 0.1 * side - fwd.z * 0.15, fwd.x, fwd.z, 2);
     },
   });
-  const events = { onCollect: null, onRespawn: null };
+  const events = { onCollect: null, onRespawn: null, onJump: null, onLand: null, onLaunch: null };
+  const IDLE = { x: 0, y: 0, jump: false, jumpPressed: false };
+  let controls = true;
   const player = createPlayer(character, {
-    onJump(double) { animator.onJump(double); if (!double) dust.ring(player.body.pos.x, player.body.pos.y, player.body.pos.z, 0.55); },
-    onLand(impact) { animator.onLand(impact); dust.ring(player.body.pos.x, player.body.pos.y, player.body.pos.z, Math.min(1.3, 0.35 + impact / 18)); },
+    onJump(double) { animator.onJump(double); if (!double) dust.ring(player.body.pos.x, player.body.pos.y, player.body.pos.z, 0.55); events.onJump && events.onJump(double); },
+    onLand(impact) { animator.onLand(impact); dust.ring(player.body.pos.x, player.body.pos.y, player.body.pos.z, Math.min(1.3, 0.35 + impact / 18)); events.onLand && events.onLand(impact); },
     onRespawn() { cam.snap(player.body.pos, cam.state.yaw); events.onRespawn && events.onRespawn(); },
   });
   const propHooks = {
     onCollect(t, n, total) { sparks.setColor(GOLD); sparks.burst(t.x, t.y, t.z, 16, 3.4); animator.cheer(); events.onCollect && events.onCollect(n, total); },
-    onLaunch(p, color) { sparks.setColor(color); sparks.burst(p.x, p.y + 0.5, p.z, 14, 4.2); },
+    onLaunch(p, color) { sparks.setColor(color); sparks.burst(p.x, p.y + 0.5, p.z, 14, 4.2); events.onLaunch && events.onLaunch(); },
   };
   const goTo = (isl) => { const s = isl.spawnPoint; player.setSpawn(s.x, s.y, s.z); player.teleport(s.x, s.y, s.z, isl.spawnYaw); cam.snap(player.body.pos, isl.spawnYaw + Math.PI); };
   const start = byId[LEVEL.start];
@@ -328,10 +330,15 @@ export async function createLevel(ctx, progress = async () => {}) {
   return {
     scene, camera: cam.camera, player, input, cam, world, props, islands: byId, stops, events, goTo, buildMs, lod,
     get checkpoint() { return checkpoint; },
+    /* false = pemain tidak bisa digerakkan (layar judul / hasil); dunia tetap hidup */
+    get controls() { return controls; }, set controls(v) { controls = !!v; },
+    /* mulai ulang: semua kaset kembali, pemain ke titik awal */
+    reset() { props.reset(); checkpoint = start; goTo(start); },
     update(dt) {
       time += dt;
       props.update(dt, player, propHooks);
-      player.update(dt, input.poll(), cam.state.yaw, world);
+      const inp = input.poll();
+      player.update(dt, controls ? inp : IDLE, cam.state.yaw, world);
       const g = player.body.ground;
       if (player.body.grounded && g && g.spawnPoint && g !== checkpoint) { checkpoint = g; player.setSpawn(g.spawnPoint.x, g.spawnPoint.y, g.spawnPoint.z); }
       anim.speed = player.state.speed; anim.grounded = player.body.grounded; anim.vy = player.body.vel.y; anim.turn = player.state.turn;

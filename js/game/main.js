@@ -26,15 +26,23 @@ const progress = (p) => new Promise((done) => {
 });
 
 const query = new URLSearchParams(location.search);
-let stage;
+let stage, flow = null;
 if (query.has('lab')) stage = (await import('./scenes/lab.js')).createLab(ctx);
 else if (query.has('arena')) stage = (await import('./scenes/playground.js')).createPlayground(ctx);
-else stage = await (await import('./scenes/level.js')).createLevel(ctx, progress);
+else {
+  stage = await (await import('./scenes/level.js')).createLevel(ctx, progress);
+  const [{ createHud }, { createBoard }, { createSfx }, { createFlow }] = await Promise.all([
+    import('./game/hud.js'), import('./game/board.js'), import('./game/sfx.js'), import('./game/flow.js'),
+  ]);
+  const board = createBoard();
+  flow = createFlow(stage, createHud(), board, createSfx(board.local.mute));
+  if (query.has('autostart')) flow.start();        // untuk uji otomatis: lewati layar judul
+}
 if (loading) { loading.classList.add('done'); setTimeout(() => loading.remove(), 450); }
 
 const timing = { ready: Math.round(performance.now()), firstFrame: 0 };
 const loop = createLoop({
-  update(dt) { stage.update(dt); },
+  update(dt) { stage.update(dt); if (flow) flow.update(dt); },
   render(dt, alpha) {
     quality.sample(dt); debug.begin(); stage.render(dt, alpha); debug.end(); debug.frame(dt);
     if (!timing.firstFrame) timing.firstFrame = Math.round(performance.now());
@@ -45,4 +53,4 @@ loop.start();
 canvas.addEventListener('webglcontextlost', (e) => { e.preventDefault(); loop.stop(); });
 canvas.addEventListener('webglcontextrestored', () => loop.start());
 
-window.__game = { ready: true, stats: debug.stats, quality, renderer, stage, timing };
+window.__game = { ready: true, stats: debug.stats, quality, renderer, stage, flow, timing };
