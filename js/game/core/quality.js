@@ -25,6 +25,8 @@ export function createQuality() {
   const q = {
     profile: PROFILES[start.name],
     locked: start.locked,
+    /* pengali resolusi (1 .. 0.7): hanya turun kalau profil low pun masih lambat */
+    scale: 1,
     fps: 60,
     onChange(fn) { listeners.push(fn); },
     set(name) {
@@ -47,6 +49,7 @@ export function createQuality() {
         slow = 0; warm = 1;
         const i = ORDER.indexOf(q.profile.name);
         if (i < ORDER.length - 1) q.set(ORDER[i + 1]);
+        else if (q.scale > 0.71) { q.scale = Math.max(0.7, q.scale - 0.15); listeners.forEach((fn) => fn(q.profile)); }
       }
     },
   };

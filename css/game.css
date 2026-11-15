@@ -135,3 +135,7 @@ body:not([data-state="play"]) #touch { display: none; }
   .card { grid-template-columns: 1fr; }
   .panel { place-items: start center; }
 }
+
+/* gagal memuat / perangkat tidak didukung */
+#loading.failed .track { display: none; }
+#loading.failed span { max-width: 80vw; text-align: center; line-height: 1.15; }

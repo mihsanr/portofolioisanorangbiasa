@@ -238,6 +238,29 @@ function getBodyGeometry() {
   return bodyCache;
 }
 
+/* Pemeran bayangan: bentuk sederhana (±700 segitiga) yang terikat ke kerangka yang sama. Badan asli
+   (±17 rb segitiga) dan kepala tidak ikut digambar di pass bayangan; siluet bayangannya tetap sama karena
+   shadow map tidak cukup tajam untuk membedakan. Sedikit lebih kecil dari badan asli supaya tidak
+   menimbulkan bayangan-diri yang salah. */
+let shadowCache = null;
+function getShadowGeometry() {
+  if (shadowCache) return shadowCache;
+  const P = [], cap = (r, len) => new THREE.CapsuleGeometry(r, len, 2, 6), W = '#ffffff';
+  P.push(part(new THREE.BoxGeometry(0.5, 0.4, 0.37), W, { p: [0, 1.32, 0], bone: B.head }));
+  P.push(part(new THREE.BoxGeometry(0.36, 0.28, 0.16), W, { p: [0, 1.32, -0.25], bone: B.head }));
+  P.push(part(cap(0.15, 0.2), W, { p: [0, 0.86, 0], s: [1.2, 1, 1], bone: B.chest }));
+  P.push(part(cap(0.14, 0.06), W, { p: [0, 0.66, 0], s: [1.2, 1, 1], bone: B.hips }));
+  const left = [
+    part(cap(0.065, 0.13), W, { p: [0.215, 0.89, 0], bone: B.armL }), part(cap(0.058, 0.13), W, { p: [0.238, 0.67, 0.004], bone: B.foreL }),
+    part(new THREE.SphereGeometry(0.05, 6, 5), W, { p: [0.247, 0.5, 0.008], bone: B.handL }),
+    part(cap(0.075, 0.13), W, { p: [0.095, 0.53, 0], bone: B.thighL }), part(cap(0.064, 0.13), W, { p: [0.1, 0.26, 0], bone: B.shinL }),
+    part(new THREE.BoxGeometry(0.11, 0.1, 0.28), W, { p: [0.1, 0.06, 0.03], bone: B.footL }),
+  ];
+  P.push(...left, ...left.map((g) => mirrorX(g, L2R)));
+  shadowCache = merge(P);
+  return shadowCache;
+}
+
 export function createCharacter(mats) {
   const root = new THREE.Group();
   const bones = RIG.map(([name]) => { const b = new THREE.Bone(); b.name = name; return b; });
@@ -249,7 +272,7 @@ export function createCharacter(mats) {
   });
 
   const body = new THREE.SkinnedMesh(getBodyGeometry(), mats.cloth);
-  body.castShadow = true; body.receiveShadow = true; body.frustumCulled = false;
+  body.castShadow = false; body.receiveShadow = true; body.frustumCulled = false;
   body.add(bones[0]);
   body.updateMatrixWorld(true);
   body.bind(new THREE.Skeleton(bones));
@@ -257,11 +280,15 @@ export function createCharacter(mats) {
   const pivot = new THREE.Group(); pivot.position.y = 0.8;
   const inner = new THREE.Group(); inner.position.y = -0.8;
   pivot.add(inner); inner.add(body); root.add(pivot);
+  const shadow = new THREE.SkinnedMesh(getShadowGeometry(), mats.shadowOnly);
+  shadow.castShadow = true; shadow.frustumCulled = false;
+  shadow.bind(body.skeleton, body.bindMatrix);
+  inner.add(shadow);
 
   const hg = getHeadGeometry();
   const head = new THREE.Group();
   const casing = new THREE.Mesh(hg.plastic, mats.plastic);
-  casing.castShadow = true; casing.receiveShadow = true;
+  casing.castShadow = false; casing.receiveShadow = true;
   const antenna = new THREE.Mesh(hg.metal, mats.metal);
   const screenMat = createScreenMaterial(mats.env);
   const screen = new THREE.Mesh(hg.screen, screenMat);

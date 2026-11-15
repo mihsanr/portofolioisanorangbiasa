@@ -43,7 +43,7 @@ export function createFollowCamera(track) {
       let want = s.dist;
       if (api.blocked) for (let k = 1; k <= 6; k++) {
         const t = s.dist * k / 6;
-        if (api.blocked(focus.x + dx * t, focus.y + dy * t, focus.z + dz * t)) { want = Math.max(1.3, t - s.dist / 6 - 0.2); break; }
+        if (api.blocked(focus.x + dx * t, focus.y + dy * t, focus.z + dz * t)) { want = Math.max(1.9, t - s.dist / 6 - 0.2); break; }
       }
       s.cur = damp(s.cur, want, want < s.cur ? 20 : 3.5, dt);
       const dist = s.cur;

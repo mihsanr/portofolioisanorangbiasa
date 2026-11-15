@@ -13,13 +13,66 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;900&family=Space+Grotesk:wght@500;700&family=VT323&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/game.css?v=3">
+  <link rel="stylesheet" href="css/game.css?v=4">
+  <script>
+    /* Browser lama (tanpa import map) tidak bisa memuat game: beri tahu pemain alih-alih layar kosong. */
+    window.addEventListener('DOMContentLoaded', function () {
+      var ok = window.HTMLScriptElement && HTMLScriptElement.supports && HTMLScriptElement.supports('importmap');
+      if (ok) return;
+      var l = document.getElementById('loading'), sp = l && l.querySelector('span');
+      if (l) l.className = 'failed';
+      if (sp) sp.textContent = 'BROWSER INI TERLALU LAMA \u2014 PERBARUI CHROME / SAFARI';
+    });
+  </script>
   <script type="importmap">
   { "imports": {
       "three": "./js/vendor/three/three.module.min.js",
       "three/addons/": "./js/vendor/three/addons/"
   } }
   </script>
+  <!-- modul diunduh paralel, bukan berantai mengikuti import -->
+  <link rel="modulepreload" href="js/vendor/three/three.module.min.js">
+  <link rel="modulepreload" href="js/vendor/three/addons/geometries/RoundedBoxGeometry.js">
+  <link rel="modulepreload" href="js/vendor/three/addons/utils/BufferGeometryUtils.js">
+  <link rel="modulepreload" href="js/game/core/atmosphere.js">
+  <link rel="modulepreload" href="js/game/core/debug.js">
+  <link rel="modulepreload" href="js/game/core/lights.js">
+  <link rel="modulepreload" href="js/game/core/loop.js">
+  <link rel="modulepreload" href="js/game/core/quality.js">
+  <link rel="modulepreload" href="js/game/core/renderer.js">
+  <link rel="modulepreload" href="js/game/core/shadows.js">
+  <link rel="modulepreload" href="js/game/game/animator.js">
+  <link rel="modulepreload" href="js/game/game/blob.js">
+  <link rel="modulepreload" href="js/game/game/board.js">
+  <link rel="modulepreload" href="js/game/game/camera.js">
+  <link rel="modulepreload" href="js/game/game/flow.js">
+  <link rel="modulepreload" href="js/game/game/fx.js">
+  <link rel="modulepreload" href="js/game/game/hud.js">
+  <link rel="modulepreload" href="js/game/game/input.js">
+  <link rel="modulepreload" href="js/game/game/leveldata.js">
+  <link rel="modulepreload" href="js/game/game/physics.js">
+  <link rel="modulepreload" href="js/game/game/player.js">
+  <link rel="modulepreload" href="js/game/game/propsys.js">
+  <link rel="modulepreload" href="js/game/game/sfx.js">
+  <link rel="modulepreload" href="js/game/gen/atlas.js">
+  <link rel="modulepreload" href="js/game/gen/build.js">
+  <link rel="modulepreload" href="js/game/gen/character.js">
+  <link rel="modulepreload" href="js/game/gen/crt-head.js">
+  <link rel="modulepreload" href="js/game/gen/flora.js">
+  <link rel="modulepreload" href="js/game/gen/island.js">
+  <link rel="modulepreload" href="js/game/gen/landmarks.js">
+  <link rel="modulepreload" href="js/game/gen/materials.js">
+  <link rel="modulepreload" href="js/game/gen/noise.js">
+  <link rel="modulepreload" href="js/game/gen/props.js">
+  <link rel="modulepreload" href="js/game/gen/rock.js">
+  <link rel="modulepreload" href="js/game/gen/ruins.js">
+  <link rel="modulepreload" href="js/game/scenes/level.js">
+  <link rel="modulepreload" href="js/game/shaders/clouds.js">
+  <link rel="modulepreload" href="js/game/shaders/crt-screen.js">
+  <link rel="modulepreload" href="js/game/shaders/glow.js">
+  <link rel="modulepreload" href="js/game/shaders/sky.js">
+  <link rel="modulepreload" href="js/game/shaders/surface.js">
+  <link rel="modulepreload" href="js/game/shaders/terrain.js">
 </head>
 <body data-state="loading">
   <canvas id="game" aria-label="Pemburu Kaset"></canvas>
@@ -106,6 +159,6 @@
   <pre id="debug" hidden></pre>
   <noscript>Game ini butuh JavaScript.</noscript>
   <script src="js/supabase-config.js?v=8"></script>
-  <script type="module" src="js/game/main.js?v=3"></script>
+  <script type="module" src="js/game/main.js?v=4"></script>
 </body>
 </html>

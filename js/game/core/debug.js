@@ -7,6 +7,9 @@ export function createDebug(renderer, quality) {
   if (el) el.hidden = !on;
   const gl = renderer.getContext();
   const ext = on && gl.createQuery ? gl.getExtension('EXT_disjoint_timer_query_webgl2') : null;
+  /* three.js me-reset penghitungnya SETELAH pass bayangan, jadi draw call & segitiga bayangan tidak ikut
+     terhitung. Di mode debug penghitung di-reset manual per frame supaya angkanya mencakup semua pass. */
+  if (on) renderer.info.autoReset = false;
   const s = { fps: 0, ms: 0, cpu: 0, gpu: -1, calls: 0, tris: 0, geos: 0, tex: 0, programs: 0, quality: '', dpr: 1 };
   let acc = 0, frames = 0, t = 0, t0 = 0, cpuAcc = 0, gpuAcc = 0, gpuN = 0, query = null;
   const waiting = [];
@@ -14,6 +17,7 @@ export function createDebug(renderer, quality) {
     stats: s,
     begin() {
       if (!on) return;
+      renderer.info.reset();
       t0 = performance.now();
       if (ext && waiting.length < 8) { query = gl.createQuery(); gl.beginQuery(ext.TIME_ELAPSED_EXT, query); }
     },

@@ -13,7 +13,7 @@ export function createRenderer(canvas, quality) {
   const cameras = new Set();
   function resize() {
     const w = window.innerWidth, h = window.innerHeight;
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, quality.profile.dpr));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, quality.profile.dpr) * quality.scale);
     renderer.setSize(w, h, false);
     cameras.forEach((c) => { c.aspect = w / h; c.updateProjectionMatrix(); });
   }

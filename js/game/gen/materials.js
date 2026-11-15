@@ -15,7 +15,10 @@ export function createMaterials(env) {
 
   const metal = new THREE.MeshStandardMaterial({ color: '#cdd0d6', roughness: 0.24, metalness: 1.0, envMap: env, envMapIntensity: 1.0 });
 
-  const all = { cloth, plastic, metal, env };
-  all.dispose = () => { cloth.dispose(); plastic.dispose(); metal.dispose(); };
+  /* tidak menulis warna maupun kedalaman: objeknya hanya ada untuk pass bayangan */
+  const shadowOnly = new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: false });
+
+  const all = { cloth, plastic, metal, shadowOnly, env };
+  all.dispose = () => { cloth.dispose(); plastic.dispose(); metal.dispose(); shadowOnly.dispose(); };
   return all;
 }

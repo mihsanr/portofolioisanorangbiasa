@@ -18,14 +18,14 @@
     inp.sim = { x: 0, y: 0, jump: false };
     await sleep(300);
     inp.sim = { x: 0, y: 1, jump: false };
-    let phase = 0, landed = 'WAKTU HABIS';
+    let phase = 0, landed = 'WAKTU HABIS', tRel = 0;
     const t0 = performance.now();
     while (performance.now() - t0 < 5000) {
       await sleep(8);
       const d = Math.hypot(B.pos.x - A.pos.x, B.pos.z - A.pos.z);
       if (phase === 0 && d > o - 0.6) { inp.sim = { x: 0, y: 1, jump: true }; phase = 1; }
-      else if (phase === 1 && !B.grounded && B.vel.y < 1.5) { inp.sim = { x: 0, y: 1, jump: false }; phase = 2; }
-      else if (phase === 2) { inp.sim = { x: 0, y: 1, jump: true }; phase = 3; }
+      else if (phase === 1 && !B.grounded && B.vel.y < 1.5) { inp.sim = { x: 0, y: 1, jump: false }; phase = 2; tRel = performance.now(); }
+      else if (phase === 2 && performance.now() - tRel > 50) { inp.sim = { x: 0, y: 1, jump: true }; phase = 3; }
       else if (phase >= 3 && B.grounded) { landed = gid(); break; }
       if (B.pos.y < Math.min(A.pos.y, T.pos.y) - 7) { landed = 'JATUH'; break; }
     }

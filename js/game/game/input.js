@@ -11,7 +11,7 @@ export function createInput(canvas) {
   const ui = { wrap: document.getElementById('touch'), joy: document.getElementById('joy'), knob: document.getElementById('joy-knob'), jump: document.getElementById('btn-jump') };
   const joy = { id: null, ox: 0, oy: 0, x: 0, y: 0 };
   const look = { id: null, lx: 0, ly: 0, dx: 0, dy: 0 };
-  let btnJump = false, prevJump = false;
+  let btnJump = false, prevJump = false, latch = false;
   const state = { x: 0, y: 0, jump: false, jumpPressed: false, sim: null };
 
   const showTouch = () => { if (ui.wrap && ui.wrap.hidden) ui.wrap.hidden = false; };
@@ -22,6 +22,7 @@ export function createInput(canvas) {
     const k = KEYS[e.code];
     if (!k) return;
     e.preventDefault();
+    if (k === 'jump' && !e.repeat) latch = true;
     held.add(k);
   });
   window.addEventListener('keyup', (e) => { const k = KEYS[e.code]; if (k) held.delete(k); });
@@ -59,7 +60,7 @@ export function createInput(canvas) {
   canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 
   if (ui.jump) {
-    ui.jump.addEventListener('pointerdown', (e) => { e.preventDefault(); btnJump = true; });
+    ui.jump.addEventListener('pointerdown', (e) => { e.preventDefault(); btnJump = true; latch = true; });
     const up = () => { btnJump = false; };
     ui.jump.addEventListener('pointerup', up); ui.jump.addEventListener('pointercancel', up); ui.jump.addEventListener('pointerleave', up);
   }
@@ -78,7 +79,9 @@ export function createInput(canvas) {
       const len = Math.hypot(x, y);
       if (len > 1) { x /= len; y /= len; }
       state.x = x; state.y = y; state.jump = jump;
-      state.jumpPressed = jump && !prevJump;
+      /* tekanan baru = tepi naik, ATAU tekanan yang terjadi (dan mungkin sudah dilepas) sejak pembacaan terakhir */
+      state.jumpPressed = (jump && !prevJump) || (latch && !state.sim);
+      latch = false;
       prevJump = jump;
       return state;
     },

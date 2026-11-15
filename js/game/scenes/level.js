@@ -47,7 +47,7 @@ export async function createLevel(ctx, progress = async () => {}) {
   const keep = (g) => { disposables.push(g); return g; };
   const shared = {
     tuft: keep(createTuftGeometry(5)), block: keep(createBlockGeometry()), boulder: keep(createBoulderGeometry(3)),
-    trees: [0, 1].map((v) => ({ hi: keep(createTreeGeometry(11 + v * 6)), lo: keep(createTreeGeometry(11 + v * 6, true)) })),
+    trees: [0, 1].map((v) => [0, 1, 2].map((l) => keep(createTreeGeometry(11 + v * 6, l)))),
   };
   await progress(0.06);
 
@@ -117,7 +117,7 @@ export async function createLevel(ctx, progress = async () => {}) {
 
   /* ——— 3. isi tiap pulau ——— */
   const m4 = new THREE.Matrix4(), quat = new THREE.Quaternion(), up = new THREE.Vector3(0, 1, 0), v3 = new THREE.Vector3(), sc = new THREE.Vector3();
-  const lod = [], tickers = [];
+  const lod = [], tickers = [], canopies = [];
   let towerGeo = null, scaffoldGeo = null;
   for (let i = 0; i < order.length; i++) {
     const isl = order[i], d = isl.data, av = avoid[isl.id], rnd = rng(d.seed * 31 + 7), small = isl.radius < 4;
@@ -127,7 +127,7 @@ export async function createLevel(ctx, progress = async () => {}) {
     const local = (x, z) => isl.localHeight(x, z);
     const wcyl = (c) => world.cyls.push({ x: c.x + isl.pos.x, z: c.z + isl.pos.z, r: c.r, y0: c.y0 + isl.pos.y, y1: c.y1 + isl.pos.y });
     const free = (x, z, r) => !av.some((a) => Math.hypot(x - a.x, z - a.z) < a.r + r);
-    const entry = { isl, far: false, treeLo: false, ground: null, grass: null, trees: null, treeGeo: null, boulders: null };
+    const entry = { isl, far: false, treeLod: 0, ground: null, grass: null, trees: null, treeGeo: null, boulders: null };
 
     entry.ground = new THREE.Mesh(isl.geometry, wm.terrain);
     entry.ground.receiveShadow = true;
@@ -183,7 +183,7 @@ export async function createLevel(ctx, progress = async () => {}) {
     /* pohon: penempatan otomatis, menghindari prop / reruntuhan / tepi sambungan */
     const nTrees = d.trees || 0;
     if (nTrees) {
-      const tg = shared.trees[i % 2], mesh = new THREE.InstancedMesh(tg.hi, wm.matte, nTrees), q = { x: 0, y: 0, z: 0, rho: 0 };
+      const tg = shared.trees[i % 2], treeH = tg[0].userData.height, mesh = new THREE.InstancedMesh(tg[0], wm.matte, nTrees), q = { x: 0, y: 0, z: 0, rho: 0 };
       let n = 0;
       for (let tries = 0; n < nTrees && tries < nTrees * 40; tries++) {
         isl.sample(rnd, q, small ? 0.45 : 0.82);
@@ -192,7 +192,8 @@ export async function createLevel(ctx, progress = async () => {}) {
         if (!free(q.x, q.z, 1.3 * s)) continue;
         quat.setFromAxisAngle(up, rnd() * 6.28);
         mesh.setMatrixAt(n++, m4.compose(v3.set(q.x, q.y - 0.05, q.z), quat, sc.set(s, s, s)));
-        wcyl({ x: q.x, z: q.z, r: 0.34 * s, y0: -2, y1: q.y + tg.hi.userData.height * s });
+        wcyl({ x: q.x, z: q.z, r: 0.34 * s, y0: -2, y1: q.y + treeH * s });
+        canopies.push({ x: isl.pos.x + q.x, y: isl.pos.y + q.y + treeH * s * 1.1, z: isl.pos.z + q.z, r2: (1.5 * s) * (1.5 * s) });
         av.push({ x: q.x, z: q.z, r: 0.7 * s });
       }
       mesh.count = n; mesh.castShadow = true; mesh.receiveShadow = true;
@@ -245,8 +246,10 @@ export async function createLevel(ctx, progress = async () => {}) {
         if (e.boulders) e.boulders.visible = !far;
       }
       if (e.trees) {
-        const lo = e.treeLo ? dist > 20 * k : dist > 26 * k;
-        if (lo !== e.treeLo) { e.treeLo = lo; e.trees.geometry = lo ? e.treeGeo.lo : e.treeGeo.hi; }
+        /* histeresis: naik tingkat pada ambang, turun lagi sedikit lebih dekat, supaya tidak berkedip */
+        let l = e.treeLod;
+        if (l === 0) { if (dist > 26 * k) l = 1; } else if (l === 1) { if (dist > 48 * k) l = 2; else if (dist < 20 * k) l = 0; } else if (dist < 42 * k) l = 1;
+        if (l !== e.treeLod) { e.treeLod = l; e.trees.geometry = e.treeGeo[l]; }
       }
       const near = dist < 26 * k;
       e.grass.visible = near;
@@ -269,6 +272,10 @@ export async function createLevel(ctx, progress = async () => {}) {
     for (let i = 0; i < world.terrains.length; i++) {
       const t = world.terrains[i];
       if (t.query(x, z, Q) && Q.rho <= 1 && y < Q.h + 0.25 && y > Q.h - t.depth * 0.6) return true;
+    }
+    for (let i = 0; i < canopies.length; i++) {
+      const c = canopies[i], dx = x - c.x, dy = (y - c.y) * 1.25, dz = z - c.z;
+      if (dx * dx + dy * dy + dz * dz < c.r2) return true;
     }
     return false;
   };
@@ -310,17 +317,18 @@ export async function createLevel(ctx, progress = async () => {}) {
   {
     const warm = new THREE.PerspectiveCamera(60, 1.6, 1, 900);
     warm.position.set(8, 150, 60); warm.lookAt(8, 0, -14); warm.updateMatrixWorld();
-    const setAll = (far) => lod.forEach((e) => {
+    const setAll = (far, tl = far ? 2 : 0) => lod.forEach((e) => {
       e.ground.geometry = far ? e.isl.lowGeometry : e.isl.geometry;
-      if (e.trees) e.trees.geometry = far ? e.treeGeo.lo : e.treeGeo.hi;
+      if (e.trees) e.trees.geometry = e.treeGeo[tl];
       if (e.boulders) e.boulders.visible = true;
-      e.grass.visible = !far; e.far = far; e.treeLo = far;
+      e.grass.visible = !far; e.far = far; e.treeLod = tl;
     });
     setAll(false);
     if (renderer.compileAsync) { try { await renderer.compileAsync(scene, warm); } catch (e) { /* lanjut dengan kompilasi biasa */ } }
     await progress(0.97);
     renderer.render(scene, warm);
-    setAll(true); renderer.render(scene, warm); await progress(0.99);
+    setAll(true); renderer.render(scene, warm);
+    setAll(true, 1); renderer.render(scene, warm); await progress(0.99);
     setAll(false);
   }
   updateLOD(cam.camera.position);
