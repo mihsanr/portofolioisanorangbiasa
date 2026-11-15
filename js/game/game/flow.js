@@ -63,10 +63,11 @@ export function createFlow(stage, hud, board, sfx) {
   hud.on.start = start;
   hud.on.restart = () => { if (state === 'ready' || state === 'run') start(); };
   hud.on.submit = submit;
+  hud.on.pick = (id) => { if (state !== 'title' && state !== 'done') return; stage.setCharacter(id); local.char = stage.characterId; board.save(); hud.setChar(local.char); };
   hud.on.mute = () => { local.mute = !local.mute; board.save(); sfx.setMuted(local.mute); hud.setMute(local.mute); };
 
   stage.controls = false;
-  hud.setBest(local.best); hud.setTapes(0, total); hud.setMute(local.mute); hud.setBoard(undefined);
+  hud.setBest(local.best); hud.setTapes(0, total); hud.setMute(local.mute); hud.setBoard(undefined); hud.setChar(stage.characterId);
   hud.state('title');
   refresh();
 

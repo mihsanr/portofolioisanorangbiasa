@@ -16,14 +16,16 @@ export function createHud() {
     title: $('title'), titleBest: $('title-best'), titleBoard: $('title-board'),
     result: $('result'), resultTime: $('result-time'), resultNote: $('result-note'), resultBoard: $('result-board'),
     form: $('result-form'), name: $('result-name'), msg: $('result-msg'),
+    chars: [...document.querySelectorAll('.chars .char')],
   };
-  const on = { start: null, restart: null, submit: null, mute: null };
+  const on = { start: null, restart: null, submit: null, mute: null, pick: null };
   let lastC = -1;
 
   el.start.addEventListener('click', () => on.start && on.start());
   el.again.addEventListener('click', () => on.start && on.start());
   el.restart.addEventListener('click', () => on.restart && on.restart());
   el.mute.addEventListener('click', () => on.mute && on.mute());
+  el.chars.forEach((b) => b.addEventListener('click', () => on.pick && on.pick(b.dataset.char)));
   el.form.addEventListener('submit', (e) => { e.preventDefault(); on.submit && on.submit(el.name.value); });
   el.name.addEventListener('input', () => { el.name.value = el.name.value.toUpperCase().replace(/[^A-Z0-9 _.-]/g, ''); });
   window.addEventListener('keydown', (e) => {
@@ -55,6 +57,9 @@ export function createHud() {
     setBest(ms) { const t = fmt(ms); el.best.textContent = t; el.titleBest.textContent = t; },
     setTapes(n, total) { el.count.textContent = n; el.total.textContent = total; el.count.parentElement.classList.remove('pop'); void el.count.offsetWidth; if (n) el.count.parentElement.classList.add('pop'); },
     penalty() { el.penalty.classList.remove('show'); void el.penalty.offsetWidth; el.penalty.classList.add('show'); },
+    /* pemilih karakter di layar judul */
+    setChar(id) { el.chars.forEach((b) => b.setAttribute('aria-checked', b.dataset.char === id ? 'true' : 'false')); },
+    setPortraits(map) { el.chars.forEach((b) => { const img = b.querySelector('img'); if (img && map[b.dataset.char]) img.src = map[b.dataset.char]; }); },
     setMute(m) { el.mute.textContent = m ? 'UNMUTE' : 'MUTE'; el.mute.setAttribute('aria-pressed', m ? 'true' : 'false'); },
     setBoard(rows, mineMs) { board(el.titleBoard, rows, mineMs); board(el.resultBoard, rows, mineMs); },
     showResult({ ms, record, name, online }) {

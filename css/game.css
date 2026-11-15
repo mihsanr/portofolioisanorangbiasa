@@ -139,3 +139,16 @@ body:not([data-state="play"]) #touch { display: none; }
 /* gagal memuat / perangkat tidak didukung */
 #loading.failed .track { display: none; }
 #loading.failed span { max-width: 80vw; text-align: center; line-height: 1.15; }
+
+/* ——— pilih karakter ——— */
+.chars { display: flex; gap: 10px; }
+.char {
+  display: grid; justify-items: center; gap: 4px; padding: 6px 6px 7px; border: 3px solid rgba(255, 255, 255, .45);
+  background: rgba(0, 0, 60, .35); color: #fff; cursor: pointer; -webkit-tap-highlight-color: transparent;
+  font: 900 17px/1 'Barlow Condensed', sans-serif; letter-spacing: .05em;
+}
+.char img { display: block; width: clamp(72px, 16vw, 100px); height: auto; aspect-ratio: 4 / 5; background: #a9d6ff; }
+.char:hover, .char:focus-visible { border-color: #fff; outline: none; }
+.char[aria-checked="true"] { border-color: #fff; background: #fff; color: #0000ff; box-shadow: 4px 5px 0 #0d0d0d; }
+.chars--small .char img { width: clamp(52px, 11vw, 66px); }
+.chars--small .char { font-size: 14px; }

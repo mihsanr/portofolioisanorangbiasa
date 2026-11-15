@@ -10,7 +10,7 @@ function isSecret(key) {
 }
 
 export function createBoard() {
-  const local = { best: 0, name: '', mute: false };
+  const local = { best: 0, name: '', mute: false, char: 'tv' };
   try { Object.assign(local, JSON.parse(localStorage.getItem(KEY) || '{}')); } catch (e) { /* storage diblokir */ }
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(local)); } catch (e) { /* abaikan */ } };
 

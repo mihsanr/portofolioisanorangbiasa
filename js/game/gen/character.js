@@ -1,28 +1,19 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { loft, spline, part, merge, mirrorX, smooth, clamp01 } from './build.js';
+import { BONE, L2R, createBones, shoe, hand } from './rig.js';
+import { getKidGeometry, createKidMaterial } from './kid.js';
 import { getHeadGeometry } from './crt-head.js';
 import { createScreenMaterial } from '../shaders/crt-screen.js';
 
-/* Karakter: badan = satu SkinnedMesh (kulit menyatu, lutut/siku melengkung halus, 1 draw call),
-   kepala CRT = 3 mesh kaku yang menempel di tulang kepala. Pose ikat: berdiri, lengan lurus ke bawah,
-   menghadap +Z, telapak kaki di y = 0. Semua rotasi tulang nol saat pose ikat. */
+/* Karakter yang bisa dimainkan. Semuanya memakai kerangka yang sama (rig.js), jadi satu animator
+   menggerakkan semuanya dengan gerakan yang identik.
+   - 'tv'  : si kepala TV — badan satu SkinnedMesh, kepala CRT = 3 mesh kaku di tulang kepala.
+   - 'kid' : bocah botak bersinglet merah (kid.js) — seluruhnya satu SkinnedMesh. */
+export const CHARACTERS = [{ id: 'tv', name: 'SI TIVI' }, { id: 'kid', name: 'SI GUNDUL' }];
+export { BONE };
 
-export const BONE = {
-  hips: 0, chest: 1, head: 2,
-  armL: 3, foreL: 4, handL: 5, armR: 6, foreR: 7, handR: 8,
-  thighL: 9, shinL: 10, footL: 11, thighR: 12, shinR: 13, footR: 14,
-};
 const B = BONE;
-/* [nama, induk, posisi dunia saat pose ikat] */
-const RIG = [
-  ['hips', -1, [0, 0.70, 0]], ['chest', B.hips, [0, 0.86, 0]], ['head', B.chest, [0, 1.07, 0]],
-  ['armL', B.chest, [0.205, 1.0, 0]], ['foreL', B.armL, [0.23, 0.78, 0]], ['handL', B.foreL, [0.246, 0.56, 0.006]],
-  ['armR', B.chest, [-0.205, 1.0, 0]], ['foreR', B.armR, [-0.23, 0.78, 0]], ['handR', B.foreR, [-0.246, 0.56, 0.006]],
-  ['thighL', B.hips, [0.094, 0.66, 0]], ['shinL', B.thighL, [0.10, 0.39, 0.006]], ['footL', B.shinL, [0.10, 0.12, -0.006]],
-  ['thighR', B.hips, [-0.094, 0.66, 0]], ['shinR', B.thighR, [-0.10, 0.39, 0.006]], ['footR', B.shinR, [-0.10, 0.12, -0.006]],
-];
-const L2R = { [B.armL]: B.armR, [B.foreL]: B.foreR, [B.handL]: B.handR, [B.thighL]: B.thighR, [B.shinL]: B.shinR, [B.footL]: B.footR };
 
 const C = {
   hoodie: '#e9e2d4', band: '#ddd5c6', string: '#c6bdac', aglet: '#a89f8e', hemShade: '#4c483f', pants: '#383840', glove: '#1c1c20',
@@ -128,67 +119,6 @@ function pocket(rings) {
   return g;
 }
 
-function shoe(x) {
-  const P = [];
-  const sole = spline([
-    { c: [x, 0.030, -0.116], rx: 0.020, rz: 0.010 },
-    { c: [x, 0.024, -0.108], rx: 0.052, rz: 0.021 },
-    { c: [x, 0.024, -0.060], rx: 0.063, rz: 0.022 },
-    { c: [x, 0.024, 0.040], rx: 0.067, rz: 0.022 },
-    { c: [x, 0.025, 0.120], rx: 0.065, rz: 0.022 },
-    { c: [x, 0.030, 0.168], rx: 0.050, rz: 0.020 },
-    { c: [x, 0.036, 0.188], rx: 0.018, rz: 0.010 },
-  ].map((k) => ({ e: 3.6, ...k })), 3);
-  P.push(loft(sole, 16, { frame: 'z', skinFn: () => [[B.footL, 1]], colorFn: (r, a, px, py) => (py < 0.013 ? C.outsole : C.sole), aoFn: (px, py) => (py < 0.006 ? 0.6 : 1) }));
-
-  const upper = spline([
-    { c: [x, 0.075, -0.104], rx: 0.020, rz: 0.030, rzb: 0.030 },
-    { c: [x, 0.075, -0.092], rx: 0.050, rz: 0.068, rzb: 0.046 },
-    { c: [x, 0.075, -0.050], rx: 0.057, rz: 0.080, rzb: 0.046 },
-    { c: [x, 0.075, 0.000], rx: 0.059, rz: 0.068, rzb: 0.046 },
-    { c: [x, 0.070, 0.045], rx: 0.060, rz: 0.048, rzb: 0.041 },
-    { c: [x, 0.065, 0.090], rx: 0.060, rz: 0.035, rzb: 0.036 },
-    { c: [x, 0.060, 0.135], rx: 0.055, rz: 0.029, rzb: 0.031 },
-    { c: [x, 0.055, 0.166], rx: 0.040, rz: 0.022, rzb: 0.026 },
-    { c: [x, 0.052, 0.180], rx: 0.014, rz: 0.010, rzb: 0.012 },
-  ].map((k) => ({ e: 2.5, ...k })), 3);
-  P.push(loft(upper, 16, {
-    frame: 'z', skinFn: () => [[B.footL, 1]],
-    colorFn: (r, a, px, py, pz) => {
-      if (pz > 0.118) return C.sole;                       // toe cap karet
-      if (pz < -0.058) return C.accent;                    // panel tumit
-      if (Math.sin(a) > 0.78 && pz > -0.03 && pz < 0.10) return C.shoeDark;  // lidah
-      if (Math.sin(a) < 0.25 && Math.sin(a) > -0.35 && pz > -0.03 && pz < 0.07) return C.shoeDark; // panel samping
-      return C.shoe;
-    },
-    aoFn: (px, py) => (py < 0.05 ? 0.78 : 1),
-  }));
-  /* tali sepatu */
-  [0.004, 0.034, 0.064, 0.094].forEach((z) => {
-    const top = z < 0.045 ? 0.143 - (z / 0.045) * 0.025 : 0.118 - ((z - 0.045) / 0.045) * 0.018;
-    P.push(part(new RoundedBoxGeometry(0.064, 0.008, 0.011, 1, 0.003), C.lace, { p: [x, top + 0.0015, z], r: [0.48, 0, 0], bone: B.footL }));
-  });
-  const m = new THREE.Matrix4().makeTranslation(x, 0, -0.006)
-    .multiply(new THREE.Matrix4().makeScale(1.15, 1.1, 1.14))
-    .multiply(new THREE.Matrix4().makeTranslation(-x, 0, 0.006));
-  P.forEach((g) => g.applyMatrix4(m));
-  return P;
-}
-
-function hand(x) {
-  const P = [], z = 0.008;
-  const g = (geo, o) => part(geo, C.glove, { bone: B.handL, ...o });
-  P.push(g(new THREE.CylinderGeometry(0.049, 0.044, 0.032, 20), { p: [x, 0.548, z - 0.002], s: [0.88, 1, 1] }));
-  P.push(g(new THREE.SphereGeometry(1, 14, 10), { p: [x - 0.002, 0.502, z], s: [0.034, 0.052, 0.05] }));
-  for (let i = 0; i < 4; i++) {
-    const fz = z - 0.0345 + i * 0.023, dy = (i === 0 || i === 3) ? 0.005 : 0;
-    P.push(g(new THREE.CapsuleGeometry(0.0155, 0.022, 3, 7), { p: [x - 0.006, 0.462 + dy, fz], r: [0, 0, -0.3] }));
-    P.push(g(new THREE.CapsuleGeometry(0.0145, 0.016, 3, 7), { p: [x - 0.024, 0.443 + dy, fz], r: [0, 0, -1.25] }));
-  }
-  P.push(g(new THREE.CapsuleGeometry(0.017, 0.026, 3, 8), { p: [x - 0.012, 0.49, z + 0.05], r: [-0.5, 0, -0.5] }));
-  return P;
-}
-
 /* lipatan kain: riak radius halus, lebih kuat di sekitar siku / lutut */
 const foldTorso = (r, a) => 1 + 0.02 * Math.sin(r.c[1] * 31 + 2.1 * Math.sin(a * 2 + 0.4)) * smooth((r.c[1] - 0.66) / 0.05) * smooth((0.99 - r.c[1]) / 0.07);
 const foldArm = (r, a) => 1 + 0.05 * Math.sin(r.c[1] * 47 + 1.4 * Math.sin(a * 2 + 1.0)) * smooth((0.95 - r.c[1]) / 0.1) * smooth((r.c[1] - 0.6) / 0.03);
@@ -242,12 +172,15 @@ function getBodyGeometry() {
    (±17 rb segitiga) dan kepala tidak ikut digambar di pass bayangan; siluet bayangannya tetap sama karena
    shadow map tidak cukup tajam untuk membedakan. Sedikit lebih kecil dari badan asli supaya tidak
    menimbulkan bayangan-diri yang salah. */
-let shadowCache = null;
-function getShadowGeometry() {
-  if (shadowCache) return shadowCache;
+const shadowCache = {};
+function getShadowGeometry(kind) {
+  if (shadowCache[kind]) return shadowCache[kind];
   const P = [], cap = (r, len) => new THREE.CapsuleGeometry(r, len, 2, 6), W = '#ffffff';
-  P.push(part(new THREE.BoxGeometry(0.5, 0.4, 0.37), W, { p: [0, 1.32, 0], bone: B.head }));
-  P.push(part(new THREE.BoxGeometry(0.36, 0.28, 0.16), W, { p: [0, 1.32, -0.25], bone: B.head }));
+  if (kind === 'kid') P.push(part(new THREE.SphereGeometry(0.2, 8, 6), W, { p: [0, 1.285, 0.01], bone: B.head }));
+  else {
+    P.push(part(new THREE.BoxGeometry(0.5, 0.4, 0.37), W, { p: [0, 1.32, 0], bone: B.head }));
+    P.push(part(new THREE.BoxGeometry(0.36, 0.28, 0.16), W, { p: [0, 1.32, -0.25], bone: B.head }));
+  }
   P.push(part(cap(0.15, 0.2), W, { p: [0, 0.86, 0], s: [1.2, 1, 1], bone: B.chest }));
   P.push(part(cap(0.14, 0.06), W, { p: [0, 0.66, 0], s: [1.2, 1, 1], bone: B.hips }));
   const left = [
@@ -257,21 +190,17 @@ function getShadowGeometry() {
     part(new THREE.BoxGeometry(0.11, 0.1, 0.28), W, { p: [0.1, 0.06, 0.03], bone: B.footL }),
   ];
   P.push(...left, ...left.map((g) => mirrorX(g, L2R)));
-  shadowCache = merge(P);
-  return shadowCache;
+  shadowCache[kind] = merge(P);
+  return shadowCache[kind];
 }
 
-export function createCharacter(mats) {
+export function createCharacter(mats, kind = 'tv') {
+  if (kind !== 'kid') kind = 'tv';
   const root = new THREE.Group();
-  const bones = RIG.map(([name]) => { const b = new THREE.Bone(); b.name = name; return b; });
-  RIG.forEach(([, parent, p], i) => {
-    if (parent < 0) { bones[i].position.set(p[0], p[1], p[2]); return; }
-    const q = RIG[parent][2];
-    bones[i].position.set(p[0] - q[0], p[1] - q[1], p[2] - q[2]);
-    bones[parent].add(bones[i]);
-  });
+  const bones = createBones();
+  const kid = kind === 'kid' ? createKidMaterial() : null;
 
-  const body = new THREE.SkinnedMesh(getBodyGeometry(), mats.cloth);
+  const body = new THREE.SkinnedMesh(kid ? getKidGeometry() : getBodyGeometry(), kid ? kid.material : mats.cloth);
   body.castShadow = false; body.receiveShadow = true; body.frustumCulled = false;
   body.add(bones[0]);
   body.updateMatrixWorld(true);
@@ -280,10 +209,22 @@ export function createCharacter(mats) {
   const pivot = new THREE.Group(); pivot.position.y = 0.8;
   const inner = new THREE.Group(); inner.position.y = -0.8;
   pivot.add(inner); inner.add(body); root.add(pivot);
-  const shadow = new THREE.SkinnedMesh(getShadowGeometry(), mats.shadowOnly);
+  const shadow = new THREE.SkinnedMesh(getShadowGeometry(kind), mats.shadowOnly);
   shadow.castShadow = true; shadow.frustumCulled = false;
   shadow.bind(body.skeleton, body.bindMatrix);
   inner.add(shadow);
+
+  const byName = {};
+  bones.forEach((b) => { byName[b.name] = b; });
+
+  if (kid) {
+    return {
+      kind, root, pivot, body, bones: byName,
+      setFace(i) { kid.uFace.value = i; },
+      tick() {},
+      dispose() { kid.material.dispose(); body.skeleton.dispose(); },
+    };
+  }
 
   const hg = getHeadGeometry();
   const head = new THREE.Group();
@@ -295,11 +236,9 @@ export function createCharacter(mats) {
   head.add(casing, antenna, screen);
   bones[B.head].add(head);
 
-  const byName = {};
-  bones.forEach((b) => { byName[b.name] = b; });
   const u = screenMat.userData.uniforms;
   return {
-    root, pivot, body, head, bones: byName,
+    kind, root, pivot, body, head, bones: byName,
     setFace(i) { u.uFrame.value = i; },
     tick(time) { u.uTime.value = time; },
     dispose() { screenMat.dispose(); body.skeleton.dispose(); },

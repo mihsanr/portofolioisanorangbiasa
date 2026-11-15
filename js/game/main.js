@@ -43,12 +43,14 @@ try {
   if (query.has('lab')) stage = (await import('./scenes/lab.js')).createLab(ctx);
   else if (query.has('arena')) stage = (await import('./scenes/playground.js')).createPlayground(ctx);
   else {
-    stage = await (await import('./scenes/level.js')).createLevel(ctx, progress);
     const [{ createHud }, { createBoard }, { createSfx }, { createFlow }] = await Promise.all([
       import('./game/hud.js'), import('./game/board.js'), import('./game/sfx.js'), import('./game/flow.js'),
     ]);
     const board = createBoard();
-    flow = createFlow(stage, createHud(), board, createSfx(board.local.mute));
+    stage = await (await import('./scenes/level.js')).createLevel(ctx, progress, { character: query.get('char') || board.local.char });
+    const hud = createHud();
+    hud.setPortraits(Object.fromEntries(stage.characters.map((c) => [c.id, stage.portrait(c.id)])));
+    flow = createFlow(stage, hud, board, createSfx(board.local.mute));
     if (query.has('autostart')) flow.start();        // untuk uji otomatis: lewati layar judul
   }
   if (loading) { loading.classList.add('done'); setTimeout(() => loading.remove(), 450); }

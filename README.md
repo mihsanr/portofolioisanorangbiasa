@@ -163,3 +163,10 @@ perlindungan kelas turnamen.
 **Merilis perubahan.** Naikkan `?v=` untuk `css/game.css` dan `js/game/main.js` di `game.html`.
 Modul lain diimpor tanpa versi, jadi setelah rilis minta pengunjung memuat ulang penuh bila ada laporan
 tampilan lama.
+
+**Karakter.** Semua karakter memakai kerangka yang sama (`gen/rig.js`), jadi satu animator menggerakkan
+semuanya dengan gerakan yang identik. Daftarnya ada di `CHARACTERS` (`gen/character.js`): `tv` (si kepala
+TV) dan `kid` (bocah botak, `gen/kid.js`). Pemain memilih di layar judul atau layar hasil; pilihan disimpan
+di `localStorage` (`ihsan.game` → `char`). `?char=kid` memaksa pilihan, dan `?lab&char=kid` membuka lembar
+karakternya. Menambah karakter: buat geometri berbobot tulang dengan `BONE` dari `rig.js`, daftarkan di
+`CHARACTERS` dan `createCharacter`, lalu tambahkan tombolnya di `game.html`.

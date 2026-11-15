@@ -13,7 +13,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;900&family=Space+Grotesk:wght@500;700&family=VT323&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/game.css?v=4">
+  <link rel="stylesheet" href="css/game.css?v=5">
   <script>
     /* Browser lama (tanpa import map) tidak bisa memuat game: beri tahu pemain alih-alih layar kosong. */
     window.addEventListener('DOMContentLoaded', function () {
@@ -60,6 +60,8 @@
   <link rel="modulepreload" href="js/game/gen/crt-head.js">
   <link rel="modulepreload" href="js/game/gen/flora.js">
   <link rel="modulepreload" href="js/game/gen/island.js">
+  <link rel="modulepreload" href="js/game/gen/kid.js">
+  <link rel="modulepreload" href="js/game/gen/rig.js">
   <link rel="modulepreload" href="js/game/gen/landmarks.js">
   <link rel="modulepreload" href="js/game/gen/materials.js">
   <link rel="modulepreload" href="js/game/gen/noise.js">
@@ -112,6 +114,10 @@
         <p class="kicker">IHSAN.TV · GAME</p>
         <h1 id="title-h">PEMBURU<br>KASET</h1>
         <p class="lead">Kumpulkan <b>20 kaset VHS</b> di pulau-pulau melayang secepat mungkin.</p>
+        <div class="chars" id="chars" role="radiogroup" aria-label="Pilih karakter">
+          <button type="button" class="char" data-char="tv" role="radio" aria-checked="true"><img alt="" width="100" height="125"><span>SI TIVI</span></button>
+          <button type="button" class="char" data-char="kid" role="radio" aria-checked="false"><img alt="" width="100" height="125"><span>SI GUNDUL</span></button>
+        </div>
         <button id="btn-start" class="btn-main" type="button">MULAI</button>
         <p class="best">Waktu terbaikmu: <b id="title-best">--:--.--</b></p>
         <p class="howto"><span class="for-keys">WASD / panah untuk gerak · Spasi lompat (dua kali = lompat ganda) · geser mouse untuk kamera · R ulang</span><span class="for-touch">Jempol kiri untuk gerak · tombol LOMPAT (dua kali = lompat ganda) · geser layar kanan untuk kamera</span></p>
@@ -139,6 +145,10 @@
           </div>
           <p id="result-msg" role="status"></p>
         </form>
+        <div class="chars chars--small" role="radiogroup" aria-label="Pilih karakter">
+          <button type="button" class="char" data-char="tv" role="radio" aria-checked="true"><img alt="" width="100" height="125"><span>SI TIVI</span></button>
+          <button type="button" class="char" data-char="kid" role="radio" aria-checked="false"><img alt="" width="100" height="125"><span>SI GUNDUL</span></button>
+        </div>
         <div class="row">
           <button id="btn-again" class="btn-ghost" type="button">MAIN LAGI</button>
           <a class="back" href="index.html">← isanorgbiasa.com</a>
@@ -159,6 +169,6 @@
   <pre id="debug" hidden></pre>
   <noscript>Game ini butuh JavaScript.</noscript>
   <script src="js/supabase-config.js?v=8"></script>
-  <script type="module" src="js/game/main.js?v=4"></script>
+  <script type="module" src="js/game/main.js?v=5"></script>
 </body>
 </html>

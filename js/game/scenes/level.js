@@ -4,7 +4,7 @@ import { createAtmosphere } from '../core/atmosphere.js';
 import { createWorldMaterials } from '../shaders/terrain.js';
 import { createScreenMaterial, FACE } from '../shaders/crt-screen.js';
 import { createMaterials } from '../gen/materials.js';
-import { createCharacter } from '../gen/character.js';
+import { createCharacter, CHARACTERS } from '../gen/character.js';
 import { getHeadGeometry } from '../gen/crt-head.js';
 import { createIsland } from '../gen/island.js';
 import { createBoulderGeometry } from '../gen/rock.js';
@@ -31,7 +31,7 @@ const GRASS_PER_M2 = 8;
 const GOLD = new THREE.Color('#ffd77a');
 const TV_SCALE = 9, GIANT_SCALE = 13;
 
-export async function createLevel(ctx, progress = async () => {}) {
+export async function createLevel(ctx, progress = async () => {}, opts = {}) {
   const { renderer, quality, env, sunDir, track } = ctx;
   const t0 = performance.now();
 
@@ -258,7 +258,11 @@ export async function createLevel(ctx, progress = async () => {}) {
   }
 
   /* ——— pemain ——— */
-  const character = createCharacter(mats);
+  /* Semua karakter dibuat saat memuat (geometrinya di-cache, shadernya ikut dipanaskan), tetapi hanya yang
+     aktif yang ada di adegan. Berganti karakter = menukar model; fisika, kamera, dan animator tetap sama. */
+  const chars = {};
+  CHARACTERS.forEach((c) => { chars[c.id] = createCharacter(mats, c.id); });
+  let character = chars[opts.character] || chars.tv, animator = null;
   scene.add(character.root);
   const dust = createDust(quality);
   const sparks = createDust(quality, { color: '#ffd77a', additive: true, opacity: 0.95 });
@@ -280,13 +284,14 @@ export async function createLevel(ctx, progress = async () => {}) {
     return false;
   };
   const fwd = new THREE.Vector3();
-  const animator = createAnimator(character, {
+  const animHooks = {
     onStep(side) {
       const p = player.body.pos, y = player.state.yaw;
       fwd.set(Math.sin(y), 0, Math.cos(y));
       dust.puff(p.x + Math.cos(y) * 0.1 * side - fwd.x * 0.15, p.y, p.z - Math.sin(y) * 0.1 * side - fwd.z * 0.15, fwd.x, fwd.z, 2);
     },
-  });
+  };
+  animator = createAnimator(character, animHooks);
   const events = { onCollect: null, onRespawn: null, onJump: null, onLand: null, onLaunch: null };
   const IDLE = { x: 0, y: 0, jump: false, jumpPressed: false };
   let controls = true;
@@ -299,6 +304,41 @@ export async function createLevel(ctx, progress = async () => {}) {
     onCollect(t, n, total) { sparks.setColor(GOLD); sparks.burst(t.x, t.y, t.z, 16, 3.4); animator.cheer(); events.onCollect && events.onCollect(n, total); },
     onLaunch(p, color) { sparks.setColor(color); sparks.burst(p.x, p.y + 0.5, p.z, 14, 4.2); events.onLaunch && events.onLaunch(); },
   };
+  function setCharacter(id) {
+    const next = chars[id];
+    if (!next || next === character) return;
+    next.root.position.copy(character.root.position); next.root.rotation.copy(character.root.rotation);
+    scene.remove(character.root); scene.add(next.root);
+    character = next;
+    animator = createAnimator(character, animHooks);
+    player.setCharacter(character);
+  }
+  /* Potret karakter untuk tombol pilih: dirender sekali ke sudut kanvas (di balik layar memuat), lalu disalin
+     ke gambar. Tidak ada file gambar yang diunduh. */
+  function portrait(id) {
+    const c = chars[id];
+    if (!c) return '';
+    const W = 200, H = 250, pr = renderer.getPixelRatio(), gl = renderer.domElement;
+    const sc = new THREE.Scene(); sc.background = new THREE.Color('#a9d6ff');
+    const sun = new THREE.DirectionalLight('#fff0d2', 2.4); sun.position.set(-2, 3, 4);
+    sc.add(new THREE.HemisphereLight('#dcecff', '#9fb0c4', 1.25), sun);
+    const parent = c.root.parent, px = c.root.position.clone(), ry = c.root.rotation.y, b = c.bones;
+    const keep = [b.armL.rotation.z, b.armR.rotation.z, b.foreL.rotation.x, b.foreR.rotation.x];
+    b.armL.rotation.z = 0.16; b.armR.rotation.z = -0.16; b.foreL.rotation.x = -0.2; b.foreR.rotation.x = -0.2;
+    sc.add(c.root); c.root.position.set(0, 0, 0); c.root.rotation.y = 0.42;
+    const pc = new THREE.PerspectiveCamera(26, W / H, 0.1, 30);
+    pc.position.set(0, 1.0, 3.9); pc.lookAt(0, 0.8, 0);
+    const size = renderer.getSize(new THREE.Vector2());
+    renderer.setViewport(0, 0, W, H); renderer.setScissor(0, 0, W, H); renderer.setScissorTest(true);
+    renderer.render(sc, pc);
+    const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+    cv.getContext('2d').drawImage(gl, 0, gl.height - H * pr, W * pr, H * pr, 0, 0, W, H);
+    renderer.setScissorTest(false); renderer.setViewport(0, 0, size.x, size.y);
+    sc.remove(c.root); if (parent) parent.add(c.root);
+    c.root.position.copy(px); c.root.rotation.y = ry;
+    b.armL.rotation.z = keep[0]; b.armR.rotation.z = keep[1]; b.foreL.rotation.x = keep[2]; b.foreR.rotation.x = keep[3];
+    return cv.toDataURL('image/webp', 0.9);
+  }
   const goTo = (isl) => { const s = isl.spawnPoint; player.setSpawn(s.x, s.y, s.z); player.teleport(s.x, s.y, s.z, isl.spawnYaw); cam.snap(player.body.pos, isl.spawnYaw + Math.PI); };
   const start = byId[LEVEL.start];
   goTo(start);
@@ -323,6 +363,8 @@ export async function createLevel(ctx, progress = async () => {}) {
       if (e.boulders) e.boulders.visible = true;
       e.grass.visible = !far; e.far = far; e.treeLod = tl;
     });
+    const spare = Object.values(chars).filter((c) => c !== character);
+    spare.forEach((c) => { c.root.position.set(8, 6, -14); scene.add(c.root); });
     setAll(false);
     if (renderer.compileAsync) { try { await renderer.compileAsync(scene, warm); } catch (e) { /* lanjut dengan kompilasi biasa */ } }
     await progress(0.97);
@@ -330,6 +372,7 @@ export async function createLevel(ctx, progress = async () => {}) {
     setAll(true); renderer.render(scene, warm);
     setAll(true, 1); renderer.render(scene, warm); await progress(0.99);
     setAll(false);
+    spare.forEach((c) => scene.remove(c.root));
   }
   updateLOD(cam.camera.position);
   await progress(1);
@@ -338,6 +381,8 @@ export async function createLevel(ctx, progress = async () => {}) {
   return {
     scene, camera: cam.camera, player, input, cam, world, props, islands: byId, stops, events, goTo, buildMs, lod,
     get checkpoint() { return checkpoint; },
+    setCharacter, portrait, characters: CHARACTERS,
+    get characterId() { return character.kind; },
     /* false = pemain tidak bisa digerakkan (layar judul / hasil); dunia tetap hidup */
     get controls() { return controls; }, set controls(v) { controls = !!v; },
     /* mulai ulang: semua kaset kembali, pemain ke titik awal */
@@ -368,7 +413,7 @@ export async function createLevel(ctx, progress = async () => {}) {
       renderer.render(scene, cam.camera);
     },
     dispose() {
-      wm.dispose(); mats.dispose(); character.dispose(); dust.dispose(); sparks.dispose(); blob.dispose(); props.dispose(); atmo.dispose();
+      wm.dispose(); mats.dispose(); Object.values(chars).forEach((c) => c.dispose()); dust.dispose(); sparks.dispose(); blob.dispose(); props.dispose(); atmo.dispose();
       order.forEach((o) => o.dispose()); disposables.forEach((d) => d.dispose());
     },
   };

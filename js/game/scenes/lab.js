@@ -36,7 +36,7 @@ export function createLab(ctx) {
     ? [{ x: 0, yaw: num('yaw', 0), pose: params.get('pose') || 'idle' }]
     : [{ x: -1.95, yaw: 0, pose: 'idle' }, { x: -0.65, yaw: Math.PI / 2, pose: 'idle' }, { x: 0.65, yaw: Math.PI, pose: 'idle' }, { x: 1.95, yaw: -0.75, pose: 'run' }];
   const chars = setups.map((s) => {
-    const c = createCharacter(mats);
+    const c = createCharacter(mats, params.get('char') || 'tv');
     c.root.position.x = s.x; c.root.rotation.y = s.yaw;
     pose(c, s.pose);
     scene.add(c.root);

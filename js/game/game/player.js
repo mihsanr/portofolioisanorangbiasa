@@ -23,7 +23,10 @@ export function createPlayer(character, hooks = {}) {
   }
 
   return {
-    body, state: s, character, spawn, teleport,
+    body, state: s, spawn, teleport,
+    get character() { return character; },
+    /* ganti model (pilih karakter); fisika dan posisi tidak berubah */
+    setCharacter(c) { character = c; },
     setSpawn(x, y, z) { spawn.set(x, y, z); },
     /* dilontarkan jump pad / pegas: tinggi penuh tanpa perlu menahan tombol, double jump tersedia lagi */
     launch(vy) {
