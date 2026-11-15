@@ -125,3 +125,41 @@ Video > 8 MB sebaiknya di-encode ulang: `-preset slow -crf 29 -maxrate 1500k -bu
   IP diambil dari header Cloudflare `cf-connecting-ip` (tidak bisa dipalsukan klien) dan hanya
   disimpan sebagai hash SHA-256 bersalt (`votes.ip_hash`; salt di `private.config`, tidak terekspos API).
   Batasnya sengaja longgar karena banyak pengguna seluler berbagi IP (CGNAT).
+
+## Pemburu Kaset (game.html)
+
+Platformer 3D third-person: kumpulkan 20 kaset VHS di pulau-pulau melayang secepat mungkin.
+Hanya three.js (r170, di-vendor di `js/vendor/three/`). Tidak ada file model, tekstur, atau audio:
+semua geometri, tekstur, awan, dan suara dibuat dari kode saat halaman dimuat.
+
+**Struktur `js/game/`**
+
+- `main.js` — titik masuk. `?lab` = lembar karakter, `?arena` = arena uji gerak, selain itu level.
+- `core/` — renderer, profil kualitas (high/medium/low, turun otomatis kalau FPS rendah), loop fisika
+  60 Hz, bayangan hemat, atmosfer, overlay debug.
+- `gen/` — generator prosedural: karakter, pulau, batu, vegetasi, reruntuhan, prop, landmark, atlas bahan.
+- `shaders/` — langit, awan, medan, layar CRT, glow.
+- `game/` — input, fisika, pemain, animasi, kamera, prop interaktif, HUD, alur permainan, papan skor, suara.
+- `game/leveldata.js` — level sebagai data. Pulau ditempatkan relatif (`from` + `dir` + `gap` tepi-ke-tepi).
+- `scenes/level.js` — membangun level dari data, LOD per pulau, checkpoint.
+
+**Parameter URL untuk menguji**
+
+- `?debug=1` — FPS, waktu CPU/GPU per frame, draw call, segitiga; tombol 1–6 melompat ke pulau besar.
+- `?q=high|medium|low` — kunci profil kualitas.
+- `?autostart` — lewati layar judul (dipakai uji otomatis).
+
+**Mengubah level.** Sunting `game/leveldata.js`, lalu jalankan uji keterjangkauan: buka
+`game.html?autostart`, tempel isi `scripts/game-linktest.js` di console, tunggu ±70 detik, dan baca
+`window.__links`. Setiap sambungan harus melaporkan pulau tujuannya.
+
+**Papan skor.** Skema ada di `supabase/game.sql` (aman dijalankan berulang). Pasang dengan
+`supabase db query --linked --project-ref <ref> -f supabase/game.sql`. Sebelum skema dipasang, atau
+kalau Supabase tidak terjangkau, game tetap jalan: papan menampilkan NO SIGNAL dan waktu terbaik
+disimpan di perangkat (`localStorage` kunci `ihsan.game`). Server mencatat waktu mulai dan selesai
+tiap permainan sendiri dan menolak skor yang tidak cocok; itu menahan kecurangan iseng, bukan
+perlindungan kelas turnamen.
+
+**Merilis perubahan.** Naikkan `?v=` untuk `css/game.css` dan `js/game/main.js` di `game.html`.
+Modul lain diimpor tanpa versi, jadi setelah rilis minta pengunjung memuat ulang penuh bila ada laporan
+tampilan lama.
