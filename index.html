@@ -52,6 +52,21 @@
     @media (min-width: 769px) { .lt-share { top: 52px; } }
     .lt-share:hover { background: #fff; color: var(--blue); border-color: #fff; }
     .lt-share svg { width: 1.1rem; height: 1.1rem; }
+    .lt-gamechip {
+      position: absolute; top: 24px; left: var(--gut);
+      height: 2.6rem; padding: 0 .8rem;
+      display: inline-flex; align-items: center; gap: .45rem;
+      font-family: var(--font-crt); font-size: 1.25rem; letter-spacing: .08em; line-height: 1;
+      color: var(--blue); background: #fff;
+      border: 2px solid #fff; border-radius: 12px; box-shadow: 3px 3px 0 var(--ink);
+      transition: background .25s, color .25s, transform .2s var(--ease-out);
+    }
+    @media (min-width: 769px) { .lt-gamechip { top: 52px; } }
+    .lt-gamechip:hover { background: var(--blue); color: #fff; transform: translate(-1px, -1px); }
+    .lt-gamechip i { width: .55rem; height: .55rem; border-radius: 50%; background: #ff2a2a; animation: lt-blink 1.2s steps(1) infinite; }
+    @keyframes lt-blink { 50% { opacity: 0; } }
+    @media (prefers-reduced-motion: reduce) { .lt-gamechip i { animation: none; } }
+    #game { scroll-margin-top: 24px; }
 
     /* profil */
     .lt-profile { text-align: center; }
@@ -156,6 +171,37 @@
     }
     .lt-card--feature:hover .lt-new { background: var(--blue); color: #fff; }
 
+    /* kartu game: klip demo asli dari game (video kecil, dimuat saat kartu terlihat) */
+    .lt-card--game { border-color: rgba(255, 255, 255, .6); }
+    .lt-screen {
+      grid-column: 1 / -1; position: relative; display: block;
+      aspect-ratio: 16 / 9; overflow: hidden;
+      border-radius: 10px; background: #8fb8ea;
+    }
+    .lt-screen video, .lt-screen img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+    .lt-screen::after {
+      content: ''; position: absolute; inset: 0; pointer-events: none;
+      background: repeating-linear-gradient(to bottom, rgba(0, 0, 0, .16) 0 1px, transparent 1px 3px);
+      box-shadow: inset 0 0 40px rgba(0, 0, 40, .35);
+    }
+    .lt-tag, .lt-play {
+      position: absolute; z-index: 1; bottom: .7rem;
+      font-family: var(--font-crt); line-height: 1; letter-spacing: .08em;
+      border-radius: 2px; box-shadow: 3px 3px 0 var(--ink);
+    }
+    .lt-tag { left: .7rem; font-size: 1.2rem; padding: 6px 9px 5px; background: #fff; color: var(--blue); }
+    .lt-play {
+      right: .7rem; font-size: 1.35rem; padding: 7px 12px 6px;
+      background: var(--blue); color: #fff;
+      animation: lt-pulse 1.6s ease-in-out infinite;
+    }
+    .lt-card--game:hover .lt-play, .lt-card--game:focus-visible .lt-play { background: #0d0d0d; animation: none; }
+    @keyframes lt-pulse { 50% { transform: scale(1.07); } }
+    .lt-card--game .lt-label small[hidden] { display: none; }
+    .lt-rec { color: var(--blue); opacity: 1 !important; }
+    .lt-card--game:not(:hover):not(:focus-visible) .lt-rec { color: #fff; }
+    @media (prefers-reduced-motion: reduce) { .lt-play { animation: none; } }
+
     .lt-foot {
       margin-top: 2.5rem; text-align: center;
       font-family: var(--font-crt); font-size: 1.15rem; letter-spacing: .08em; text-transform: uppercase;
@@ -204,6 +250,7 @@
     <button class="lt-share" id="shareBtn" type="button" aria-label="Bagikan halaman ini">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 8l5-5 5 5M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg>
     </button>
+    <a class="lt-gamechip" href="#game"><i aria-hidden="true"></i>MAIN GAME</a>
 
     <!-- ===== PREVIEW WALL → work.html#tape/<slug> ===== -->
     <section class="lt-wall" aria-label="Preview karya portofolio">
@@ -254,10 +301,14 @@
           <span class="lt-arrow" aria-hidden="true">↗&#xFE0E;</span>
         </a>
       </li>
-      <li>
-        <a class="lt-card" href="game.html">
-          <span class="lt-thumb lt-glyph" aria-hidden="true">PK</span>
-          <span class="lt-label">Pemburu Kaset<small>game 3D · main di browser</small></span>
+      <li id="game">
+        <a class="lt-card lt-card--feature lt-card--game" href="game.html">
+          <span class="lt-screen">
+            <video id="gameDemo" muted loop playsinline preload="none" poster="assets/game/demo.webp" data-src="assets/game/demo.mp4" aria-hidden="true"></video>
+            <span class="lt-tag" aria-hidden="true">GAME 3D</span>
+            <span class="lt-play" aria-hidden="true">▶&#xFE0E; MAIN</span>
+          </span>
+          <span class="lt-label">Pemburu Kaset<small>kumpulin 20 kaset secepatnya · HP &amp; desktop</small><small class="lt-rec" id="gameRec" hidden></small></span>
           <span class="lt-arrow" aria-hidden="true">↗&#xFE0E;</span>
         </a>
       </li>
@@ -379,6 +430,45 @@
           say(url);
         }
       });
+    })();
+  </script>
+  <script>
+    // Kartu game: klip demo baru diunduh saat kartu mendekati layar, berhenti saat keluar layar.
+    // Hemat data / kurangi gerak: cukup gambar diam. Rekor teratas diambil sekali dari papan skor.
+    (function () {
+      var v = document.getElementById('gameDemo'), rec = document.getElementById('gameRec');
+      if (!v) return;
+      var still = matchMedia('(prefers-reduced-motion: reduce)').matches || (navigator.connection && navigator.connection.saveData);
+      var seen = false;
+      function pad(n) { return (n < 10 ? '0' : '') + n; }
+      function fmt(ms) { var cs = Math.floor(ms / 10); return pad(Math.floor(cs / 6000)) + ':' + pad(Math.floor(cs / 100) % 60) + '.' + pad(cs % 100); }
+      function top() {
+        var c = window.WAITLIST_SUPABASE;
+        if (!c || !c.url || !c.anonKey || /^sb_secret_/.test(c.anonKey) || !window.fetch) return;
+        var h = { apikey: c.anonKey, 'Content-Type': 'application/json' };
+        if (/^eyJ/.test(c.anonKey)) h.Authorization = 'Bearer ' + c.anonKey;
+        fetch(c.url.replace(/\/+$/, '') + '/rest/v1/rpc/game_top_scores', { method: 'POST', headers: h, body: '{"p_limit":1}' })
+          .then(function (r) { return r.ok ? r.json() : null; })
+          .then(function (rows) {
+            if (!rows || !rows[0] || !(rows[0].time_ms > 0)) return;
+            rec.textContent = 'rekor ' + fmt(rows[0].time_ms) + ' · ' + String(rows[0].name || '').slice(0, 12) + ' — kalahin?';
+            rec.hidden = false;
+          })
+          .catch(function () {});
+      }
+      function first() {
+        seen = true;
+        if (!still) { v.src = v.getAttribute('data-src'); v.muted = true; }
+        var s = document.createElement('script');
+        s.src = 'js/supabase-config.js?v=8'; s.onload = top;
+        document.head.appendChild(s);
+      }
+      if (!('IntersectionObserver' in window)) { first(); if (!still) v.play().catch(function () {}); return; }
+      new IntersectionObserver(function (es) {
+        var e = es[es.length - 1];
+        if (e.isIntersecting) { if (!seen) first(); if (!still) v.play().catch(function () {}); }
+        else if (!v.paused) v.pause();
+      }, { rootMargin: '150px 0px' }).observe(v);
     })();
   </script>
 </body>
