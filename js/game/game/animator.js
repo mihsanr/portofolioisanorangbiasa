@@ -74,7 +74,8 @@ export function createAnimator(c, hooks = {}) {
 
       /* squash & stretch (pegas teredam), pivot di telapak kaki */
       sqv += (-250 * sq - 17 * sqv) * dt; sq = clamp(sq + sqv * dt, -0.34, 0.26);
-      c.root.scale.set(1 - sq * 0.5, 1 + sq, 1 - sq * 0.5);
+      if (s.flat && s.flat.on) { c.root.scale.set(s.flat.x, s.flat.y, s.flat.x); sq = 0; sqv = 0; }   // gepeng (mode EDAN)
+      else c.root.scale.set(1 - sq * 0.5, 1 + sq, 1 - sq * 0.5);
 
       /* salto depan saat double jump */
       if (flip >= 0) {
@@ -86,7 +87,7 @@ export function createAnimator(c, hooks = {}) {
 
       /* wajah */
       if (faceT > 0) { faceT -= dt; c.setFace(face); }
-      else if (!s.grounded && s.vy < -14) c.setFace(FACE.wow);
+      else if ((s.flat && s.flat.on) || (!s.grounded && s.vy < -14)) c.setFace(FACE.wow);
       else { blink -= dt; if (blink < -0.13) blink = 2.2 + Math.random() * 2.6; c.setFace(blink < 0 ? FACE.blink : FACE.happy); }
     },
   };

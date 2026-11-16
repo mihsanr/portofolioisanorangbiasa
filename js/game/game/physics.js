@@ -17,6 +17,7 @@ export function stepBody(b, dt, world) {
   const terrains = world.terrains;
   if (terrains) for (let i = 0; i < terrains.length; i++) {
     const t = terrains[i];
+    if (t.off) continue;                 // pulau yang sedang runtuh (mode EDAN)
     if (!t.query(b.pos.x, b.pos.z, Q)) continue;
     const inRock = b.pos.y < Q.h - STEP_UP && b.pos.y + h > Q.h - t.wallDepth;
     if (Q.rho <= 1) {
@@ -32,7 +33,9 @@ export function stepBody(b, dt, world) {
 
   const cyls = world.cyls;
   if (cyls) for (let i = 0; i < cyls.length; i++) {
-    const c = cyls[i], dx = b.pos.x - c.x, dz = b.pos.z - c.z, reach = c.r + r;
+    const c = cyls[i];
+    if (c.owner && c.owner.off) continue;
+    const dx = b.pos.x - c.x, dz = b.pos.z - c.z, reach = c.r + r;
     const d2 = dx * dx + dz * dz;
     if (d2 >= reach * reach) continue;
     if (b.pos.y >= c.y1 + SNAP || b.pos.y + h <= c.y0) continue;

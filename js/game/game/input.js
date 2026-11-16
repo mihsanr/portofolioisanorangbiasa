@@ -1,10 +1,14 @@
 /* Masukan terpadu: keyboard (WASD/panah + Spasi), joystick sentuh mengambang di paruh kiri layar,
-   tombol LOMPAT, dan geser (mouse/jari) untuk memutar kamera. Satu objek state dibaca tiap langkah fisika. */
+   tombol LOMPAT, dan geser (mouse/jari) untuk memutar kamera. Satu objek state dibaca tiap langkah fisika.
+   Desktop: saat bermain, kursor dikunci (Pointer Lock) — gerakan mouse langsung memutar kamera seperti game
+   third-person, tanpa klik. Esc melepas kunci; klik layar mengunci lagi. */
 const KEYS = {
   KeyW: 'up', ArrowUp: 'up', KeyS: 'down', ArrowDown: 'down',
   KeyA: 'left', ArrowLeft: 'left', KeyD: 'right', ArrowRight: 'right', Space: 'jump',
 };
 const JOY_R = 56;
+const MOUSE_K = 0.55;          // gerakan mouse terkunci terasa lebih cepat dari geser; diredam supaya pas
+const MOUSE_MAX = 120;         // buang lonjakan movementX/Y (terjadi di beberapa browser tepat setelah mengunci)
 
 export function createInput(canvas) {
   const held = new Set();
@@ -15,7 +19,22 @@ export function createInput(canvas) {
   const state = { x: 0, y: 0, jump: false, jumpPressed: false, sim: null };
 
   const showTouch = () => { if (ui.wrap && ui.wrap.hidden) ui.wrap.hidden = false; };
-  if (matchMedia('(pointer: coarse)').matches) showTouch();
+  const coarse = matchMedia('(pointer: coarse)').matches;
+  if (coarse) showTouch();
+
+  /* ——— kunci kursor (desktop) ——— */
+  let wantLock = false;
+  const locked = () => document.pointerLockElement === canvas;
+  const lock = () => {
+    if (coarse || locked() || !canvas.requestPointerLock) return;
+    try { const p = canvas.requestPointerLock(); if (p && p.catch) p.catch(() => {}); } catch (err) { /* browser menolak: tetap bisa geser */ }
+  };
+  document.addEventListener('pointerlockchange', () => { document.body.classList.toggle('mouse-locked', locked()); });
+  document.addEventListener('mousemove', (e) => {
+    if (!locked()) return;
+    const mx = Math.max(-MOUSE_MAX, Math.min(MOUSE_MAX, e.movementX || 0)), my = Math.max(-MOUSE_MAX, Math.min(MOUSE_MAX, e.movementY || 0));
+    look.dx += mx * MOUSE_K; look.dy += my * MOUSE_K;
+  });
 
   window.addEventListener('keydown', (e) => {
     if (e.target && /INPUT|TEXTAREA/.test(e.target.tagName)) return;      // sedang mengetik nama
@@ -29,6 +48,7 @@ export function createInput(canvas) {
   window.addEventListener('blur', () => { held.clear(); btnJump = false; });
 
   canvas.addEventListener('pointerdown', (e) => {
+    if (e.pointerType === 'mouse' && wantLock && !locked()) { lock(); return; }   // klik layar = kunci lagi
     if (e.pointerType === 'touch') showTouch();
     if (e.pointerType === 'touch' && e.clientX < window.innerWidth * 0.5 && joy.id === null) {
       joy.id = e.pointerId; joy.ox = e.clientX; joy.oy = e.clientY; joy.x = 0; joy.y = 0;
@@ -85,6 +105,10 @@ export function createInput(canvas) {
       prevJump = jump;
       return state;
     },
+    /* mulai / berhenti mengunci kursor (dipanggil dari gestur pemain: tombol MULAI / Enter) */
+    lockMouse() { wantLock = true; lock(); },
+    unlockMouse() { wantLock = false; if (locked()) document.exitPointerLock(); },
+    get mouseLocked() { return locked(); },
     /* geseran kamera sejak pemanggilan terakhir (piksel) */
     takeLook(out) { out.dx = look.dx; out.dy = look.dy; out.active = look.id !== null; look.dx = 0; look.dy = 0; return out; },
   };

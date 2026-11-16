@@ -21,6 +21,7 @@ import { groundBelow } from '../game/physics.js';
 import { createProps } from '../game/propsys.js';
 import { createBlobShadow } from '../game/blob.js';
 import { LEVEL } from '../game/leveldata.js';
+import { createTraps } from '../game/traps.js';
 
 /* Pembangun level dari data (game/leveldata.js). Dibangun bertahap (satu pulau per frame) supaya halaman
    tidak membeku saat memuat. Per pulau: 1 draw call medan + rumput + pohon + batu + reruntuhan, semuanya
@@ -29,6 +30,7 @@ import { LEVEL } from '../game/leveldata.js';
 const D2R = Math.PI / 180;
 const GRASS_PER_M2 = 8;
 const GOLD = new THREE.Color('#ffd77a');
+const RED = new THREE.Color('#ff3b2f');
 const TV_SCALE = 9, GIANT_SCALE = 13;
 
 export async function createLevel(ctx, progress = async () => {}) {
@@ -113,6 +115,7 @@ export async function createLevel(ctx, progress = async () => {}) {
   order.forEach((isl) => { if (isl.data.tower) { const p = W(isl, isl.data.tower[0], isl.data.tower[1]); props.addHalo(p[0], p[1] + 18.3, p[2], '#ff4a3d', 3.4, 0.5); } });
   props.build();
   scene.add(props.group);
+  const traps = createTraps({ props, world, scene });      // rintangan berpola mode EDAN (tersembunyi di NORMAL)
   await progress(0.46);
 
   /* ——— 3. isi tiap pulau ——— */
@@ -124,8 +127,9 @@ export async function createLevel(ctx, progress = async () => {}) {
     const root = new THREE.Group();
     root.position.copy(isl.pos);
     scene.add(root);
+    isl.root = root;                  // mode EDAN menggoyang / menjatuhkan pulau kecil lewat root ini
     const local = (x, z) => isl.localHeight(x, z);
-    const wcyl = (c) => world.cyls.push({ x: c.x + isl.pos.x, z: c.z + isl.pos.z, r: c.r, y0: c.y0 + isl.pos.y, y1: c.y1 + isl.pos.y });
+    const wcyl = (c) => world.cyls.push({ x: c.x + isl.pos.x, z: c.z + isl.pos.z, r: c.r, y0: c.y0 + isl.pos.y, y1: c.y1 + isl.pos.y, owner: isl });
     const free = (x, z, r) => !av.some((a) => Math.hypot(x - a.x, z - a.z) < a.r + r);
     const entry = { isl, far: false, treeLod: 0, ground: null, grass: null, trees: null, treeGeo: null, boulders: null };
 
@@ -287,22 +291,30 @@ export async function createLevel(ctx, progress = async () => {}) {
       dust.puff(p.x + Math.cos(y) * 0.1 * side - fwd.x * 0.15, p.y, p.z - Math.sin(y) * 0.1 * side - fwd.z * 0.15, fwd.x, fwd.z, 2);
     },
   });
-  const events = { onCollect: null, onRespawn: null, onJump: null, onLand: null, onLaunch: null };
+  const events = { onCollect: null, onRespawn: null, onJump: null, onLand: null, onLaunch: null, onTrap: null };
+  let hazards = null;                 // jebakan mode EDAN (game/edan.js), dipasang oleh flow
+  const ORANGE = new THREE.Color('#ff8a3d');
+  const trapHooks = { onSpray(h) { sparks.setColor(ORANGE); sparks.burst(h.x, h.y + 0.4, h.z, 4, 6.5); }, onHit(h) { sparks.setColor(RED); sparks.burst(player.body.pos.x, player.body.pos.y + 0.8, player.body.pos.z, 18, 5); events.onTrapHit && events.onTrapHit(h); } };
   const IDLE = { x: 0, y: 0, jump: false, jumpPressed: false };
   let controls = true;
   const player = createPlayer(character, {
     onJump(double) { animator.onJump(double); if (!double) dust.ring(player.body.pos.x, player.body.pos.y, player.body.pos.z, 0.55); events.onJump && events.onJump(double); },
     onLand(impact) { animator.onLand(impact); dust.ring(player.body.pos.x, player.body.pos.y, player.body.pos.z, Math.min(1.3, 0.35 + impact / 18)); events.onLand && events.onLand(impact); },
     onRespawn() { cam.snap(player.body.pos, cam.state.yaw); events.onRespawn && events.onRespawn(); },
+    canDouble: () => !hazards || hazards.canDouble(),
   });
   const propHooks = {
-    onCollect(t, n, total) { sparks.setColor(GOLD); sparks.burst(t.x, t.y, t.z, 16, 3.4); animator.cheer(); events.onCollect && events.onCollect(n, total); },
+    onCollect(t, n, total) { sparks.setColor(GOLD); sparks.burst(t.x, t.y, t.z, 16, 3.4); animator.cheer(); events.onCollect && events.onCollect(n, total, t); },
+    onTrap(t) { sparks.setColor(RED); sparks.burst(t.x, t.y, t.z, 22, 5.5); hazards && hazards.trap(t); events.onTrap && events.onTrap(t); },
     onLaunch(p, color) { sparks.setColor(color); sparks.burst(p.x, p.y + 0.5, p.z, 14, 4.2); events.onLaunch && events.onLaunch(); },
   };
   const goTo = (isl) => { const s = isl.spawnPoint; player.setSpawn(s.x, s.y, s.z); player.teleport(s.x, s.y, s.z, isl.spawnYaw); cam.snap(player.body.pos, isl.spawnYaw + Math.PI); };
   const start = byId[LEVEL.start];
   goTo(start);
-  let checkpoint = start;
+  let checkpoint = start, checkpoints = true;
+  /* pijakan aman terakhir: dipakai mode EDAN untuk menghitung seberapa jauh pemain "terlempar pulang" */
+  const lastSafe = new THREE.Vector3().copy(player.body.pos);
+  let lastIsland = start;
 
   /* ?debug: tombol 1–9 melompat ke titik awal pulau besar (untuk menguji level) */
   const stops = order.filter((o) => o.spawnPoint);
@@ -324,12 +336,18 @@ export async function createLevel(ctx, progress = async () => {}) {
       e.grass.visible = !far; e.far = far; e.treeLod = tl;
     });
     setAll(false);
+    traps.group.visible = true;                  // bahan rintangan EDAN (uap) ikut dikompilasi sekarang, bukan saat pertama muncul
     if (renderer.compileAsync) { try { await renderer.compileAsync(scene, warm); } catch (e) { /* lanjut dengan kompilasi biasa */ } }
     await progress(0.97);
     renderer.render(scene, warm);
     setAll(true); renderer.render(scene, warm);
     setAll(true, 1); renderer.render(scene, warm); await progress(0.99);
+    /* bayangan saat pemain jatuh ke lautan awan memakai varian shader depth yang tidak terlihat dari kamera pemanasan:
+       geser cahaya ke bawah pulau sekali di sini, supaya jatuh pertama tidak memicu kompilasi (tersendat) */
     setAll(false);
+    lights.follow(new THREE.Vector3(start.pos.x + 60, world.killY + 22, start.pos.z)); renderer.render(scene, warm);
+    lights.follow(start.spawnPoint);
+    traps.group.visible = false;
   }
   updateLOD(cam.camera.position);
   await progress(1);
@@ -338,22 +356,39 @@ export async function createLevel(ctx, progress = async () => {}) {
   return {
     scene, camera: cam.camera, player, input, cam, world, props, islands: byId, stops, events, goTo, buildMs, lod,
     get checkpoint() { return checkpoint; },
+    /* false (mode EDAN) = tidak ada checkpoint: jatuh selalu kembali ke pulau awal */
+    traps,
+    /* bahan untuk chaos.js (pohon nongol dll.) */
+    kit: { scene, treeGeo: shared.trees[0][1], treeMat: wm.foliage },
+    burst(color, x, y, z, n, speed) { sparks.setColor(new THREE.Color(color)); sparks.burst(x, y, z, n, speed); },
+    get hazards() { return hazards; }, set hazards(h) { hazards = h; },
+    get checkpoints() { return checkpoints; }, set checkpoints(v) { checkpoints = !!v; },
+    lastSafe, get lastIsland() { return lastIsland; }, startPoint: start.spawnPoint,
     /* false = pemain tidak bisa digerakkan (layar judul / hasil); dunia tetap hidup */
     get controls() { return controls; }, set controls(v) { controls = !!v; },
     /* mulai ulang: semua kaset kembali, pemain ke titik awal */
-    reset() { props.reset(); checkpoint = start; goTo(start); },
+    reset() { props.reset(); traps.reset(); checkpoint = start; goTo(start); lastSafe.copy(player.body.pos); lastIsland = start; },
     update(dt) {
       time += dt;
+      if (hazards) hazards.update(dt);
+      if (!(hazards && hazards.pinned)) traps.update(dt, player, trapHooks);
       props.update(dt, player, propHooks);
       const inp = input.poll();
-      player.update(dt, controls ? inp : IDLE, cam.state.yaw, world);
+      if (hazards) hazards.filterInput(inp);
+      player.update(dt, controls && !(hazards && (hazards.blackout || hazards.pinned)) ? inp : IDLE, cam.state.yaw, world);
       const g = player.body.ground;
-      if (player.body.grounded && g && g.spawnPoint && g !== checkpoint) { checkpoint = g; player.setSpawn(g.spawnPoint.x, g.spawnPoint.y, g.spawnPoint.z); }
+      if (player.body.grounded && g) {
+        lastSafe.copy(player.body.pos);
+        if (g.outline) lastIsland = g;
+        if (checkpoints && g.spawnPoint && g !== checkpoint) { checkpoint = g; player.setSpawn(g.spawnPoint.x, g.spawnPoint.y, g.spawnPoint.z); }
+      }
+      anim.flat = hazards ? hazards.flatScale : null;
       anim.speed = player.state.speed; anim.grounded = player.body.grounded; anim.vy = player.body.vel.y; anim.turn = player.state.turn;
       animator.update(dt, anim);
       dust.update(dt); sparks.update(dt);
     },
     render(dt, alpha) {
+      if (hazards && hazards.frozen) return;          // "lag" palsu mode EDAN: layar membeku sesaat
       wm.uTime.value = time;
       player.render(alpha);
       cam.update(dt, character.root.position, player.body.vel, input);
@@ -369,7 +404,7 @@ export async function createLevel(ctx, progress = async () => {}) {
       renderer.render(scene, cam.camera);
     },
     dispose() {
-      wm.dispose(); mats.dispose(); character.dispose(); dust.dispose(); sparks.dispose(); blob.dispose(); props.dispose(); atmo.dispose();
+      wm.dispose(); mats.dispose(); traps.dispose(); character.dispose(); dust.dispose(); sparks.dispose(); blob.dispose(); props.dispose(); atmo.dispose();
       order.forEach((o) => o.dispose()); disposables.forEach((d) => d.dispose());
     },
   };
