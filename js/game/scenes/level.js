@@ -352,6 +352,9 @@ export async function createLevel(ctx, progress = async () => {}) {
     get checkpoint() { return checkpoint; },
     /* false (mode EDAN) = tidak ada checkpoint: jatuh selalu kembali ke pulau awal */
     traps,
+    /* bahan untuk chaos.js (pohon nongol dll.) */
+    kit: { scene, treeGeo: shared.trees[0][1], treeMat: wm.foliage },
+    burst(color, x, y, z, n, speed) { sparks.setColor(new THREE.Color(color)); sparks.burst(x, y, z, n, speed); },
     get hazards() { return hazards; }, set hazards(h) { hazards = h; },
     get checkpoints() { return checkpoints; }, set checkpoints(v) { checkpoints = !!v; },
     lastSafe, get lastIsland() { return lastIsland; }, startPoint: start.spawnPoint,
@@ -378,6 +381,7 @@ export async function createLevel(ctx, progress = async () => {}) {
       dust.update(dt); sparks.update(dt);
     },
     render(dt, alpha) {
+      if (hazards && hazards.frozen) return;          // "lag" palsu mode EDAN: layar membeku sesaat
       wm.uTime.value = time;
       player.render(alpha);
       cam.update(dt, character.root.position, player.body.vel, input);

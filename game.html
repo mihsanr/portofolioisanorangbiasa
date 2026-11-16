@@ -47,6 +47,7 @@
       "./js/game/game/modes.js": "./js/game/game/modes.js?v=6",
       "./js/game/game/edan.js": "./js/game/game/edan.js?v=6",
       "./js/game/game/traps.js": "./js/game/game/traps.js?v=6",
+      "./js/game/game/chaos.js": "./js/game/game/chaos.js?v=6",
       "./js/game/game/physics.js": "./js/game/game/physics.js?v=6",
       "./js/game/game/player.js": "./js/game/game/player.js?v=6",
       "./js/game/game/propsys.js": "./js/game/game/propsys.js?v=6",
@@ -98,6 +99,7 @@
   <link rel="modulepreload" href="js/game/game/modes.js?v=6">
   <link rel="modulepreload" href="js/game/game/edan.js?v=6">
   <link rel="modulepreload" href="js/game/game/traps.js?v=6">
+  <link rel="modulepreload" href="js/game/game/chaos.js?v=6">
   <link rel="modulepreload" href="js/game/game/physics.js?v=6">
   <link rel="modulepreload" href="js/game/game/player.js?v=6">
   <link rel="modulepreload" href="js/game/game/propsys.js?v=6">
@@ -127,6 +129,7 @@
   <div id="vignette" aria-hidden="true"></div>
   <!-- mode EDAN: layar hilang sinyal sesaat setelah jatuh -->
   <div id="blackout" hidden aria-hidden="true"><b>NO SIGNAL</b></div>
+  <div id="chaos-tint" aria-hidden="true"></div>
 
   <div id="touch" hidden>
     <div id="joy"><i id="joy-knob"></i></div>
@@ -169,7 +172,7 @@
         <p class="lead">Kumpulkan <b>20 kaset VHS</b> di pulau-pulau melayang secepat mungkin.</p>
         <div class="modes" role="group" aria-label="Tingkat kesulitan">
           <button type="button" class="mode" data-mode-pick="normal" aria-pressed="true"><b>NORMAL</b><span>Checkpoint di tiap pulau besar · jatuh +2 dtk · masuk papan skor</span></button>
-          <button type="button" class="mode edan" data-mode-pick="edan" aria-pressed="false"><b>EDAN</b><span>Tiap kaset dijaga duri, palang putar, atau semburan berirama · tanpa checkpoint: jatuh = pulang, 3 kaset hilang, layar mati · pulau rapuh, angin, gempa, kontrol terbalik</span></button>
+          <button type="button" class="mode edan" data-mode-pick="edan" aria-pressed="false"><b>EDAN</b><span>Tiap kaset dijaga duri, palang, atau semburan · tanpa checkpoint: jatuh = pulang, 3 kaset hilang · dan dunia ini suka tiba-tiba berulah. Jangan diam terlalu lama.</span></button>
         </div>
         <button id="btn-start" class="btn-main" type="button">MULAI</button>
         <p class="best">Waktu terbaikmu: <b id="title-best">--:--.--</b></p>
@@ -201,7 +204,7 @@
         </form>
         <div class="modes" role="group" aria-label="Tingkat kesulitan main lagi">
           <button type="button" class="mode" data-mode-pick="normal" aria-pressed="true"><b>NORMAL</b><span>Checkpoint di tiap pulau besar · jatuh +2 dtk · masuk papan skor</span></button>
-          <button type="button" class="mode edan" data-mode-pick="edan" aria-pressed="false"><b>EDAN</b><span>Tiap kaset dijaga duri, palang putar, atau semburan berirama · tanpa checkpoint: jatuh = pulang, 3 kaset hilang, layar mati · pulau rapuh, angin, gempa, kontrol terbalik</span></button>
+          <button type="button" class="mode edan" data-mode-pick="edan" aria-pressed="false"><b>EDAN</b><span>Tiap kaset dijaga duri, palang, atau semburan · tanpa checkpoint: jatuh = pulang, 3 kaset hilang · dan dunia ini suka tiba-tiba berulah. Jangan diam terlalu lama.</span></button>
         </div>
         <div class="row">
           <button id="btn-again" class="btn-ghost" type="button">MAIN LAGI</button>

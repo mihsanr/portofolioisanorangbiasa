@@ -8,6 +8,7 @@
 import { MOVE } from './player.js';
 import { modeOf } from './modes.js';
 import { createEdan } from './edan.js';
+import { createChaos } from './chaos.js';
 
 const MESSAGES = {
   'rate-limited': 'Terlalu banyak kiriman dari jaringan ini. Coba lagi nanti.',
@@ -31,7 +32,19 @@ export function createFlow(stage, hud, board, sfx) {
     onTrap: () => sfx.trap(),
     onLost: (n) => { hud.setTapes(stage.props.state.collected, total); hud.lost(n); },
   });
-  stage.hazards = edan;
+  const chaos = createChaos(stage, Object.assign({ edan }, stage.kit), {
+    flash: (t) => hud.flash(t), cls: (c, on) => hud.chaos(c, on), sfx, burst: stage.burst,
+  });
+  /* level hanya mengenal satu objek "hazards": gabungan jebakan acak (edan) + kejadian mendadak (chaos) */
+  stage.hazards = {
+    get active() { return edan.active; },
+    get blackout() { return edan.blackout; },
+    get frozen() { return chaos.frozen; },
+    update(dt) { edan.update(dt); chaos.update(dt); },
+    filterInput(inp) { edan.filterInput(inp); chaos.filterInput(inp); },
+    canDouble: () => edan.canDouble(),
+    trap: (t) => edan.trap(t),
+  };
   const bestOf = (m) => (m.id === 'edan' ? local.bestEdan : local.best) || 0;
 
   function setMode(id) {
@@ -46,7 +59,7 @@ export function createFlow(stage, hud, board, sfx) {
     sfx.unlock();
     MOVE.coyote = mode.coyote; MOVE.buffer = mode.buffer; stage.checkpoints = mode.checkpoints;
     stage.traps.enabled = mode.hazards;
-    stage.reset(); edan.reset(mode.hazards, forced); stage.controls = true;
+    stage.reset(); edan.reset(mode.hazards, forced); chaos.reset(mode.hazards); stage.controls = true;
     state = 'ready'; t = 0; ms = 0; falls = 0; runId = null; runPromise = null; donePromise = null; sending = false; sent = false;
     lostTotal = 0;
     hud.setMode(mode); hud.setFalls(0); hud.event(null); hud.blackout(false);
@@ -60,7 +73,7 @@ export function createFlow(stage, hud, board, sfx) {
     const key = mode.id === 'edan' ? 'bestEdan' : 'best';
     const record = !local[key] || ms < local[key];
     if (record) { local[key] = ms; board.save(); }
-    edan.reset(false); hud.event(null); hud.blackout(false);
+    edan.reset(false); chaos.reset(false); hud.event(null); hud.blackout(false);
     hud.setBest(local[key]); hud.setTime(ms);
     sfx.finish();
     hud.showResult({ ms, record, name: local.name, online: board.online && mode.online, mode, falls, lostM: Math.round(lostTotal) });
@@ -85,7 +98,7 @@ export function createFlow(stage, hud, board, sfx) {
     else hud.resultMsg(MESSAGES[r.error] || 'NO SIGNAL — coba kirim lagi sebentar lagi.');
   }
 
-  stage.events.onCollect = (n, tot, tape) => { edan.collected(tape); hud.setTapes(n, total); sfx.collect(n); if (n >= total && state === 'run') finish(); };
+  stage.events.onCollect = (n, tot, tape) => { edan.collected(tape); if (n < total) chaos.onCollect(tape); hud.setTapes(n, total); sfx.collect(n); if (n >= total && state === 'run') finish(); };
   stage.events.onRespawn = () => {
     sfx.fall();
     if (state !== 'run') return;
@@ -96,8 +109,8 @@ export function createFlow(stage, hud, board, sfx) {
     lostTotal += Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z);
     edan.fell();
   };
-  stage.events.onJump = (double) => sfx.jump(double);
-  stage.events.onLand = (impact) => sfx.land(impact);
+  stage.events.onJump = (double) => { sfx.jump(double); chaos.onJump(double); };
+  stage.events.onLand = (impact) => { sfx.land(impact); chaos.onLand(impact); };
   stage.events.onTrapHit = () => sfx.trap();
   stage.events.onLaunch = () => { edan.launched(); sfx.launch(); };
 
@@ -117,7 +130,7 @@ export function createFlow(stage, hud, board, sfx) {
     get state() { return state; },
     get mode() { return mode.id; },
     get falls() { return falls; },
-    edan,
+    edan, chaos,
     get timeMs() { return Math.round(t * 1000); },
     update(dt) {
       if (state === 'title' || state === 'done') { stage.cam.state.yaw += dt * (state === 'title' ? 0.1 : 0.22); return; }
@@ -125,7 +138,7 @@ export function createFlow(stage, hud, board, sfx) {
         const i = stage.input.state;
         if (i.x || i.y || i.jump) { state = 'run'; if (mode.online) runPromise = board.start().then((id) => { runId = id; }); }
       }
-      if (state === 'run') { t += dt; hud.setTime(t * 1000); }
+      if (state === 'run') { t += dt * chaos.timeScale; hud.setTime(t * 1000); }
     },
   };
 }

@@ -68,7 +68,7 @@ export function createHud() {
     /* tanda gangguan mode EDAN. Angin: panah searah hembusan, dilihat dari kamera saat tanda muncul */
     event(ev, camYaw = 0) {
       if (!ev) { el.event.className = 'hud-event'; return; }
-      el.eventLabel.textContent = { angin: 'ANGIN', terbalik: 'KONTROL TERBALIK', gempa: 'GEMPA', berat: 'GRAVITASI BERAT' }[ev.kind];
+      el.eventLabel.textContent = { angin: 'ANGIN', terbalik: 'KONTROL TERBALIK', gempa: 'GEMPA', berat: 'GRAVITASI BERAT', ringan: 'GRAVITASI RINGAN' }[ev.kind];
       if (ev.kind === 'angin') {
         const dx = ev.dx, dz = ev.dz;
         const sx = dx * Math.cos(camYaw) - dz * Math.sin(camYaw), sy = -dx * Math.sin(camYaw) - dz * Math.cos(camYaw);
@@ -76,7 +76,10 @@ export function createHud() {
       }
       el.event.className = 'hud-event show ' + ev.kind;
     },
-    jam() { el.jam.classList.remove('show'); void el.jam.offsetWidth; el.jam.classList.add('show'); },
+    jam() { this.flash('LOMPAT MACET'); },
+    /* tulisan singkat kejadian mendadak (mode EDAN) */
+    flash(text) { el.jam.textContent = text; el.jam.classList.remove('show'); void el.jam.offsetWidth; el.jam.classList.add('show'); },
+    chaos(name, on) { document.body.classList.toggle('chaos-' + name, !!on); },
     blackout(on) { el.blackout.hidden = !on; },
     shake() { document.body.classList.remove('quake'); void document.body.offsetWidth; document.body.classList.add('quake'); },
     /* kaset yang kembali ke tempatnya setelah jatuh */

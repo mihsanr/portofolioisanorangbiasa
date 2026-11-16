@@ -18,8 +18,9 @@ export const EDAN = {
   CRUMBLE_GONE: 3.5,      // detik hilang sebelum muncul lagi
   EVENT_EVERY: [7, 13],   // jeda antar-gangguan berkala (detik, acak)
   EVENT_WARN: 0.8,        // tanda gangguan muncul sekian detik sebelum berlaku
-  EVENT_TIME: { angin: 1.4, terbalik: 3, gempa: 2.5, berat: 3.5 },
+  EVENT_TIME: { angin: 1.4, terbalik: 3, gempa: 2.5, berat: 3.5, ringan: 3 },
   GUST_FORCE: 11,         // angin: percepatan mendatar saat di udara (m/dtk²)
+  LIGHT: 0.4,             // gravitasi ringan: lompatan melambung jauh melewati sasaran
   HEAVY: 1.4,             // gravitasi berat: pengali gravitasi (lompat ganda ±6 m jadi ±4,5 m)
   QUAKE_HOP: 4.2,         // gempa: kecepatan terpental ke atas saat berpijak
   JAM_CHANCE: 0.2,        // peluang lompat ganda macet

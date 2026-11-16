@@ -14,7 +14,7 @@ import { MOVE } from './player.js';
    - Kaset jebakan: sentuhan pertama melontarkan pemain, baru sentuhan berikutnya terpungut.
    - Jatuh: beberapa kaset yang terakhir dipungut kembali ke tempatnya, lalu layar "hilang sinyal" sesaat
      (kontrol mati, stopwatch tetap jalan). */
-const KINDS = ['angin', 'terbalik', 'gempa', 'berat'];
+const KINDS = ['angin', 'terbalik', 'gempa', 'berat', 'ringan'];
 
 export function createEdan(stage, { onEvent, onCrumble, onTrap, onLost, onJam, onQuake, onBlackout } = {}) {
   const { player, props } = stage;
@@ -83,6 +83,7 @@ export function createEdan(stage, { onEvent, onCrumble, onTrap, onLost, onJam, o
     if (ev.t <= 0) return;
     if (ev.kind === 'angin' && !body.grounded) { body.vel.x += ev.dx * EDAN.GUST_FORCE * dt; body.vel.z += ev.dz * EDAN.GUST_FORCE * dt; }
     if (ev.kind === 'berat' && was <= 0) { MOVE.gravityUp = base.gravityUp * EDAN.HEAVY; MOVE.gravityDown = base.gravityDown * EDAN.HEAVY; }
+    if (ev.kind === 'ringan' && was <= 0) { MOVE.gravityUp = base.gravityUp * EDAN.LIGHT; MOVE.gravityDown = base.gravityDown * EDAN.LIGHT; }
     if (ev.kind === 'gempa') {
       quakeIn -= dt;
       if (quakeIn <= 0) {
@@ -122,6 +123,14 @@ export function createEdan(stage, { onEvent, onCrumble, onTrap, onLost, onJam, o
     get active() { return active; },
     get winnable() { return winnable; },
     get event() { return ev; },
+    /* mulai satu gangguan sekarang juga (dipakai chaos.js dan alat uji) */
+    forceEvent(kind) {
+      if (!active) return;
+      if (ev) endEvent();
+      const a = rnd() * Math.PI * 2;
+      ev = { kind, dx: Math.cos(a), dz: Math.sin(a), angle: a, t: -EDAN.EVENT_WARN, dur: EDAN.EVENT_TIME[kind] };
+      lastKind = kind; quakeIn = 0; onEvent && onEvent(ev);
+    },
     get blackout() { return blackout > 0; },
     crumbles: () => crumbles,
     update(dt) {

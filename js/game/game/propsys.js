@@ -204,6 +204,7 @@ export function createProps({ renderer, env, world, uTime, quality }) {
       }
       if (haloPts) { haloPts.geometry.attributes.position.needsUpdate = true; haloPts.geometry.attributes.aSize.needsUpdate = true; }
     },
+    get time() { return time; },
     setViewport(heightPx, fovDeg) { halo.uniforms.uScale.value = heightPx / (2 * Math.tan(fovDeg * Math.PI / 360)); },
     reset() { tapes.forEach((t) => { t.alive = true; t.pop = -1; t.cool = 0; }); state.collected = 0; },
     dispose() { disposables.forEach((d) => d.dispose()); },
