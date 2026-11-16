@@ -2,11 +2,12 @@
    - Stopwatch baru berjalan saat pemain pertama kali bergerak, dan dihitung dari langkah fisika
      (bukan jam dinding), jadi tab yang dijeda tidak menambah waktu.
    - Jatuh ke lautan awan = muncul lagi di checkpoint terakhir + penalti 2 detik (NORMAL).
-     Mode EDAN: tanpa checkpoint, +5 detik, narator nyinyir, rekor hanya di perangkat (lihat modes.js).
+     Mode EDAN: tanpa checkpoint, +5 detik, jebakan acak (edan.js), rekor hanya di perangkat.
    - Saat stopwatch mulai, server membuka "run"; saat kaset terakhir terpungut, server mencatat selesainya.
      Skor yang dikirim harus cocok dengan selisih waktu yang dicatat server (lihat supabase/game.sql). */
 import { MOVE } from './player.js';
-import { modeOf, taunt } from './modes.js';
+import { modeOf } from './modes.js';
+import { createEdan } from './edan.js';
 
 const MESSAGES = {
   'rate-limited': 'Terlalu banyak kiriman dari jaringan ini. Coba lagi nanti.',
@@ -18,7 +19,19 @@ const MESSAGES = {
 export function createFlow(stage, hud, board, sfx) {
   const local = board.local, total = stage.props.state.total;
   let state = 'title', t = 0, ms = 0, falls = 0, runId = null, runPromise = null, donePromise = null, sending = false, sent = false;
-  let mode = modeOf(local.mode), lostTotal = 0, lastFallIsland = null, sameSpot = 0;
+  let mode = modeOf(local.mode), lostTotal = 0;
+  /* ?debug&nasib=menang|kalah memaksa hasil undian (hanya untuk menguji) */
+  const q = new URLSearchParams(location.search), forced = q.has('debug') ? q.get('nasib') : null;
+  const edan = createEdan(stage, {
+    onEvent: (ev) => { hud.event(ev, stage.cam.state.yaw); if (ev) sfx.warn(ev.kind); },
+    onQuake: () => { hud.shake(); sfx.crumble(false); },
+    onJam: () => { hud.jam(); sfx.jam(); },
+    onBlackout: (on) => { hud.blackout(on); if (on) sfx.static(); },
+    onCrumble: (gone) => sfx.crumble(gone),
+    onTrap: () => sfx.trap(),
+    onLost: (n) => { hud.setTapes(stage.props.state.collected, total); hud.lost(n); },
+  });
+  stage.hazards = edan;
   const bestOf = (m) => (m.id === 'edan' ? local.bestEdan : local.best) || 0;
 
   function setMode(id) {
@@ -32,10 +45,10 @@ export function createFlow(stage, hud, board, sfx) {
   function start() {
     sfx.unlock();
     MOVE.coyote = mode.coyote; MOVE.buffer = mode.buffer; stage.checkpoints = mode.checkpoints;
-    stage.reset(); stage.controls = true;
+    stage.reset(); edan.reset(mode.hazards, forced); stage.controls = true;
     state = 'ready'; t = 0; ms = 0; falls = 0; runId = null; runPromise = null; donePromise = null; sending = false; sent = false;
-    lostTotal = 0; lastFallIsland = null; sameSpot = 0;
-    hud.setMode(mode); hud.setFalls(0); hud.taunt('');
+    lostTotal = 0;
+    hud.setMode(mode); hud.setFalls(0); hud.event(null); hud.blackout(false);
     hud.setTime(0); hud.setTapes(0, total); hud.resultMsg('', false); hud.state('play');
   }
 
@@ -46,7 +59,8 @@ export function createFlow(stage, hud, board, sfx) {
     const key = mode.id === 'edan' ? 'bestEdan' : 'best';
     const record = !local[key] || ms < local[key];
     if (record) { local[key] = ms; board.save(); }
-    hud.setBest(local[key]); hud.setTime(ms); hud.taunt('');
+    edan.reset(false); hud.event(null); hud.blackout(false);
+    hud.setBest(local[key]); hud.setTime(ms);
     sfx.finish();
     hud.showResult({ ms, record, name: local.name, online: board.online && mode.online, mode, falls, lostM: Math.round(lostTotal) });
     hud.state('done');
@@ -70,22 +84,20 @@ export function createFlow(stage, hud, board, sfx) {
     else hud.resultMsg(MESSAGES[r.error] || 'NO SIGNAL — coba kirim lagi sebentar lagi.');
   }
 
-  stage.events.onCollect = (n) => { hud.setTapes(n, total); sfx.collect(n); if (n >= total && state === 'run') finish(); };
+  stage.events.onCollect = (n, tot, tape) => { edan.collected(tape); hud.setTapes(n, total); sfx.collect(n); if (n >= total && state === 'run') finish(); };
   stage.events.onRespawn = () => {
     sfx.fall();
     if (state !== 'run') return;
     t += mode.penalty; falls++; hud.penalty(mode.penalty); hud.setFalls(falls);
-    if (!mode.taunts) return;
+    if (!mode.hazards) return;
     /* seberapa jauh pemain terlempar: dari pijakan aman terakhir ke titik muncul (Rumah) */
-    const a = stage.lastSafe, b = stage.player.body.pos, lostM = Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z);
-    lostTotal += lostM;
-    const isl = stage.lastIsland;
-    sameSpot = isl === lastFallIsland ? sameSpot + 1 : 1; lastFallIsland = isl;
-    hud.taunt(taunt({ falls, lostM, left: total - stage.props.state.collected, sameSpot }), lostM >= 8 ? Math.round(lostM) : 0);
+    const a = stage.lastSafe, b = stage.player.body.pos;
+    lostTotal += Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z);
+    edan.fell();
   };
   stage.events.onJump = (double) => sfx.jump(double);
   stage.events.onLand = (impact) => sfx.land(impact);
-  stage.events.onLaunch = () => sfx.launch();
+  stage.events.onLaunch = () => { edan.launched(); sfx.launch(); };
 
   hud.on.start = start;
   hud.on.mode = setMode;
@@ -103,6 +115,7 @@ export function createFlow(stage, hud, board, sfx) {
     get state() { return state; },
     get mode() { return mode.id; },
     get falls() { return falls; },
+    edan,
     get timeMs() { return Math.round(t * 1000); },
     update(dt) {
       if (state === 'title' || state === 'done') { stage.cam.state.yaw += dt * (state === 'title' ? 0.1 : 0.22); return; }

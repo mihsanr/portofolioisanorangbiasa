@@ -60,8 +60,11 @@ export function createPlayer(character, hooks = {}) {
           body.vel.y = MOVE.jump; s.coyote = 0; s.buffer = 0; body.grounded = false; s.held = true;
           hooks.onJump && hooks.onJump(false);
         } else if (s.airJumps < 1) {
-          body.vel.y = MOVE.jump2; s.airJumps++; s.buffer = 0; s.held = true;
-          hooks.onJump && hooks.onJump(true);
+          s.airJumps++; s.buffer = 0;
+          if (!hooks.canDouble || hooks.canDouble()) {        // mode EDAN: kadang macet
+            body.vel.y = MOVE.jump2; s.held = true;
+            hooks.onJump && hooks.onJump(true);
+          }
         }
       }
       if (body.vel.y <= 0) s.boost = false;

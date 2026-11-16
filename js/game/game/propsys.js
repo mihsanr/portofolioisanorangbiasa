@@ -48,7 +48,7 @@ export function createProps({ renderer, env, world, uTime, quality }) {
     group, state, tapes, pads, springs, carts, material: prop, glassMaterial: glass, glowMaterial: glow, geo: {},
     /* sumber cahaya tambahan (mis. lampu menara) ikut dalam Points halo yang sama */
     addHalo(x, y, z, color, size = 2, k = 0.3) { extraHalos.push({ x, y, z, color: new THREE.Color(color), size, k }); },
-    addCassette(x, y, z) { tapes.push({ x, y, z, phase: tapes.length * 1.7, alive: true, pop: -1 }); },
+    addCassette(x, y, z) { tapes.push({ x, y, z, phase: tapes.length * 1.7, alive: true, pop: -1, trap: false, cool: 0 }); },
     addPad(x, y, z, ry = 0) { pads.push({ x, y, z, ry, kick: 0, cool: 0, box: null }); },
     addSpring(x, y, z) { springs.push({ x, y, z, kick: 0, cool: 0, cyl: null }); },
     /* troli bolak-balik a -> b (sumbu X atau Z); period = detik satu putaran penuh */
@@ -175,7 +175,10 @@ export function createProps({ renderer, env, world, uTime, quality }) {
         const y = t.y + Math.sin(time * 2.1 + t.phase) * 0.12;
         if (t.alive && body) {
           const dx = body.pos.x - t.x, dy = body.pos.y + 0.8 - y, dz = body.pos.z - t.z;
-          if (dx * dx + dy * dy * 0.6 + dz * dz < PICK_R2) {
+          if (t.cool > 0) t.cool -= dt;
+          else if (dx * dx + dy * dy * 0.6 + dz * dz < PICK_R2 && t.trap && hooks.onTrap) {
+            t.trap = false; t.cool = 0.8; hooks.onTrap(t);            // kaset jebakan (mode EDAN)
+          } else if (dx * dx + dy * dy * 0.6 + dz * dz < PICK_R2) {
             t.alive = false; t.pop = 0; state.collected++;
             hooks.onCollect && hooks.onCollect(t, state.collected, state.total);
           }
@@ -202,7 +205,7 @@ export function createProps({ renderer, env, world, uTime, quality }) {
       if (haloPts) { haloPts.geometry.attributes.position.needsUpdate = true; haloPts.geometry.attributes.aSize.needsUpdate = true; }
     },
     setViewport(heightPx, fovDeg) { halo.uniforms.uScale.value = heightPx / (2 * Math.tan(fovDeg * Math.PI / 360)); },
-    reset() { tapes.forEach((t) => { t.alive = true; t.pop = -1; }); state.collected = 0; },
+    reset() { tapes.forEach((t) => { t.alive = true; t.pop = -1; t.cool = 0; }); state.collected = 0; },
     dispose() { disposables.forEach((d) => d.dispose()); },
   };
   return api;

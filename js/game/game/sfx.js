@@ -42,6 +42,12 @@ export function createSfx(muted = false) {
     collect(n) { const k = Math.pow(1.0293, Math.min(n, 20)); tone(880 * k, 880 * k, 0.09, 'square', 0.28); tone(1320 * k, 1320 * k, 0.16, 'square', 0.28, 0.07); },
     launch() { tone(180, 1250, 0.32, 'sawtooth', 0.3); thump(0.6, 900); },
     fall() { tone(420, 110, 0.4, 'sine', 0.5); },
+    /* mode EDAN */
+    warn(kind) { kind === 'angin' ? (thump(0.35, 260), tone(140, 90, 1.4, 'sine', 0.12)) : (tone(660, 660, 0.12, 'square', 0.22), tone(660, 660, 0.12, 'square', 0.22, 0.2)); },
+    jam() { tone(220, 140, 0.18, 'square', 0.3); },
+    static() { thump(0.5, 4000); thump(0.3, 2500); },
+    crumble(gone) { gone ? (thump(1, 220), tone(160, 50, 0.6, 'sawtooth', 0.25)) : thump(0.45, 700); },
+    trap() { tone(900, 120, 0.3, 'square', 0.3); thump(0.9, 1200); },
     finish() { [523, 659, 784, 1047, 1319].forEach((f, i) => tone(f, f, 0.22, 'square', 0.3, i * 0.11)); },
   };
 }

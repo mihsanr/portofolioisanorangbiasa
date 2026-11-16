@@ -166,13 +166,25 @@ body[data-mode="edan"] .hud-falls { display: block; }
 .hud-falls small { display: block; font: 700 clamp(11px, 1.4vw, 14px)/1 'Space Grotesk', sans-serif; letter-spacing: .08em; color: #fff; }
 .hud-falls b { font-weight: 900; font-size: clamp(26px, 4vw, 40px); line-height: 1; font-variant-numeric: tabular-nums; }
 .hud-falls.hit b { animation: pop .32s ease-out; }
-.hud-taunt {
-  position: absolute; left: 50%; top: 22%; width: min(560px, calc(100vw - 32px)); transform: translateX(-50%);
-  text-align: center; opacity: 0; pointer-events: none;
+.hud-lost { position: absolute; right: max(16px, env(safe-area-inset-right)); top: calc(max(12px, env(safe-area-inset-top)) + clamp(4px, 1vw, 10px)); margin-right: clamp(150px, 20vw, 210px); font: 900 clamp(26px, 4vw, 40px)/1 'Barlow Condensed', sans-serif; font-style: normal; color: #ff5a4d; opacity: 0; }
+.hud-lost.show { animation: penalty 1.4s ease-out; }
+.hud-event { position: absolute; left: 50%; top: max(14px, env(safe-area-inset-top)); transform: translateX(-50%); display: grid; justify-items: center; gap: 4px; color: #fff; opacity: 0; transition: opacity .15s; pointer-events: none; }
+.hud-event.show { opacity: 1; animation: evpulse .45s ease-in-out infinite alternate; }
+.hud-event svg { display: none; width: clamp(30px, 4vw, 42px); height: clamp(30px, 4vw, 42px); }
+.hud-event.angin svg { display: block; }
+.hud-event small { padding: 5px 10px; background: #ff3b2f; color: #fff; text-shadow: none; font: 700 clamp(12px, 1.5vw, 15px)/1 'Space Grotesk', sans-serif; letter-spacing: .12em; white-space: nowrap; }
+@keyframes evpulse { to { color: #ff5a4d; transform: translateX(-50%) scale(1.06); } }
+.hud-jam { position: absolute; left: 50%; bottom: 26%; transform: translateX(-50%); font: 900 clamp(24px, 3.6vw, 36px)/1 'Barlow Condensed', sans-serif; font-style: normal; color: #ff5a4d; opacity: 0; white-space: nowrap; }
+.hud-jam.show { animation: penalty 0.9s ease-out; }
+body.quake #game { animation: quake .35s linear; }
+@keyframes quake { 0%, 100% { transform: none; } 20% { transform: translate(-6px, 3px); } 40% { transform: translate(5px, -4px); } 60% { transform: translate(-4px, -2px); } 80% { transform: translate(3px, 4px); } }
+#blackout {
+  position: fixed; inset: 0; z-index: 11; display: grid; place-items: center; pointer-events: none;
+  background: repeating-linear-gradient(0deg, rgba(255, 255, 255, .07) 0 2px, transparent 2px 4px), #101014;
+  animation: static .12s steps(2) infinite;
 }
-.hud-taunt small { display: inline-block; padding: 5px 9px; background: #ff3b2f; color: #fff; text-shadow: none; font: 700 clamp(11px, 1.4vw, 14px)/1 'Space Grotesk', sans-serif; letter-spacing: .1em; }
-.hud-taunt p { margin: 6px 0 0; font: 900 clamp(26px, 4.4vw, 44px)/1.02 'Barlow Condensed', sans-serif; }
-.hud-taunt.show { animation: taunt 3.2s ease-out forwards; }
-@keyframes taunt { 0% { opacity: 0; transform: translate(-50%, 10px) scale(.96); } 8% { opacity: 1; transform: translate(-50%, 0); } 82% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -8px); } }
-@media (pointer: coarse) { .hud-falls { top: calc(max(12px, env(safe-area-inset-top)) + 100px); } .hud-taunt { top: 18%; } }
-@media (prefers-reduced-motion: reduce) { .hud-taunt.show { animation-duration: 3.2s; animation-timing-function: steps(1, end); } }
+#blackout[hidden] { display: none; }
+#blackout b { font: 48px/1 'VT323', monospace; letter-spacing: .14em; color: #fff; }
+@keyframes static { 50% { background-position: 0 3px; filter: brightness(1.25); } }
+@media (prefers-reduced-motion: reduce) { .hud-event.show, #blackout, body.quake #game { animation: none; } }
+@media (pointer: coarse) { .hud-falls { top: calc(max(12px, env(safe-area-inset-top)) + 100px); } }

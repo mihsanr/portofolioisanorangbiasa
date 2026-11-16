@@ -16,11 +16,12 @@ export function createHud() {
     title: $('title'), titleBest: $('title-best'), titleBoard: $('title-board'),
     result: $('result'), resultTime: $('result-time'), resultNote: $('result-note'), resultBoard: $('result-board'),
     form: $('result-form'), name: $('result-name'), msg: $('result-msg'),
-    falls: $('hud-falls'), fallsN: $('hud-falls-n'), taunt: $('hud-taunt'), tauntText: $('hud-taunt-text'), tauntLost: $('hud-taunt-lost'),
+    falls: $('hud-falls'), fallsN: $('hud-falls-n'), event: $('hud-event'), eventArrow: $('hud-event-arrow'), eventLabel: $('hud-event-label'), lost: $('hud-lost'),
+    jam: $('hud-jam'), blackout: $('blackout'),
     resultKicker: $('result-kicker'), modes: Array.from(document.querySelectorAll('[data-mode-pick]')),
   };
   const on = { start: null, restart: null, submit: null, mute: null, mode: null };
-  let lastC = -1, tauntTimer = 0;
+  let lastC = -1;
 
   el.modes.forEach((b) => b.addEventListener('click', () => on.mode && on.mode(b.dataset.modePick)));
 
@@ -64,15 +65,22 @@ export function createHud() {
       el.modes.forEach((b) => { const on = b.dataset.modePick === m.id; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on ? 'true' : 'false'); });
     },
     setFalls(n) { el.fallsN.textContent = n; if (n) { el.falls.classList.remove('hit'); void el.falls.offsetWidth; el.falls.classList.add('hit'); } },
-    /* komentar narator mode EDAN: muncul tepat setelah jatuh, hilang sendiri */
-    taunt(text, lostM = 0) {
-      clearTimeout(tauntTimer);
-      if (!text) { el.taunt.classList.remove('show'); return; }
-      el.tauntText.textContent = text;
-      el.tauntLost.textContent = lostM ? 'KEMBALI KE RUMAH · ' + lostM + ' M HILANG' : 'KEMBALI KE RUMAH';
-      el.taunt.classList.remove('show'); void el.taunt.offsetWidth; el.taunt.classList.add('show');
-      tauntTimer = setTimeout(() => el.taunt.classList.remove('show'), 3200);
+    /* tanda gangguan mode EDAN. Angin: panah searah hembusan, dilihat dari kamera saat tanda muncul */
+    event(ev, camYaw = 0) {
+      if (!ev) { el.event.className = 'hud-event'; return; }
+      el.eventLabel.textContent = { angin: 'ANGIN', terbalik: 'KONTROL TERBALIK', gempa: 'GEMPA', berat: 'GRAVITASI BERAT' }[ev.kind];
+      if (ev.kind === 'angin') {
+        const dx = ev.dx, dz = ev.dz;
+        const sx = dx * Math.cos(camYaw) - dz * Math.sin(camYaw), sy = -dx * Math.sin(camYaw) - dz * Math.cos(camYaw);
+        el.eventArrow.style.transform = 'rotate(' + (Math.atan2(sx, sy) * 180 / Math.PI).toFixed(1) + 'deg)';
+      }
+      el.event.className = 'hud-event show ' + ev.kind;
     },
+    jam() { el.jam.classList.remove('show'); void el.jam.offsetWidth; el.jam.classList.add('show'); },
+    blackout(on) { el.blackout.hidden = !on; },
+    shake() { document.body.classList.remove('quake'); void document.body.offsetWidth; document.body.classList.add('quake'); },
+    /* kaset yang kembali ke tempatnya setelah jatuh */
+    lost(n) { el.lost.textContent = '−' + n; el.lost.classList.remove('show'); void el.lost.offsetWidth; el.lost.classList.add('show'); },
     setMute(m) { el.mute.textContent = m ? 'UNMUTE' : 'MUTE'; el.mute.setAttribute('aria-pressed', m ? 'true' : 'false'); },
     setBoard(rows, mineMs) { board(el.titleBoard, rows, mineMs); board(el.resultBoard, rows, mineMs); },
     showResult({ ms, record, name, online, mode, falls = 0, lostM = 0 }) {

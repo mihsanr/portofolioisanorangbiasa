@@ -29,6 +29,7 @@ import { LEVEL } from '../game/leveldata.js';
 const D2R = Math.PI / 180;
 const GRASS_PER_M2 = 8;
 const GOLD = new THREE.Color('#ffd77a');
+const RED = new THREE.Color('#ff3b2f');
 const TV_SCALE = 9, GIANT_SCALE = 13;
 
 export async function createLevel(ctx, progress = async () => {}) {
@@ -124,8 +125,9 @@ export async function createLevel(ctx, progress = async () => {}) {
     const root = new THREE.Group();
     root.position.copy(isl.pos);
     scene.add(root);
+    isl.root = root;                  // mode EDAN menggoyang / menjatuhkan pulau kecil lewat root ini
     const local = (x, z) => isl.localHeight(x, z);
-    const wcyl = (c) => world.cyls.push({ x: c.x + isl.pos.x, z: c.z + isl.pos.z, r: c.r, y0: c.y0 + isl.pos.y, y1: c.y1 + isl.pos.y });
+    const wcyl = (c) => world.cyls.push({ x: c.x + isl.pos.x, z: c.z + isl.pos.z, r: c.r, y0: c.y0 + isl.pos.y, y1: c.y1 + isl.pos.y, owner: isl });
     const free = (x, z, r) => !av.some((a) => Math.hypot(x - a.x, z - a.z) < a.r + r);
     const entry = { isl, far: false, treeLod: 0, ground: null, grass: null, trees: null, treeGeo: null, boulders: null };
 
@@ -287,16 +289,19 @@ export async function createLevel(ctx, progress = async () => {}) {
       dust.puff(p.x + Math.cos(y) * 0.1 * side - fwd.x * 0.15, p.y, p.z - Math.sin(y) * 0.1 * side - fwd.z * 0.15, fwd.x, fwd.z, 2);
     },
   });
-  const events = { onCollect: null, onRespawn: null, onJump: null, onLand: null, onLaunch: null };
+  const events = { onCollect: null, onRespawn: null, onJump: null, onLand: null, onLaunch: null, onTrap: null };
+  let hazards = null;                 // jebakan mode EDAN (game/edan.js), dipasang oleh flow
   const IDLE = { x: 0, y: 0, jump: false, jumpPressed: false };
   let controls = true;
   const player = createPlayer(character, {
     onJump(double) { animator.onJump(double); if (!double) dust.ring(player.body.pos.x, player.body.pos.y, player.body.pos.z, 0.55); events.onJump && events.onJump(double); },
     onLand(impact) { animator.onLand(impact); dust.ring(player.body.pos.x, player.body.pos.y, player.body.pos.z, Math.min(1.3, 0.35 + impact / 18)); events.onLand && events.onLand(impact); },
     onRespawn() { cam.snap(player.body.pos, cam.state.yaw); events.onRespawn && events.onRespawn(); },
+    canDouble: () => !hazards || hazards.canDouble(),
   });
   const propHooks = {
-    onCollect(t, n, total) { sparks.setColor(GOLD); sparks.burst(t.x, t.y, t.z, 16, 3.4); animator.cheer(); events.onCollect && events.onCollect(n, total); },
+    onCollect(t, n, total) { sparks.setColor(GOLD); sparks.burst(t.x, t.y, t.z, 16, 3.4); animator.cheer(); events.onCollect && events.onCollect(n, total, t); },
+    onTrap(t) { sparks.setColor(RED); sparks.burst(t.x, t.y, t.z, 22, 5.5); hazards && hazards.trap(t); events.onTrap && events.onTrap(t); },
     onLaunch(p, color) { sparks.setColor(color); sparks.burst(p.x, p.y + 0.5, p.z, 14, 4.2); events.onLaunch && events.onLaunch(); },
   };
   const goTo = (isl) => { const s = isl.spawnPoint; player.setSpawn(s.x, s.y, s.z); player.teleport(s.x, s.y, s.z, isl.spawnYaw); cam.snap(player.body.pos, isl.spawnYaw + Math.PI); };
@@ -342,6 +347,7 @@ export async function createLevel(ctx, progress = async () => {}) {
     scene, camera: cam.camera, player, input, cam, world, props, islands: byId, stops, events, goTo, buildMs, lod,
     get checkpoint() { return checkpoint; },
     /* false (mode EDAN) = tidak ada checkpoint: jatuh selalu kembali ke pulau awal */
+    get hazards() { return hazards; }, set hazards(h) { hazards = h; },
     get checkpoints() { return checkpoints; }, set checkpoints(v) { checkpoints = !!v; },
     lastSafe, get lastIsland() { return lastIsland; }, startPoint: start.spawnPoint,
     /* false = pemain tidak bisa digerakkan (layar judul / hasil); dunia tetap hidup */
@@ -350,9 +356,11 @@ export async function createLevel(ctx, progress = async () => {}) {
     reset() { props.reset(); checkpoint = start; goTo(start); lastSafe.copy(player.body.pos); lastIsland = start; },
     update(dt) {
       time += dt;
+      if (hazards) hazards.update(dt);
       props.update(dt, player, propHooks);
       const inp = input.poll();
-      player.update(dt, controls ? inp : IDLE, cam.state.yaw, world);
+      if (hazards) hazards.filterInput(inp);
+      player.update(dt, controls && !(hazards && hazards.blackout) ? inp : IDLE, cam.state.yaw, world);
       const g = player.body.ground;
       if (player.body.grounded && g) {
         lastSafe.copy(player.body.pos);
