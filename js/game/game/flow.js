@@ -45,6 +45,7 @@ export function createFlow(stage, hud, board, sfx) {
   function start() {
     sfx.unlock();
     MOVE.coyote = mode.coyote; MOVE.buffer = mode.buffer; stage.checkpoints = mode.checkpoints;
+    stage.traps.enabled = mode.hazards;
     stage.reset(); edan.reset(mode.hazards, forced); stage.controls = true;
     state = 'ready'; t = 0; ms = 0; falls = 0; runId = null; runPromise = null; donePromise = null; sending = false; sent = false;
     lostTotal = 0;
@@ -97,6 +98,7 @@ export function createFlow(stage, hud, board, sfx) {
   };
   stage.events.onJump = (double) => sfx.jump(double);
   stage.events.onLand = (impact) => sfx.land(impact);
+  stage.events.onTrapHit = () => sfx.trap();
   stage.events.onLaunch = () => { edan.launched(); sfx.launch(); };
 
   hud.on.start = start;

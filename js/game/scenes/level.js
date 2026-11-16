@@ -21,6 +21,7 @@ import { groundBelow } from '../game/physics.js';
 import { createProps } from '../game/propsys.js';
 import { createBlobShadow } from '../game/blob.js';
 import { LEVEL } from '../game/leveldata.js';
+import { createTraps } from '../game/traps.js';
 
 /* Pembangun level dari data (game/leveldata.js). Dibangun bertahap (satu pulau per frame) supaya halaman
    tidak membeku saat memuat. Per pulau: 1 draw call medan + rumput + pohon + batu + reruntuhan, semuanya
@@ -114,6 +115,7 @@ export async function createLevel(ctx, progress = async () => {}) {
   order.forEach((isl) => { if (isl.data.tower) { const p = W(isl, isl.data.tower[0], isl.data.tower[1]); props.addHalo(p[0], p[1] + 18.3, p[2], '#ff4a3d', 3.4, 0.5); } });
   props.build();
   scene.add(props.group);
+  const traps = createTraps({ props, world, scene });      // rintangan berpola mode EDAN (tersembunyi di NORMAL)
   await progress(0.46);
 
   /* ——— 3. isi tiap pulau ——— */
@@ -291,6 +293,8 @@ export async function createLevel(ctx, progress = async () => {}) {
   });
   const events = { onCollect: null, onRespawn: null, onJump: null, onLand: null, onLaunch: null, onTrap: null };
   let hazards = null;                 // jebakan mode EDAN (game/edan.js), dipasang oleh flow
+  const ORANGE = new THREE.Color('#ff8a3d');
+  const trapHooks = { onSpray(h) { sparks.setColor(ORANGE); sparks.burst(h.x, h.y + 0.4, h.z, 4, 6.5); }, onHit(h) { sparks.setColor(RED); sparks.burst(player.body.pos.x, player.body.pos.y + 0.8, player.body.pos.z, 18, 5); events.onTrapHit && events.onTrapHit(h); } };
   const IDLE = { x: 0, y: 0, jump: false, jumpPressed: false };
   let controls = true;
   const player = createPlayer(character, {
@@ -347,16 +351,18 @@ export async function createLevel(ctx, progress = async () => {}) {
     scene, camera: cam.camera, player, input, cam, world, props, islands: byId, stops, events, goTo, buildMs, lod,
     get checkpoint() { return checkpoint; },
     /* false (mode EDAN) = tidak ada checkpoint: jatuh selalu kembali ke pulau awal */
+    traps,
     get hazards() { return hazards; }, set hazards(h) { hazards = h; },
     get checkpoints() { return checkpoints; }, set checkpoints(v) { checkpoints = !!v; },
     lastSafe, get lastIsland() { return lastIsland; }, startPoint: start.spawnPoint,
     /* false = pemain tidak bisa digerakkan (layar judul / hasil); dunia tetap hidup */
     get controls() { return controls; }, set controls(v) { controls = !!v; },
     /* mulai ulang: semua kaset kembali, pemain ke titik awal */
-    reset() { props.reset(); checkpoint = start; goTo(start); lastSafe.copy(player.body.pos); lastIsland = start; },
+    reset() { props.reset(); traps.reset(); checkpoint = start; goTo(start); lastSafe.copy(player.body.pos); lastIsland = start; },
     update(dt) {
       time += dt;
       if (hazards) hazards.update(dt);
+      traps.update(dt, player, trapHooks);
       props.update(dt, player, propHooks);
       const inp = input.poll();
       if (hazards) hazards.filterInput(inp);
@@ -387,7 +393,7 @@ export async function createLevel(ctx, progress = async () => {}) {
       renderer.render(scene, cam.camera);
     },
     dispose() {
-      wm.dispose(); mats.dispose(); character.dispose(); dust.dispose(); sparks.dispose(); blob.dispose(); props.dispose(); atmo.dispose();
+      wm.dispose(); mats.dispose(); traps.dispose(); character.dispose(); dust.dispose(); sparks.dispose(); blob.dispose(); props.dispose(); atmo.dispose();
       order.forEach((o) => o.dispose()); disposables.forEach((d) => d.dispose());
     },
   };
