@@ -160,6 +160,6 @@ disimpan di perangkat (`localStorage` kunci `ihsan.game`). Server mencatat waktu
 tiap permainan sendiri dan menolak skor yang tidak cocok; itu menahan kecurangan iseng, bukan
 perlindungan kelas turnamen.
 
-**Merilis perubahan.** Naikkan `?v=` untuk `css/game.css` dan `js/game/main.js` di `game.html`.
+**Merilis perubahan.** Naikkan semua `?v=` di `game.html` (CSS, `main.js`, import map, dan `modulepreload`) ke angka yang sama, misalnya cari-ganti `?v=5` → `?v=6`. Import map memetakan tiap modul `js/game/**` ke URL berversi, jadi browser yang masih menyimpan modul lama (cache 7 hari) tidak mencampur file lama dan baru. Modul baru juga harus didaftarkan di import map dan `modulepreload`.
 Modul lain diimpor tanpa versi, jadi setelah rilis minta pengunjung memuat ulang penuh bila ada laporan
 tampilan lama.

@@ -37,7 +37,7 @@ export function chisel(geo, { freq = [0.5, 1.1, 0.5], amp = 0.3, seed = 1, flat 
 }
 
 export const ROCK = {
-  warm: new THREE.Color('#b9a88f'), cool: new THREE.Color('#928c9a'), deep: new THREE.Color('#625c72'),
+  warm: new THREE.Color('#b5a58c'), cool: new THREE.Color('#8f8d92'), deep: new THREE.Color('#5c5862'),
   soil: new THREE.Color('#7d5e40'), moss: new THREE.Color('#78a53f'),
 };
 

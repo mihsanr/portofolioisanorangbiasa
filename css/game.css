@@ -139,3 +139,8 @@ body:not([data-state="play"]) #touch { display: none; }
 /* gagal memuat / perangkat tidak didukung */
 #loading.failed .track { display: none; }
 #loading.failed span { max-width: 80vw; text-align: center; line-height: 1.15; }
+/* vinyet lensa: CSS biasa, bukan pass render tambahan */
+#vignette {
+  position: fixed; inset: 0; z-index: 1; pointer-events: none;
+  background: radial-gradient(120% 100% at 50% 45%, transparent 58%, rgba(8, 20, 48, .26) 100%);
+}

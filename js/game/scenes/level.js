@@ -39,7 +39,7 @@ export async function createLevel(ctx, progress = async () => {}) {
   const atmo = createAtmosphere(ctx, scene);
   const lights = createLights(scene, quality, sunDir);
   lights.setRange(17);
-  const wm = createWorldMaterials();
+  const wm = createWorldMaterials(sunDir);
   const mats = createMaterials(env);
   const world = { floorY: null, killY: atmo.seaY - 6, boxes: [], cyls: [], terrains: [] };
   const props = createProps({ renderer, env, world, uTime: wm.uTime, quality });
@@ -183,7 +183,7 @@ export async function createLevel(ctx, progress = async () => {}) {
     /* pohon: penempatan otomatis, menghindari prop / reruntuhan / tepi sambungan */
     const nTrees = d.trees || 0;
     if (nTrees) {
-      const tg = shared.trees[i % 2], treeH = tg[0].userData.height, mesh = new THREE.InstancedMesh(tg[0], wm.matte, nTrees), q = { x: 0, y: 0, z: 0, rho: 0 };
+      const tg = shared.trees[i % 2], treeH = tg[0].userData.height, mesh = new THREE.InstancedMesh(tg[0], wm.foliage, nTrees), q = { x: 0, y: 0, z: 0, rho: 0 };
       let n = 0;
       for (let tries = 0; n < nTrees && tries < nTrees * 40; tries++) {
         isl.sample(rnd, q, small ? 0.45 : 0.82);
@@ -358,6 +358,7 @@ export async function createLevel(ctx, progress = async () => {}) {
       player.render(alpha);
       cam.update(dt, character.root.position, player.body.vel, input);
       lights.follow(character.root.position);
+      cam.camera.updateMatrixWorld(); wm.update(cam.camera);
       blob.update(character.root.position);
       atmo.update(cam.camera, time);
       lodT += dt; if (lodT > 0.2) { lodT = 0; updateLOD(cam.camera.position); }
