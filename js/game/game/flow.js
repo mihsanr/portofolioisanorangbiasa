@@ -40,6 +40,8 @@ export function createFlow(stage, hud, board, sfx) {
     get active() { return edan.active; },
     get blackout() { return edan.blackout; },
     get frozen() { return chaos.frozen; },
+    get pinned() { return chaos.pinned; },
+    get flatScale() { return chaos.flatScale; },
     update(dt) { edan.update(dt); chaos.update(dt); },
     filterInput(inp) { edan.filterInput(inp); chaos.filterInput(inp); },
     canDouble: () => edan.canDouble(),
@@ -64,10 +66,11 @@ export function createFlow(stage, hud, board, sfx) {
     lostTotal = 0;
     hud.setMode(mode); hud.setFalls(0); hud.event(null); hud.blackout(false);
     hud.setTime(0); hud.setTapes(0, total); hud.resultMsg('', false); hud.state('play');
+    stage.input.lockMouse();
   }
 
   function finish() {
-    state = 'done'; stage.controls = false;
+    state = 'done'; stage.controls = false; stage.input.unlockMouse();
     ms = Math.round(t * 1000);
     donePromise = runPromise ? runPromise.then(() => (runId ? board.finish(runId) : false)) : null;
     const key = mode.id === 'edan' ? 'bestEdan' : 'best';

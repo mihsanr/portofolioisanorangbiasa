@@ -16,6 +16,7 @@ export const CHAOS = {
   slip: 0.12, bounce: 0.15, boom: 0.25, magnetRho: 0.82, magnetPull: 1.6, camStick: 0.2, cartFlip: 0.4, crampAfter: 4.5, cramp: 0.3, crampTime: 0.9,
   /* ACAK: jeda [min, max] detik */
   tree: [9, 16], shove: [16, 28], tape: [13, 22], lag: [22, 38], fog: [30, 50], mirror: [35, 55], doom: [60, 90], doomFirst: [45, 70],
+  flatTime: 10,            // kena meteor saat berpijak = gepeng selama ini (detik)
   lagTime: 0.55, fogTime: 5, mirrorTime: 4.5, doomTime: 7, meteorEvery: 0.35, meteorWarn: 0.9, meteorR: 1.6, tapeSpeed: 13,
 };
 
@@ -49,7 +50,11 @@ export function createChaos(stage, kit, { flash, cls, sfx, burst } = {}) {
   const rings = pool(ringGeo, props.glowMaterial, 10), discs = pool(discGeo, props.glowMaterial, 10), meteors = pool(meteorGeo, props.material, 10), trails = pool(trailGeo, props.glowMaterial, 10);
   const vhs = pool(props.geo.vhs, props.material, 2);
   const trees = pool(kit.treeGeo, kit.treeMat, 3); trees.castShadow = true;
+  /* receiveShadow disamakan dengan prop/pohon yang sudah ada → varian shader yang SAMA (sudah dikompilasi saat memuat).
+     Tanpa ini, meteor/kaset terbang/pohon pertama memicu kompilasi shader di tengah permainan = tersendat. */
+  meteors.receiveShadow = vhs.receiveShadow = trees.receiveShadow = true;
   const disposables = [ringGeo, discGeo, meteorGeo, trailGeo];
+  const live = [rings, discs, meteors, trails, vhs, trees];
   const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), v = new THREE.Vector3(), s = new THREE.Vector3();
   const put = (m, i, x, y, z, sc = 1, ry = 0, rx = 0, sy = sc) => { q.setFromEuler(e.set(rx, ry, 0)); m.setMatrixAt(i, m4.compose(v.set(x, y, z), q, s.set(sc, sy, sc))); };
 
@@ -72,7 +77,7 @@ export function createChaos(stage, kit, { flash, cls, sfx, burst } = {}) {
   function fresh() {
     return {
       idle: 0, fired: {}, boltT: 0, tilt: 0, timeScale: 1, camSpin: 0, camTurn: 0, cramp: 0, run: 0, magnet: 0,
-      lag: 0, latch: null, fog: 0, mirror: 0, doom: 0, meteorT: 0, strikes: [], flying: [], wasDrag: false, onCart: null, flipIn: -1,
+      lag: 0, latch: null, fog: 0, stickCool: 0, flat: null, mirror: 0, doom: 0, meteorT: 0, strikes: [], flying: [], wasDrag: false, onCart: null, flipIn: -1,
       timers: { tree: range(CHAOS.tree), shove: range(CHAOS.shove), tape: range(CHAOS.tape), lag: range(CHAOS.lag), fog: range(CHAOS.fog), mirror: range(CHAOS.mirror), doom: range(CHAOS.doomFirst) },
     };
   }
@@ -85,8 +90,38 @@ export function createChaos(stage, kit, { flash, cls, sfx, burst } = {}) {
     rings.count = discs.count = meteors.count = trails.count = vhs.count = trees.count = 0;
   }
 
+  /* ——— gepeng: ditimpa meteor → pipih ke tanah, tertahan CHAOS.flatTime detik, lalu bangkit memantul ———
+     Skala tidak ditulis ke karakter langsung (animator menimpanya tiap frame); animator membaca flatScale. */
+  const flatScale = { x: 1, y: 1, on: false };
+  function gepeng() {
+    st.flat = { t: 0, pin: body.pos.clone(), last: -1 };
+    body.vel.set(0, 0, 0);
+    flash && flash('GEPENG!'); sfx && sfx.squash();
+    burst && burst('#d9c7a8', body.pos.x, body.pos.y + 0.1, body.pos.z, 26, 4.5);
+  }
+  const elastic = (t) => (t >= 1 ? 1 : 1 - Math.pow(2, -9 * t) * Math.cos(t * 13));
+  function updateFlat(dt) {
+    const f = st.flat;
+    if (!f) { flatScale.on = false; return; }
+    f.t += dt;
+    const T = CHAOS.flatTime, DOWN = 0.16, UP = 0.75;
+    let y;
+    if (f.t < DOWN) { const k = f.t / DOWN; y = 1 - 0.93 * k * k; }                        // jatuh pipih (dipercepat)
+    else if (f.t < DOWN + 0.35) { const k = (f.t - DOWN) / 0.35; y = 0.07 + 0.05 * Math.sin(k * Math.PI * 3) * (1 - k); }   // memantul kecil
+    else if (f.t < T) { y = 0.07 + 0.008 * Math.sin(f.t * 5); }                               // tergeletak, bernapas pelan
+    else { const k = (f.t - T) / UP; y = 0.07 + 0.93 * elastic(k); }                       // bangkit memantul
+    flatScale.on = true; flatScale.y = Math.max(0.05, y); flatScale.x = Math.min(1.9, 1 / Math.sqrt(flatScale.y)) ;
+    if (f.t < T) {
+      body.pos.copy(f.pin); body.vel.set(0, 0, 0);
+      const left = Math.ceil(T - f.t);
+      if (left !== f.last && f.t > 0.6) { f.last = left; flash && flash('GEPENG · ' + left); }
+    } else if (f.last !== 0) { f.last = 0; body.vel.y = 5.5; body.grounded = false; body.ground = null; sfx && sfx.launch(); }
+    if (f.t >= T + UP) { st.flat = null; flatScale.on = false; }
+  }
+
   /* ——— kejadian (satu fungsi per fitur; dipanggil pemicu atau force) ——— */
-  const strike = (x, z, warn, r, kind) => { const h = ground(x, z); if (h == null) return; st.strikes.push({ x, z, y: h, t: -warn, warn, r, kind }); };
+  const MAX_STRIKES = 10;          // = kapasitas pool cincin/meteor; lebih dari ini dibuang (bukan melebihi buffer)
+  const strike = (x, z, warn, r, kind) => { if (st.strikes.length >= MAX_STRIKES) return; const h = ground(x, z); if (h == null) return; st.strikes.push({ x, z, y: h, t: -warn, warn, r, kind }); };
   const yawFwd = () => [Math.sin(player.state.yaw), Math.cos(player.state.yaw)];
   const F = {
     'stopwatch-ngebut'() { st.timeScale = 2; cls && cls('fast', true); flash && flash('STOPWATCH NGEBUT'); },
@@ -141,6 +176,7 @@ export function createChaos(stage, kit, { flash, cls, sfx, burst } = {}) {
     lag() { st.lag = CHAOS.lagTime; st.latch = { x: input.state.x, y: input.state.y, jump: input.state.jump }; },
     kabut() { st.fog = CHAOS.fogTime; flash && flash('KABUT'); },
     cermin() { st.mirror = CHAOS.mirrorTime; cls && cls('cermin', true); },
+    gepeng() { gepeng(); },
     kiamat() { st.doom = CHAOS.doomTime; st.meteorT = 0; cls && cls('kiamat', true); flash && flash('KIAMAT'); sfx && sfx.boom(); },
     'gravitasi-ringan'() { kit.edan && kit.edan.forceEvent('ringan'); },
   };
@@ -179,7 +215,8 @@ export function createChaos(stage, kit, { flash, cls, sfx, burst } = {}) {
     } else { st.magnet = 0; st.fired.magnet = 0; }
     /* kamera nyangkut: tepat saat pemain mulai memutar kamera */
     const drag = cam.state.idle < 0.05;
-    if (drag && !st.wasDrag && rnd() < CHAOS.camStick) F['kamera-nyangkut']();
+    st.stickCool -= dt;
+    if (drag && !st.wasDrag && st.stickCool <= 0 && st.camSpin <= 0 && rnd() < CHAOS.camStick) { st.stickCool = 12; F['kamera-nyangkut'](); }
     st.wasDrag = drag;
     /* troli kesurupan: setelah naik troli, kadang berbalik arah di tengah jalan */
     const cart = props.carts.find((c) => body.ground === c.box) || null;
@@ -222,7 +259,7 @@ export function createChaos(stage, kit, { flash, cls, sfx, burst } = {}) {
     }
     /* sambaran (petir & meteor) */
     let ri = 0, mi = 0;
-    st.strikes = st.strikes.filter((k) => {
+    if (st.strikes.length) st.strikes = st.strikes.filter((k) => {
       k.t += dt;
       if (k.t < 0) {
         const p = 1 + k.t / k.warn;
@@ -231,7 +268,9 @@ export function createChaos(stage, kit, { flash, cls, sfx, burst } = {}) {
         return true;
       }
       const dx = body.pos.x - k.x, dz = body.pos.z - k.z;
-      if (dx * dx + dz * dz < k.r * k.r && body.pos.y < k.y + 2) { cool = 0; knock(dx || 1, dz, 8, 8); }
+      if (dx * dx + dz * dz < k.r * k.r && body.pos.y < k.y + 2 && !st.flat) {
+        if (k.kind === 'meteor' && body.grounded) gepeng(); else { cool = 0; knock(dx || 1, dz, 8, 8); }
+      }
       burst && burst(k.kind === 'meteor' ? '#ff8a3d' : '#bfe3ff', k.x, k.y + 0.3, k.z, 22, 6);
       sfx && (k.kind === 'meteor' ? sfx.boom() : sfx.zap());
       return false;
@@ -239,7 +278,7 @@ export function createChaos(stage, kit, { flash, cls, sfx, burst } = {}) {
     rings.count = discs.count = ri; meteors.count = trails.count = mi;
     /* kaset terbang */
     let fi = 0;
-    st.flying = st.flying.filter((f) => {
+    if (st.flying.length) st.flying = st.flying.filter((f) => {
       f.t += dt; f.x += f.vx * dt; f.y += f.vy * dt; f.z += f.vz * dt;
       const dx = body.pos.x - f.x, dy = body.pos.y + 0.8 - f.y, dz = body.pos.z - f.z;
       if (dx * dx + dy * dy + dz * dz < 0.75 * 0.75) { cool = 0; knock(f.vx, f.vz, 9, 5); burst && burst('#ffd77a', f.x, f.y, f.z, 16, 4); sfx && sfx.boom(); return false; }
@@ -259,16 +298,21 @@ export function createChaos(stage, kit, { flash, cls, sfx, burst } = {}) {
       put(trees, ti++, t.x, t.y - 0.05, t.z, 0.9 * Math.max(0.01, sc), t.ry);
     }
     trees.count = ti;
-    for (const m of [rings, discs, meteors, trails, vhs, trees]) m.instanceMatrix.needsUpdate = true;
+    for (let i = 0; i < live.length; i++) live[i].instanceMatrix.needsUpdate = true;
   }
 
   return {
     get active() { return active; },
     get timeScale() { return active ? st.timeScale : 1; },
     get frozen() { return active && st.lag > 0; },
-    reset(on) { active = !!on; clear(); st = fresh(); group.visible = active; },
+    /* gepeng: pemain dipaku & tanpa kendali; animator membaca flatScale */
+    get pinned() { return active && !!st.flat && st.flat.t < CHAOS.flatTime; },
+    flatScale,
+    reset(on) { active = !!on; clear(); st = fresh(); flatScale.on = false; group.visible = active; },
     update(dt) {
       if (!active) return;
+      updateFlat(dt);
+      if (st.flat && st.flat.t < CHAOS.flatTime) { updateTimed(dt); return; }   // sedang gepeng: tidak ada pemicu baru
       updateTimed(dt); updateIdle(dt); updateAction(dt); updateRandom(dt);
     },
     filterInput(inp) {

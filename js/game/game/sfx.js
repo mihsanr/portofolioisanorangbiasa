@@ -45,6 +45,7 @@ export function createSfx(muted = false) {
     /* mode EDAN */
     warn(kind) { kind === 'angin' ? (thump(0.35, 260), tone(140, 90, 1.4, 'sine', 0.12)) : (tone(660, 660, 0.12, 'square', 0.22), tone(660, 660, 0.12, 'square', 0.22, 0.2)); },
     jam() { tone(220, 140, 0.18, 'square', 0.3); },
+    squash() { thump(1, 140); tone(300, 60, 0.35, 'square', 0.3); tone(90, 70, 0.4, 'sine', 0.4, 0.05); },
     whistle() { tone(1400, 500, 0.9, 'sine', 0.18); },
     boom() { thump(1, 180); tone(120, 40, 0.5, 'sawtooth', 0.3); },
     zap() { thump(0.8, 3000); tone(2400, 300, 0.25, 'square', 0.25); },

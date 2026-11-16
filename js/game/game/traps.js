@@ -140,7 +140,9 @@ export function createTraps({ props, world, scene }) {
     pillar: inst(pillarGeometry(), props.material, of('sweep').length),
     vent: inst(vent.body, props.material, G.length), ventGlow: inst(vent.glow, props.glowMaterial, G.length), column: inst(columnGeometry(), steam, G.length),
   };
-  mesh.spikeBase.receiveShadow = true; mesh.vent.receiveShadow = true;
+  for (const m of Object.values(mesh)) if (m.material === props.material) m.receiveShadow = true;   // varian shader = prop lain
+  const moving = [mesh.spikes, mesh.column, mesh.bar, mesh.barGlow, mesh.barAir, mesh.barAirGlow];
+  const ST = { danger: false, warn: false, angle: 0, h: 0 };      // dipakai ulang tiap langkah (tanpa sampah memori)
 
   const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), v = new THREE.Vector3(), s = new THREE.Vector3();
   const set = (m, i, x, y, z, ry = 0, sx = 1, sy = 1, sz = 1) => { q.setFromEuler(e.set(0, ry, 0)); m.setMatrixAt(i, m4.compose(v.set(x, y, z), q, s.set(sx, sy, sz))); };
@@ -159,19 +161,24 @@ export function createTraps({ props, world, scene }) {
     reset() { time = 0; cool = 0; },
     get time() { return time; }, set time(v) { time = v; },     // untuk alat uji
     /* keadaan tiap rintangan pada waktu ini (dipakai juga oleh alat uji): { danger, warn, angle, h } */
-    stateOf(h, at = time) {
+    stateOf(h, at = time, out = { danger: false, warn: false, angle: 0, h: 0 }) {
       if (h.kind === 'spikes') {
         const c = TRAP.spikes, p = phase(at, c.period, h.off) * c.period;
         const warn = p < c.warn, up = p >= c.warn && p < c.warn + c.up;
-        const k2 = up ? Math.min(1, (p - c.warn) / 0.08) * Math.min(1, (c.warn + c.up - p) / 0.12) : warn ? 0.18 * Math.abs(Math.sin(p * 60)) : 0;
-        return { danger: up, warn, h: k2 };
+        out.danger = up; out.warn = warn; out.angle = 0;
+        out.h = up ? Math.min(1, (p - c.warn) / 0.08) * Math.min(1, (c.warn + c.up - p) / 0.12) : warn ? 0.18 * Math.abs(Math.sin(p * 60)) : 0;
+        return out;
       }
       if (h.kind === 'geyser') {
         const c = TRAP.geyser, p = phase(at, c.period, h.off) * c.period;
         const warn = p < c.warn, on = p >= c.warn && p < c.warn + c.on;
-        return { danger: on, warn, h: on ? Math.min(1, (p - c.warn) / 0.12) * Math.min(1, (c.warn + c.on - p) / 0.25) : 0 };
+        out.danger = on; out.warn = warn; out.angle = 0;
+        out.h = on ? Math.min(1, (p - c.warn) / 0.12) * Math.min(1, (c.warn + c.on - p) / 0.25) : 0;
+        return out;
       }
-      return { danger: true, warn: false, angle: h.dir * phase(at, h.period || (h.kind === 'air' ? TRAP.air.period : TRAP.sweep.period), h.off) * TAU };
+      out.danger = true; out.warn = false; out.h = 0;
+      out.angle = h.dir * phase(at, h.period || (h.kind === 'air' ? TRAP.air.period : TRAP.sweep.period), h.off) * TAU;
+      return out;
     },
     update(dt, player, hooks) {
       if (!enabled) return;
@@ -179,7 +186,7 @@ export function createTraps({ props, world, scene }) {
       const b = player.body, px = b.pos.x, py = b.pos.y, pz = b.pos.z;
       let si = 0, wi = 0, ai = 0, gi = 0, hit = null;
       for (const h of list) {
-        const st = api.stateOf(h);
+        const st = api.stateOf(h, time, ST);
         const dx = px - h.x, dz = pz - h.z;
         if (h.kind === 'spikes') {
           set(mesh.spikes, si++, h.x, h.y - 0.42 + st.h * 0.56, h.z, h.ang);
@@ -204,7 +211,7 @@ export function createTraps({ props, world, scene }) {
           }
         }
       }
-      for (const m of [mesh.spikes, mesh.column, mesh.bar, mesh.barGlow, mesh.barAir, mesh.barAirGlow]) m.instanceMatrix.needsUpdate = true;
+      for (let i = 0; i < moving.length; i++) moving[i].instanceMatrix.needsUpdate = true;
       if (hit && cool <= 0) {
         cool = 0.6;
         const l = Math.hypot(hit.ux, hit.uz) || 1;

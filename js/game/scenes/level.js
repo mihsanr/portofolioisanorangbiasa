@@ -336,12 +336,18 @@ export async function createLevel(ctx, progress = async () => {}) {
       e.grass.visible = !far; e.far = far; e.treeLod = tl;
     });
     setAll(false);
+    traps.group.visible = true;                  // bahan rintangan EDAN (uap) ikut dikompilasi sekarang, bukan saat pertama muncul
     if (renderer.compileAsync) { try { await renderer.compileAsync(scene, warm); } catch (e) { /* lanjut dengan kompilasi biasa */ } }
     await progress(0.97);
     renderer.render(scene, warm);
     setAll(true); renderer.render(scene, warm);
     setAll(true, 1); renderer.render(scene, warm); await progress(0.99);
+    /* bayangan saat pemain jatuh ke lautan awan memakai varian shader depth yang tidak terlihat dari kamera pemanasan:
+       geser cahaya ke bawah pulau sekali di sini, supaya jatuh pertama tidak memicu kompilasi (tersendat) */
     setAll(false);
+    lights.follow(new THREE.Vector3(start.pos.x + 60, world.killY + 22, start.pos.z)); renderer.render(scene, warm);
+    lights.follow(start.spawnPoint);
+    traps.group.visible = false;
   }
   updateLOD(cam.camera.position);
   await progress(1);
@@ -365,17 +371,18 @@ export async function createLevel(ctx, progress = async () => {}) {
     update(dt) {
       time += dt;
       if (hazards) hazards.update(dt);
-      traps.update(dt, player, trapHooks);
+      if (!(hazards && hazards.pinned)) traps.update(dt, player, trapHooks);
       props.update(dt, player, propHooks);
       const inp = input.poll();
       if (hazards) hazards.filterInput(inp);
-      player.update(dt, controls && !(hazards && hazards.blackout) ? inp : IDLE, cam.state.yaw, world);
+      player.update(dt, controls && !(hazards && (hazards.blackout || hazards.pinned)) ? inp : IDLE, cam.state.yaw, world);
       const g = player.body.ground;
       if (player.body.grounded && g) {
         lastSafe.copy(player.body.pos);
         if (g.outline) lastIsland = g;
         if (checkpoints && g.spawnPoint && g !== checkpoint) { checkpoint = g; player.setSpawn(g.spawnPoint.x, g.spawnPoint.y, g.spawnPoint.z); }
       }
+      anim.flat = hazards ? hazards.flatScale : null;
       anim.speed = player.state.speed; anim.grounded = player.body.grounded; anim.vy = player.body.vel.y; anim.turn = player.state.turn;
       animator.update(dt, anim);
       dust.update(dt); sparks.update(dt);

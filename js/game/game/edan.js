@@ -99,9 +99,10 @@ export function createEdan(stage, { onEvent, onCrumble, onTrap, onLost, onJam, o
      Selama kabur kaset tidak bisa dipungut (cool), jadi menyentuhnya tepat saat mulai kabur pun tidak cukup. */
   function updateFlee(dt) {
     if (winnable) return;
-    const left = tapes.filter((t) => t.alive);
-    if (left.length !== 1) { if (flee) { flee.tape.cool = 0; flee = null; } return; }
-    const t = left[0], h = t.home;
+    let alive = 0, t = null;                       // tanpa filter(): tidak membuat array baru tiap langkah
+    for (let i = 0; i < tapes.length; i++) if (tapes[i].alive) { alive++; t = tapes[i]; }
+    if (alive !== 1) { if (flee) { flee.tape.cool = 0; flee = null; } return; }
+    const h = t.home;
     if (!flee) {
       const dx = t.x - body.pos.x, dz = t.z - body.pos.z, dy = t.y - (body.pos.y + 0.8);
       if (dx * dx + dz * dz + dy * dy < EDAN.FLEE_R * EDAN.FLEE_R) {
