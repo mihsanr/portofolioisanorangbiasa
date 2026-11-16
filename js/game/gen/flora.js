@@ -31,7 +31,7 @@ export function createTuftGeometry(seed = 5) {
 }
 
 const BARK = { a: new THREE.Color('#7a5a3c'), b: new THREE.Color('#4f3a29') };
-const LEAF = { top: new THREE.Color('#9ccc45'), mid: new THREE.Color('#6aa836'), low: new THREE.Color('#3c7a2c') };
+const LEAF = { top: new THREE.Color('#a9ca4d'), mid: new THREE.Color('#5f9a36'), low: new THREE.Color('#2a5c25') };
 
 function paintTrunk(g, skew) {
   const pos = g.attributes.position, col = g.attributes.color, c = new THREE.Color();
@@ -80,7 +80,7 @@ export function createTreeGeometry(seed = 1, lod = 0) {
       const pos = g.attributes.position, nor = g.attributes.normal, col = new Float32Array(pos.count * 3);
       for (let i = 0; i < pos.count; i++) {
         const sx = pos.getX(i), sy = pos.getY(i), sz = pos.getZ(i);
-        const k2 = 1 + 0.16 * (value3(sx * 1.6 + k * 7, sy * 1.6 + ci * 3, sz * 1.6, seed + k) - 0.5);
+        const k2 = 1 + 0.16 * (value3(sx * 1.6 + k * 7, sy * 1.6 + ci * 3, sz * 1.6, seed + k) - 0.5) + (lod ? 0 : 0.1 * (value3(sx * 4.2 + k, sy * 4.2, sz * 4.2 + ci, seed + 40 + k) - 0.5));
         const x = px + sx * r * k2 * 1.12, y = py + sy * r * k2 * (sy < 0 ? 0.62 : 0.86), z = pz + sz * r * k2 * 1.12;
         pos.setXYZ(i, x, y, z);
         o.set(x - cx, (y - cy) * 1.3 + cr * 0.25, z - cz).normalize();

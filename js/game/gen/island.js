@@ -12,7 +12,7 @@ import { smooth } from './build.js';
 const TAU = Math.PI * 2;
 const RHO_HI = [0, 0.14, 0.28, 0.42, 0.55, 0.66, 0.76, 0.84, 0.9, 0.945, 0.975, 1.0];
 const RHO_LO = [0, 0.28, 0.55, 0.76, 0.9, 0.975, 1.0];
-const GRASS = { base: new THREE.Color('#84bb3b'), light: new THREE.Color('#a8d24f'), dark: new THREE.Color('#5c9932'), hang: new THREE.Color('#3f7c2b') };
+const GRASS = { base: new THREE.Color('#79ad3e'), light: new THREE.Color('#a2c252'), dark: new THREE.Color('#4c8731'), hang: new THREE.Color('#386d28') };
 
 export function createIsland(def) {
   const R = def.radius, seed = def.seed ?? 1, relief = def.relief ?? 1.2;
@@ -30,6 +30,9 @@ export function createIsland(def) {
   function topColor(x, z, rho, out) {
     const t = fbm2(x * 0.21 + 9, z * 0.21 + seed, 3, seed + 3), t2 = fbm2(x * 0.62 + 40, z * 0.62, 2, seed + 5);
     out.copy(GRASS.dark).lerp(GRASS.base, smooth((t - 0.3) / 0.22)).lerp(GRASS.light, smooth((t2 - 0.5) / 0.22) * 0.75);
+    /* petak kering kekuningan & petak subur gelap (skala beberapa meter), dipanggang per vertex */
+    const dry = smooth((value2(x * 0.17 + 11, z * 0.17, seed + 7) - 0.55) / 0.3), lush = smooth((0.5 - value2(x * 0.3 + 3, z * 0.3, seed + 9)) / 0.3) * 0.8;
+    out.r *= (1 + 0.24 * dry) * (1 - 0.34 * lush); out.g *= (1 + 0.1 * dry) * (1 - 0.18 * lush); out.b *= (1 - 0.32 * dry) * (1 - 0.3 * lush);
     return out.multiplyScalar(1 - 0.14 * smooth((rho - 0.84) / 0.16));
   }
 
@@ -84,6 +87,9 @@ export function createIsland(def) {
       c1.lerp(ROCK.soil, (1 - smooth(s / 0.075)) * 0.9);
       c1.lerp(ROCK.moss, smooth((ch.cellNy[i] - 0.3) / 0.3) * (1 - smooth((s - 0.25) / 0.3)) * 0.8);     // lumut di undakan
       c1.multiplyScalar((0.44 + 0.56 * ch.crack[i]) * (0.72 + 0.56 * ch.cell[i]) * (1 - 0.25 * (1 - smooth(s / 0.05))));
+      /* lapisan sedimen hangat/dingin bergantian */
+      const st = value2(cpos.getY(i) * 1.1 + ch.cell[i] * 0.8, (cpos.getX(i) + cpos.getZ(i)) * 0.08, seed + 61);
+      c1.r *= 0.88 + 0.26 * st; c1.g *= 0.92 + 0.12 * st; c1.b *= 1.03 - 0.17 * st;
       P.push(cpos.getX(i), cpos.getY(i), cpos.getZ(i)); N.push(cnor.getX(i), cnor.getY(i), cnor.getZ(i));
       C.push(c1.r, c1.g, c1.b); K.push(1);
     }
