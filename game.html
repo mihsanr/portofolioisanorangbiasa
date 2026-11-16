@@ -13,7 +13,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;900&family=Space+Grotesk:wght@500;700&family=VT323&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/game.css?v=5">
+  <link rel="stylesheet" href="css/game.css?v=6">
   <script>
     /* Browser lama (tanpa import map) tidak bisa memuat game: beri tahu pemain alih-alih layar kosong. */
     window.addEventListener('DOMContentLoaded', function () {
@@ -28,47 +28,48 @@
   { "imports": {
       "three": "./js/vendor/three/three.module.min.js",
       "three/addons/": "./js/vendor/three/addons/",
-      "./js/game/core/atmosphere.js": "./js/game/core/atmosphere.js?v=5",
-      "./js/game/core/debug.js": "./js/game/core/debug.js?v=5",
-      "./js/game/core/lights.js": "./js/game/core/lights.js?v=5",
-      "./js/game/core/loop.js": "./js/game/core/loop.js?v=5",
-      "./js/game/core/quality.js": "./js/game/core/quality.js?v=5",
-      "./js/game/core/renderer.js": "./js/game/core/renderer.js?v=5",
-      "./js/game/core/shadows.js": "./js/game/core/shadows.js?v=5",
-      "./js/game/game/animator.js": "./js/game/game/animator.js?v=5",
-      "./js/game/game/blob.js": "./js/game/game/blob.js?v=5",
-      "./js/game/game/board.js": "./js/game/game/board.js?v=5",
-      "./js/game/game/camera.js": "./js/game/game/camera.js?v=5",
-      "./js/game/game/flow.js": "./js/game/game/flow.js?v=5",
-      "./js/game/game/fx.js": "./js/game/game/fx.js?v=5",
-      "./js/game/game/hud.js": "./js/game/game/hud.js?v=5",
-      "./js/game/game/input.js": "./js/game/game/input.js?v=5",
-      "./js/game/game/leveldata.js": "./js/game/game/leveldata.js?v=5",
-      "./js/game/game/physics.js": "./js/game/game/physics.js?v=5",
-      "./js/game/game/player.js": "./js/game/game/player.js?v=5",
-      "./js/game/game/propsys.js": "./js/game/game/propsys.js?v=5",
-      "./js/game/game/sfx.js": "./js/game/game/sfx.js?v=5",
-      "./js/game/gen/atlas.js": "./js/game/gen/atlas.js?v=5",
-      "./js/game/gen/build.js": "./js/game/gen/build.js?v=5",
-      "./js/game/gen/character.js": "./js/game/gen/character.js?v=5",
-      "./js/game/gen/crt-head.js": "./js/game/gen/crt-head.js?v=5",
-      "./js/game/gen/flora.js": "./js/game/gen/flora.js?v=5",
-      "./js/game/gen/island.js": "./js/game/gen/island.js?v=5",
-      "./js/game/gen/landmarks.js": "./js/game/gen/landmarks.js?v=5",
-      "./js/game/gen/materials.js": "./js/game/gen/materials.js?v=5",
-      "./js/game/gen/noise.js": "./js/game/gen/noise.js?v=5",
-      "./js/game/gen/props.js": "./js/game/gen/props.js?v=5",
-      "./js/game/gen/rock.js": "./js/game/gen/rock.js?v=5",
-      "./js/game/gen/ruins.js": "./js/game/gen/ruins.js?v=5",
-      "./js/game/scenes/lab.js": "./js/game/scenes/lab.js?v=5",
-      "./js/game/scenes/level.js": "./js/game/scenes/level.js?v=5",
-      "./js/game/scenes/playground.js": "./js/game/scenes/playground.js?v=5",
-      "./js/game/shaders/clouds.js": "./js/game/shaders/clouds.js?v=5",
-      "./js/game/shaders/crt-screen.js": "./js/game/shaders/crt-screen.js?v=5",
-      "./js/game/shaders/glow.js": "./js/game/shaders/glow.js?v=5",
-      "./js/game/shaders/sky.js": "./js/game/shaders/sky.js?v=5",
-      "./js/game/shaders/surface.js": "./js/game/shaders/surface.js?v=5",
-      "./js/game/shaders/terrain.js": "./js/game/shaders/terrain.js?v=5"
+      "./js/game/core/atmosphere.js": "./js/game/core/atmosphere.js?v=6",
+      "./js/game/core/debug.js": "./js/game/core/debug.js?v=6",
+      "./js/game/core/lights.js": "./js/game/core/lights.js?v=6",
+      "./js/game/core/loop.js": "./js/game/core/loop.js?v=6",
+      "./js/game/core/quality.js": "./js/game/core/quality.js?v=6",
+      "./js/game/core/renderer.js": "./js/game/core/renderer.js?v=6",
+      "./js/game/core/shadows.js": "./js/game/core/shadows.js?v=6",
+      "./js/game/game/animator.js": "./js/game/game/animator.js?v=6",
+      "./js/game/game/blob.js": "./js/game/game/blob.js?v=6",
+      "./js/game/game/board.js": "./js/game/game/board.js?v=6",
+      "./js/game/game/camera.js": "./js/game/game/camera.js?v=6",
+      "./js/game/game/flow.js": "./js/game/game/flow.js?v=6",
+      "./js/game/game/fx.js": "./js/game/game/fx.js?v=6",
+      "./js/game/game/hud.js": "./js/game/game/hud.js?v=6",
+      "./js/game/game/input.js": "./js/game/game/input.js?v=6",
+      "./js/game/game/leveldata.js": "./js/game/game/leveldata.js?v=6",
+      "./js/game/game/modes.js": "./js/game/game/modes.js?v=6",
+      "./js/game/game/physics.js": "./js/game/game/physics.js?v=6",
+      "./js/game/game/player.js": "./js/game/game/player.js?v=6",
+      "./js/game/game/propsys.js": "./js/game/game/propsys.js?v=6",
+      "./js/game/game/sfx.js": "./js/game/game/sfx.js?v=6",
+      "./js/game/gen/atlas.js": "./js/game/gen/atlas.js?v=6",
+      "./js/game/gen/build.js": "./js/game/gen/build.js?v=6",
+      "./js/game/gen/character.js": "./js/game/gen/character.js?v=6",
+      "./js/game/gen/crt-head.js": "./js/game/gen/crt-head.js?v=6",
+      "./js/game/gen/flora.js": "./js/game/gen/flora.js?v=6",
+      "./js/game/gen/island.js": "./js/game/gen/island.js?v=6",
+      "./js/game/gen/landmarks.js": "./js/game/gen/landmarks.js?v=6",
+      "./js/game/gen/materials.js": "./js/game/gen/materials.js?v=6",
+      "./js/game/gen/noise.js": "./js/game/gen/noise.js?v=6",
+      "./js/game/gen/props.js": "./js/game/gen/props.js?v=6",
+      "./js/game/gen/rock.js": "./js/game/gen/rock.js?v=6",
+      "./js/game/gen/ruins.js": "./js/game/gen/ruins.js?v=6",
+      "./js/game/scenes/lab.js": "./js/game/scenes/lab.js?v=6",
+      "./js/game/scenes/level.js": "./js/game/scenes/level.js?v=6",
+      "./js/game/scenes/playground.js": "./js/game/scenes/playground.js?v=6",
+      "./js/game/shaders/clouds.js": "./js/game/shaders/clouds.js?v=6",
+      "./js/game/shaders/crt-screen.js": "./js/game/shaders/crt-screen.js?v=6",
+      "./js/game/shaders/glow.js": "./js/game/shaders/glow.js?v=6",
+      "./js/game/shaders/sky.js": "./js/game/shaders/sky.js?v=6",
+      "./js/game/shaders/surface.js": "./js/game/shaders/surface.js?v=6",
+      "./js/game/shaders/terrain.js": "./js/game/shaders/terrain.js?v=6"
   } }
   </script>
   <!-- modul diunduh paralel, bukan berantai mengikuti import. Semua modul game diberi ?v= lewat import map di atas,
@@ -76,45 +77,46 @@
   <link rel="modulepreload" href="js/vendor/three/three.module.min.js">
   <link rel="modulepreload" href="js/vendor/three/addons/geometries/RoundedBoxGeometry.js">
   <link rel="modulepreload" href="js/vendor/three/addons/utils/BufferGeometryUtils.js">
-  <link rel="modulepreload" href="js/game/core/atmosphere.js?v=5">
-  <link rel="modulepreload" href="js/game/core/debug.js?v=5">
-  <link rel="modulepreload" href="js/game/core/lights.js?v=5">
-  <link rel="modulepreload" href="js/game/core/loop.js?v=5">
-  <link rel="modulepreload" href="js/game/core/quality.js?v=5">
-  <link rel="modulepreload" href="js/game/core/renderer.js?v=5">
-  <link rel="modulepreload" href="js/game/core/shadows.js?v=5">
-  <link rel="modulepreload" href="js/game/game/animator.js?v=5">
-  <link rel="modulepreload" href="js/game/game/blob.js?v=5">
-  <link rel="modulepreload" href="js/game/game/board.js?v=5">
-  <link rel="modulepreload" href="js/game/game/camera.js?v=5">
-  <link rel="modulepreload" href="js/game/game/flow.js?v=5">
-  <link rel="modulepreload" href="js/game/game/fx.js?v=5">
-  <link rel="modulepreload" href="js/game/game/hud.js?v=5">
-  <link rel="modulepreload" href="js/game/game/input.js?v=5">
-  <link rel="modulepreload" href="js/game/game/leveldata.js?v=5">
-  <link rel="modulepreload" href="js/game/game/physics.js?v=5">
-  <link rel="modulepreload" href="js/game/game/player.js?v=5">
-  <link rel="modulepreload" href="js/game/game/propsys.js?v=5">
-  <link rel="modulepreload" href="js/game/game/sfx.js?v=5">
-  <link rel="modulepreload" href="js/game/gen/atlas.js?v=5">
-  <link rel="modulepreload" href="js/game/gen/build.js?v=5">
-  <link rel="modulepreload" href="js/game/gen/character.js?v=5">
-  <link rel="modulepreload" href="js/game/gen/crt-head.js?v=5">
-  <link rel="modulepreload" href="js/game/gen/flora.js?v=5">
-  <link rel="modulepreload" href="js/game/gen/island.js?v=5">
-  <link rel="modulepreload" href="js/game/gen/landmarks.js?v=5">
-  <link rel="modulepreload" href="js/game/gen/materials.js?v=5">
-  <link rel="modulepreload" href="js/game/gen/noise.js?v=5">
-  <link rel="modulepreload" href="js/game/gen/props.js?v=5">
-  <link rel="modulepreload" href="js/game/gen/rock.js?v=5">
-  <link rel="modulepreload" href="js/game/gen/ruins.js?v=5">
-  <link rel="modulepreload" href="js/game/scenes/level.js?v=5">
-  <link rel="modulepreload" href="js/game/shaders/clouds.js?v=5">
-  <link rel="modulepreload" href="js/game/shaders/crt-screen.js?v=5">
-  <link rel="modulepreload" href="js/game/shaders/glow.js?v=5">
-  <link rel="modulepreload" href="js/game/shaders/sky.js?v=5">
-  <link rel="modulepreload" href="js/game/shaders/surface.js?v=5">
-  <link rel="modulepreload" href="js/game/shaders/terrain.js?v=5">
+  <link rel="modulepreload" href="js/game/core/atmosphere.js?v=6">
+  <link rel="modulepreload" href="js/game/core/debug.js?v=6">
+  <link rel="modulepreload" href="js/game/core/lights.js?v=6">
+  <link rel="modulepreload" href="js/game/core/loop.js?v=6">
+  <link rel="modulepreload" href="js/game/core/quality.js?v=6">
+  <link rel="modulepreload" href="js/game/core/renderer.js?v=6">
+  <link rel="modulepreload" href="js/game/core/shadows.js?v=6">
+  <link rel="modulepreload" href="js/game/game/animator.js?v=6">
+  <link rel="modulepreload" href="js/game/game/blob.js?v=6">
+  <link rel="modulepreload" href="js/game/game/board.js?v=6">
+  <link rel="modulepreload" href="js/game/game/camera.js?v=6">
+  <link rel="modulepreload" href="js/game/game/flow.js?v=6">
+  <link rel="modulepreload" href="js/game/game/fx.js?v=6">
+  <link rel="modulepreload" href="js/game/game/hud.js?v=6">
+  <link rel="modulepreload" href="js/game/game/input.js?v=6">
+  <link rel="modulepreload" href="js/game/game/leveldata.js?v=6">
+  <link rel="modulepreload" href="js/game/game/modes.js?v=6">
+  <link rel="modulepreload" href="js/game/game/physics.js?v=6">
+  <link rel="modulepreload" href="js/game/game/player.js?v=6">
+  <link rel="modulepreload" href="js/game/game/propsys.js?v=6">
+  <link rel="modulepreload" href="js/game/game/sfx.js?v=6">
+  <link rel="modulepreload" href="js/game/gen/atlas.js?v=6">
+  <link rel="modulepreload" href="js/game/gen/build.js?v=6">
+  <link rel="modulepreload" href="js/game/gen/character.js?v=6">
+  <link rel="modulepreload" href="js/game/gen/crt-head.js?v=6">
+  <link rel="modulepreload" href="js/game/gen/flora.js?v=6">
+  <link rel="modulepreload" href="js/game/gen/island.js?v=6">
+  <link rel="modulepreload" href="js/game/gen/landmarks.js?v=6">
+  <link rel="modulepreload" href="js/game/gen/materials.js?v=6">
+  <link rel="modulepreload" href="js/game/gen/noise.js?v=6">
+  <link rel="modulepreload" href="js/game/gen/props.js?v=6">
+  <link rel="modulepreload" href="js/game/gen/rock.js?v=6">
+  <link rel="modulepreload" href="js/game/gen/ruins.js?v=6">
+  <link rel="modulepreload" href="js/game/scenes/level.js?v=6">
+  <link rel="modulepreload" href="js/game/shaders/clouds.js?v=6">
+  <link rel="modulepreload" href="js/game/shaders/crt-screen.js?v=6">
+  <link rel="modulepreload" href="js/game/shaders/glow.js?v=6">
+  <link rel="modulepreload" href="js/game/shaders/sky.js?v=6">
+  <link rel="modulepreload" href="js/game/shaders/surface.js?v=6">
+  <link rel="modulepreload" href="js/game/shaders/terrain.js?v=6">
 </head>
 <body data-state="loading">
   <canvas id="game" aria-label="Pemburu Kaset"></canvas>
@@ -136,6 +138,8 @@
       <svg viewBox="0 0 56 40" aria-hidden="true"><rect x="3" y="3" width="50" height="34" rx="5" fill="none" stroke="currentColor" stroke-width="4"/><rect x="13" y="11" width="30" height="12" rx="5" fill="none" stroke="currentColor" stroke-width="3"/><circle cx="21" cy="17" r="2.6" fill="currentColor"/><circle cx="35" cy="17" r="2.6" fill="currentColor"/><path d="M15 37l3-7h20l3 7" fill="none" stroke="currentColor" stroke-width="3"/></svg>
       <b><span id="hud-count">0</span> / <span id="hud-total">20</span></b>
     </div>
+    <div class="hud-falls" id="hud-falls" aria-label="Jumlah jatuh"><small>EDAN · JATUH</small><b id="hud-falls-n">0</b></div>
+    <div class="hud-taunt" id="hud-taunt" aria-live="polite"><small id="hud-taunt-lost"></small><p id="hud-taunt-text"></p></div>
     <div class="hud-keys" id="hud-keys">
       <p><kbd>Spasi</kbd> Lompat</p>
       <p><kbd>Spasi</kbd><kbd>Spasi</kbd> Lompat ganda</p>
@@ -155,6 +159,10 @@
         <p class="kicker">IHSAN.TV · GAME</p>
         <h1 id="title-h">PEMBURU<br>KASET</h1>
         <p class="lead">Kumpulkan <b>20 kaset VHS</b> di pulau-pulau melayang secepat mungkin.</p>
+        <div class="modes" role="group" aria-label="Tingkat kesulitan">
+          <button type="button" class="mode" data-mode-pick="normal" aria-pressed="true"><b>NORMAL</b><span>Checkpoint di tiap pulau besar · jatuh +2 dtk · masuk papan skor</span></button>
+          <button type="button" class="mode edan" data-mode-pick="edan" aria-pressed="false"><b>EDAN</b><span>Tanpa checkpoint: jatuh = pulang ke Rumah · +5 dtk · tepi lebih licin · ada yang mengomentari setiap kegagalanmu</span></button>
+        </div>
         <button id="btn-start" class="btn-main" type="button">MULAI</button>
         <p class="best">Waktu terbaikmu: <b id="title-best">--:--.--</b></p>
         <p class="howto"><span class="for-keys">WASD / panah untuk gerak · Spasi lompat (dua kali = lompat ganda) · geser mouse untuk kamera · R ulang</span><span class="for-touch">Jempol kiri untuk gerak · tombol LOMPAT (dua kali = lompat ganda) · geser layar kanan untuk kamera</span></p>
@@ -162,6 +170,7 @@
       </div>
       <div class="card-board">
         <h2>PAPAN SKOR</h2>
+        <p class="board-edan">Papan ini untuk mode NORMAL. Rekor EDAN tersimpan di perangkatmu.</p>
         <ol id="title-board" class="board"><li class="note">TUNING…</li></ol>
       </div>
     </div>
@@ -171,7 +180,7 @@
   <section id="result" class="panel" aria-labelledby="result-time" hidden>
     <div class="card">
       <div class="card-main">
-        <p class="kicker">SELESAI · 20 / 20 KASET</p>
+        <p class="kicker" id="result-kicker">SELESAI · 20 / 20 KASET</p>
         <h1 id="result-time">00:00.00</h1>
         <p class="lead" id="result-note"></p>
         <form id="result-form" autocomplete="off">
@@ -182,6 +191,10 @@
           </div>
           <p id="result-msg" role="status"></p>
         </form>
+        <div class="modes" role="group" aria-label="Tingkat kesulitan main lagi">
+          <button type="button" class="mode" data-mode-pick="normal" aria-pressed="true"><b>NORMAL</b><span>Checkpoint di tiap pulau besar · jatuh +2 dtk · masuk papan skor</span></button>
+          <button type="button" class="mode edan" data-mode-pick="edan" aria-pressed="false"><b>EDAN</b><span>Tanpa checkpoint: jatuh = pulang ke Rumah · +5 dtk · tepi lebih licin · ada yang mengomentari setiap kegagalanmu</span></button>
+        </div>
         <div class="row">
           <button id="btn-again" class="btn-ghost" type="button">MAIN LAGI</button>
           <a class="back" href="index.html">← isanorgbiasa.com</a>
@@ -189,6 +202,7 @@
       </div>
       <div class="card-board">
         <h2>PAPAN SKOR</h2>
+        <p class="board-edan">Papan ini untuk mode NORMAL. Rekor EDAN tersimpan di perangkatmu.</p>
         <ol id="result-board" class="board"><li class="note">TUNING…</li></ol>
       </div>
     </div>
@@ -202,6 +216,6 @@
   <pre id="debug" hidden></pre>
   <noscript>Game ini butuh JavaScript.</noscript>
   <script src="js/supabase-config.js?v=8"></script>
-  <script type="module" src="js/game/main.js?v=5"></script>
+  <script type="module" src="js/game/main.js?v=6"></script>
 </body>
 </html>

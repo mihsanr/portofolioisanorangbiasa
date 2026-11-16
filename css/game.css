@@ -144,3 +144,35 @@ body:not([data-state="play"]) #touch { display: none; }
   position: fixed; inset: 0; z-index: 1; pointer-events: none;
   background: radial-gradient(120% 100% at 50% 45%, transparent 58%, rgba(8, 20, 48, .26) 100%);
 }
+
+/* ——— mode NORMAL / EDAN ——— */
+.modes { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.mode {
+  display: grid; gap: 5px; align-content: start; padding: 10px 12px; text-align: left; cursor: pointer; color: #fff;
+  background: transparent; border: 3px solid rgba(255, 255, 255, .55); -webkit-tap-highlight-color: transparent;
+}
+.mode b { font: 900 26px/1 'Barlow Condensed', sans-serif; letter-spacing: .05em; }
+.mode span { font: 500 12px/1.35 'Space Grotesk', sans-serif; opacity: .9; }
+.mode:hover, .mode:focus-visible { border-color: #fff; outline: none; }
+.mode.on { background: #fff; color: #0000ff; border-color: #fff; box-shadow: 4px 5px 0 #0d0d0d; }
+.mode.edan.on { background: #ff3b2f; color: #fff; }
+body[data-mode="edan"] .card { box-shadow: 8px 9px 0 #ff3b2f; }
+.board-edan { display: none; margin: 0; font: 500 12px/1.35 'Space Grotesk', sans-serif; opacity: .75; }
+body[data-mode="edan"] .board-edan { display: block; }
+@media (max-width: 420px) { .modes { grid-template-columns: 1fr; } }
+
+.hud-falls { position: absolute; right: max(16px, env(safe-area-inset-right)); top: calc(max(12px, env(safe-area-inset-top)) + clamp(48px, 7vw, 66px)); display: none; text-align: right; color: #ff5a4d; }
+body[data-mode="edan"] .hud-falls { display: block; }
+.hud-falls small { display: block; font: 700 clamp(11px, 1.4vw, 14px)/1 'Space Grotesk', sans-serif; letter-spacing: .08em; color: #fff; }
+.hud-falls b { font-weight: 900; font-size: clamp(26px, 4vw, 40px); line-height: 1; font-variant-numeric: tabular-nums; }
+.hud-falls.hit b { animation: pop .32s ease-out; }
+.hud-taunt {
+  position: absolute; left: 50%; top: 22%; width: min(560px, calc(100vw - 32px)); transform: translateX(-50%);
+  text-align: center; opacity: 0; pointer-events: none;
+}
+.hud-taunt small { display: inline-block; padding: 5px 9px; background: #ff3b2f; color: #fff; text-shadow: none; font: 700 clamp(11px, 1.4vw, 14px)/1 'Space Grotesk', sans-serif; letter-spacing: .1em; }
+.hud-taunt p { margin: 6px 0 0; font: 900 clamp(26px, 4.4vw, 44px)/1.02 'Barlow Condensed', sans-serif; }
+.hud-taunt.show { animation: taunt 3.2s ease-out forwards; }
+@keyframes taunt { 0% { opacity: 0; transform: translate(-50%, 10px) scale(.96); } 8% { opacity: 1; transform: translate(-50%, 0); } 82% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -8px); } }
+@media (pointer: coarse) { .hud-falls { top: calc(max(12px, env(safe-area-inset-top)) + 100px); } .hud-taunt { top: 18%; } }
+@media (prefers-reduced-motion: reduce) { .hud-taunt.show { animation-duration: 3.2s; animation-timing-function: steps(1, end); } }

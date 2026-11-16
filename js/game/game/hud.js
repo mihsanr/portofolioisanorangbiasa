@@ -16,9 +16,13 @@ export function createHud() {
     title: $('title'), titleBest: $('title-best'), titleBoard: $('title-board'),
     result: $('result'), resultTime: $('result-time'), resultNote: $('result-note'), resultBoard: $('result-board'),
     form: $('result-form'), name: $('result-name'), msg: $('result-msg'),
+    falls: $('hud-falls'), fallsN: $('hud-falls-n'), taunt: $('hud-taunt'), tauntText: $('hud-taunt-text'), tauntLost: $('hud-taunt-lost'),
+    resultKicker: $('result-kicker'), modes: Array.from(document.querySelectorAll('[data-mode-pick]')),
   };
-  const on = { start: null, restart: null, submit: null, mute: null };
-  let lastC = -1;
+  const on = { start: null, restart: null, submit: null, mute: null, mode: null };
+  let lastC = -1, tauntTimer = 0;
+
+  el.modes.forEach((b) => b.addEventListener('click', () => on.mode && on.mode(b.dataset.modePick)));
 
   el.start.addEventListener('click', () => on.start && on.start());
   el.again.addEventListener('click', () => on.start && on.start());
@@ -54,14 +58,31 @@ export function createHud() {
     setTime(ms) { const c = Math.floor(ms / 10); if (c !== lastC) { lastC = c; el.time.textContent = ms > 0 ? fmt(ms) : '00:00.00'; } },
     setBest(ms) { const t = fmt(ms); el.best.textContent = t; el.titleBest.textContent = t; },
     setTapes(n, total) { el.count.textContent = n; el.total.textContent = total; el.count.parentElement.classList.remove('pop'); void el.count.offsetWidth; if (n) el.count.parentElement.classList.add('pop'); },
-    penalty() { el.penalty.classList.remove('show'); void el.penalty.offsetWidth; el.penalty.classList.add('show'); },
+    penalty(sec = 2) { el.penalty.textContent = '+' + sec.toFixed(2); el.penalty.classList.remove('show'); void el.penalty.offsetWidth; el.penalty.classList.add('show'); },
+    setMode(m) {
+      document.body.dataset.mode = m.id;
+      el.modes.forEach((b) => { const on = b.dataset.modePick === m.id; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on ? 'true' : 'false'); });
+    },
+    setFalls(n) { el.fallsN.textContent = n; if (n) { el.falls.classList.remove('hit'); void el.falls.offsetWidth; el.falls.classList.add('hit'); } },
+    /* komentar narator mode EDAN: muncul tepat setelah jatuh, hilang sendiri */
+    taunt(text, lostM = 0) {
+      clearTimeout(tauntTimer);
+      if (!text) { el.taunt.classList.remove('show'); return; }
+      el.tauntText.textContent = text;
+      el.tauntLost.textContent = lostM ? 'KEMBALI KE RUMAH · ' + lostM + ' M HILANG' : 'KEMBALI KE RUMAH';
+      el.taunt.classList.remove('show'); void el.taunt.offsetWidth; el.taunt.classList.add('show');
+      tauntTimer = setTimeout(() => el.taunt.classList.remove('show'), 3200);
+    },
     setMute(m) { el.mute.textContent = m ? 'UNMUTE' : 'MUTE'; el.mute.setAttribute('aria-pressed', m ? 'true' : 'false'); },
     setBoard(rows, mineMs) { board(el.titleBoard, rows, mineMs); board(el.resultBoard, rows, mineMs); },
-    showResult({ ms, record, name, online }) {
+    showResult({ ms, record, name, online, mode, falls = 0, lostM = 0 }) {
+      const edan = mode && mode.id === 'edan';
       el.resultTime.textContent = fmt(ms);
-      el.resultNote.textContent = record ? 'Rekor baru di perangkat ini!' : 'Waktu terbaikmu: ' + el.best.textContent;
+      el.resultKicker.textContent = 'SELESAI · ' + (edan ? 'MODE EDAN' : 'MODE NORMAL') + ' · 20 / 20 KASET';
+      el.resultNote.textContent = (record ? 'Rekor baru di perangkat ini!' : 'Waktu terbaikmu: ' + el.best.textContent)
+        + (edan ? ' Jatuh ' + falls + ' kali, total ' + lostM + ' m terlempar pulang.' : '');
       el.name.value = name || '';
-      el.msg.textContent = online ? '' : 'NO SIGNAL — skor hanya tersimpan di perangkat ini.';
+      el.msg.textContent = online ? '' : edan ? 'Mode EDAN belum punya papan skor global. Rekormu tersimpan di perangkat ini.' : 'NO SIGNAL — skor hanya tersimpan di perangkat ini.';
       el.form.classList.toggle('off', !online);
     },
     resultOffline() { el.msg.textContent = 'NO SIGNAL — skor hanya tersimpan di perangkat ini.'; el.form.classList.add('off'); },

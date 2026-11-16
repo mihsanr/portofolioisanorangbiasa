@@ -302,7 +302,10 @@ export async function createLevel(ctx, progress = async () => {}) {
   const goTo = (isl) => { const s = isl.spawnPoint; player.setSpawn(s.x, s.y, s.z); player.teleport(s.x, s.y, s.z, isl.spawnYaw); cam.snap(player.body.pos, isl.spawnYaw + Math.PI); };
   const start = byId[LEVEL.start];
   goTo(start);
-  let checkpoint = start;
+  let checkpoint = start, checkpoints = true;
+  /* pijakan aman terakhir: dipakai mode EDAN untuk menghitung seberapa jauh pemain "terlempar pulang" */
+  const lastSafe = new THREE.Vector3().copy(player.body.pos);
+  let lastIsland = start;
 
   /* ?debug: tombol 1–9 melompat ke titik awal pulau besar (untuk menguji level) */
   const stops = order.filter((o) => o.spawnPoint);
@@ -338,17 +341,24 @@ export async function createLevel(ctx, progress = async () => {}) {
   return {
     scene, camera: cam.camera, player, input, cam, world, props, islands: byId, stops, events, goTo, buildMs, lod,
     get checkpoint() { return checkpoint; },
+    /* false (mode EDAN) = tidak ada checkpoint: jatuh selalu kembali ke pulau awal */
+    get checkpoints() { return checkpoints; }, set checkpoints(v) { checkpoints = !!v; },
+    lastSafe, get lastIsland() { return lastIsland; }, startPoint: start.spawnPoint,
     /* false = pemain tidak bisa digerakkan (layar judul / hasil); dunia tetap hidup */
     get controls() { return controls; }, set controls(v) { controls = !!v; },
     /* mulai ulang: semua kaset kembali, pemain ke titik awal */
-    reset() { props.reset(); checkpoint = start; goTo(start); },
+    reset() { props.reset(); checkpoint = start; goTo(start); lastSafe.copy(player.body.pos); lastIsland = start; },
     update(dt) {
       time += dt;
       props.update(dt, player, propHooks);
       const inp = input.poll();
       player.update(dt, controls ? inp : IDLE, cam.state.yaw, world);
       const g = player.body.ground;
-      if (player.body.grounded && g && g.spawnPoint && g !== checkpoint) { checkpoint = g; player.setSpawn(g.spawnPoint.x, g.spawnPoint.y, g.spawnPoint.z); }
+      if (player.body.grounded && g) {
+        lastSafe.copy(player.body.pos);
+        if (g.outline) lastIsland = g;
+        if (checkpoints && g.spawnPoint && g !== checkpoint) { checkpoint = g; player.setSpawn(g.spawnPoint.x, g.spawnPoint.y, g.spawnPoint.z); }
+      }
       anim.speed = player.state.speed; anim.grounded = player.body.grounded; anim.vy = player.body.vel.y; anim.turn = player.state.turn;
       animator.update(dt, anim);
       dust.update(dt); sparks.update(dt);

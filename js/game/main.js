@@ -49,6 +49,7 @@ try {
     ]);
     const board = createBoard();
     flow = createFlow(stage, createHud(), board, createSfx(board.local.mute));
+    if (query.has('mode')) flow.setMode(query.get('mode'));   // ?mode=edan
     if (query.has('autostart')) flow.start();        // untuk uji otomatis: lewati layar judul
   }
   if (loading) { loading.classList.add('done'); setTimeout(() => loading.remove(), 450); }
