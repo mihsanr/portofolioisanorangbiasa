@@ -1,5 +1,7 @@
 // Semua angka yang perlu di-tuning + konten edukasi ada di sini (PRD 4.4, 18).
 const D = Math.PI / 180;
+// HP & tablet (layar sentuh): profil ringan. Uji di desktop dengan ?lite.
+export const LITE = typeof matchMedia !== 'undefined' && (matchMedia('(pointer: coarse)').matches || /[?&]lite/.test(location.search));
 
 export const FLIGHT = {
   speed: 12,          // unit/detik
@@ -22,7 +24,7 @@ export const FLIGHT = {
 // Dunia berulang: satu petak TILE×TILE, keluar di satu sisi = masuk dari sisi seberang.
 // Kabut harus habis sebelum TILE/2 supaya pengulangannya tak terlihat.
 export const TILE = 1000;
-export const FOG = { near: 170, far: 440 };
+export const FOG = LITE ? { near: 125, far: 340 } : { near: 170, far: 440 };
 
 // Thrust hanya terisi setelah mengambil objective (huruf/angka): tiap ambil +perItem detik.
 export const THRUST = { perItem: 6, max: 12 };

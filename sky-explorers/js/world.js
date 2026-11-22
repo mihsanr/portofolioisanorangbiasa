@@ -3,7 +3,7 @@
 // Kabut (FOG.far < TILE/2) menyembunyikan titik sambungnya.
 import * as THREE from 'three';
 import * as M from './models.js';
-import { SPOTS, LETTERS, NUMBERS, COLORS, TILE, FOG } from './config.js';
+import { SPOTS, LETTERS, NUMBERS, COLORS, TILE, FOG, LITE } from './config.js';
 import { createSky, SKY, SUN_DIR } from './sky.js';
 import { buildCity } from './city.js';
 import { landmarks } from './landmarks.js';
@@ -30,7 +30,7 @@ export function heightAt(x, z) {
   return shapeLand(x, z, land * (rural + (10 - z * 0.022 - rural) * city) - (1 - land) * 9);
 }
 // Tinggi permukaan yang benar-benar tergambar (segitiga petak 10 unit) → jalan & benda menempel di lereng.
-const GN = matchMedia('(pointer: coarse)').matches ? 100 : 128, GS = TILE / GN, gh = [];   // petak ±7,8 unit (HP 10) → bukit & tepi sungai lebih halus
+const GN = LITE ? 100 : 128, GS = TILE / GN, gh = [];   // petak ±7,8 unit (HP 10) → bukit & tepi sungai lebih halus
 const gv = (i, j) => { const k = j * (GN + 1) + i; return gh[k] ??= heightAt(i * GS - TILE / 2, j * GS - TILE / 2); };
 export function groundAt(x, z) {
   const u = (wrapC(x) + TILE / 2) / GS, v = (wrapC(z) + TILE / 2) / GS, i = Math.min(GN - 1, Math.floor(u)), j = Math.min(GN - 1, Math.floor(v)), fx = u - i, fz = v - j;
@@ -62,7 +62,7 @@ function canvasTex(size, fill) {
   fill(img.data);
   g.putImageData(img, 0, 0);
   const t = new THREE.CanvasTexture(c);
-  t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 4;
+  t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = LITE ? 1 : 4;
   return t;
 }
 // Detail rumput/tanah: dikalikan ke warna vertex medan (±0,8..1).
@@ -97,20 +97,21 @@ const dummy = new THREE.Object3D();
 // InstancedMesh yang tiap frame hanya berisi instans dekat & di depan kamera (salinan terdekat).
 // far = geometri sederhana untuk jarak > nearR; hanya yang dekat menjatuhkan bayangan.
 function wrappedInstances(geo, mat, list, { far = null, nearR = 120, maxR = 400, colors = null } = {}) {
-  const meshes = (far ? [geo, far] : [geo]).map(g => { const m = new THREE.InstancedMesh(g, mat, list.length); m.frustumCulled = false; m.count = 0; return m; });
-  const c = new THREE.Color();
+  maxR = Math.min(maxR * (LITE ? 0.72 : 1), FOG.far + 30); if (LITE) nearR *= 0.55;
+  mat = M.variant(mat, colors ? 'ic' : 'i');
+  const meshes = (far ? [geo, far] : [geo]).map(g => { const m = new THREE.InstancedMesh(g, mat, list.length); m.frustumCulled = false; if (colors && list.length) m.setColorAt(0, colors[0]); m.count = 0; return m; });
   return {
     mesh: meshes[0], meshes,
     update(cx, cz, fx = 0, fz = 0) {
       const n = [0, 0];
       for (let i = 0; i < list.length; i++) {
         const [x, y, z, s = 1, ry = 0] = list[i], px = near(x, cx), pz = near(z, cz), dx = px - cx, dz = pz - cz, d2 = dx * dx + dz * dz;
-        if (d2 > maxR * maxR || (d2 > 6400 && dx * fx + dz * fz < Math.sqrt(d2) * 0.25)) continue;   // jauh / di luar pandangan
+        if (d2 > maxR * maxR || (d2 > 6400 && dx * fx + dz * fz < Math.sqrt(d2) * (LITE ? 0.1 : 0.25))) continue;   // jauh / di luar pandangan
         const q = d2 > maxR * maxR * 0.74 ? Math.max(0.001, (1 - Math.sqrt(d2) / maxR) / 0.14) : 1, S = s * q * q * (3 - 2 * q);   // muncul/hilang membesar-mengecil, tidak mendadak
         const k = far && d2 > nearR * nearR ? 1 : 0, e = meshes[k].instanceMatrix.array, o = n[k]++ * 16, co = Math.cos(ry) * S, si = Math.sin(ry) * S;
         e[o] = co; e[o + 1] = 0; e[o + 2] = -si; e[o + 3] = 0; e[o + 4] = 0; e[o + 5] = S; e[o + 6] = 0; e[o + 7] = 0;
         e[o + 8] = si; e[o + 9] = 0; e[o + 10] = co; e[o + 11] = 0; e[o + 12] = px; e[o + 13] = y; e[o + 14] = pz; e[o + 15] = 1;
-        if (colors) meshes[k].setColorAt(n[k] - 1, c.copy(colors[i]));
+        if (colors) meshes[k].setColorAt(n[k] - 1, colors[i]);
       }
       meshes.forEach((m, k) => { m.count = n[k]; m.visible = n[k] > 0; m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; });
     },
@@ -132,7 +133,7 @@ export function buildWorld(scene, { shadows = false } = {}) {
   sun.position.copy(SUN_DIR).multiplyScalar(200);
   const rim = new THREE.DirectionalLight('#9fc6ff', 0.7);
   rim.position.set(-SUN_DIR.x, 0.35, -SUN_DIR.z).normalize().multiplyScalar(100);
-  scene.add(new THREE.HemisphereLight('#cfdcef', '#8f9672', 0.9), sun, sun.target, rim);
+  scene.add(new THREE.HemisphereLight('#cfdcef', '#8f9672', LITE ? 1.05 : 0.9), sun, sun.target); if (!LITE) scene.add(rim);   // HP: satu cahaya arah saja
   const SH_R = 70, SH_MAP = 2048;
   if (shadows) {
     sun.castShadow = true;
@@ -167,7 +168,7 @@ export function buildWorld(scene, { shadows = false } = {}) {
 
   const wn = waterNormals(); wn.repeat.set(36, 36);
   const water = new THREE.Mesh(new THREE.PlaneGeometry(2400, 2400).rotateX(-Math.PI / 2),
-    new THREE.MeshPhongMaterial({ color: 0x23aee0, specular: 0xcff4ff, shininess: 120, normalMap: wn, normalScale: new THREE.Vector2(0.45, 0.45), transparent: true, opacity: 0.86 }));
+    new THREE.MeshPhongMaterial({ color: 0x23aee0, specular: 0xcff4ff, shininess: 120, normalMap: wn, normalScale: new THREE.Vector2(0.45, 0.45), transparent: !LITE, opacity: 0.86 }));
   scene.add(water);
   anim.push(t => { wn.offset.set(t * 0.004, t * 0.0025); });
 
@@ -278,12 +279,13 @@ export function buildWorld(scene, { shadows = false } = {}) {
       const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: blobTex, color: new THREE.Color(color).lerp(new THREE.Color(0xffffff), 0.55), opacity: 0.75, depthWrite: false, fog: false }));
       halo.scale.setScalar(15); halo.position.z = -4.5;   // selalu di belakang huruf, jangan memudarkan mukanya
       halo.renderOrder = 1; mesh.renderOrder = 2;   // semua cahaya dulu, baru huruf: cahaya huruf lain tidak memucatkan
-      mesh.add(halo); scene.add(mesh);
+      halo.updateMatrix(); halo.matrixAutoUpdate = false; mesh.add(halo); scene.add(mesh);
       items.push({ data, mesh, halo, home, phase: rand() * 6, state: 'idle', t: 0 });
     });
   });
 
   const tmp = new THREE.Vector3();
+  let beat = 0;
   return {
     items, hit, life, lms,
     update(t, dt, cam, focus, dir = { x: 0, z: 0 }) {
@@ -294,10 +296,12 @@ export function buildWorld(scene, { shadows = false } = {}) {
       water.position.set(cam.x, 0, cam.z);
       for (const mv of movers) {
         const p = mv.obj.position; p.x = near(mv.x, cam.x); p.z = near(mv.z, cam.z);
-        if (mv.x || mv.z) mv.obj.visible = (p.x - cam.x) ** 2 + (p.z - cam.z) ** 2 < 230000;   // di balik kabut: lewati
+        if (mv.x || mv.z) mv.obj.visible = (p.x - cam.x) ** 2 + (p.z - cam.z) ** 2 < (FOG.far + 40) ** 2;   // di balik kabut: lewati
       }
+      for (const grp of [city.buildings, city.ground, city.ao]) for (const m of grp.children) { const b = m.geometry.boundingSphere; if (b) m.visible = Math.hypot(b.center.x + grp.position.x - cam.x, b.center.z + grp.position.z - cam.z) - b.radius < FOG.far; }
       const dl = Math.hypot(dir.x, dir.z) || 1;
-      for (const w of instanced) w.update(cam.x, cam.z, dir.x / dl, dir.z / dl);
+      beat++;
+      for (let i = 0; i < instanced.length; i++) if (!LITE || beat < 3 || (beat + i) % 2 === 0) instanced[i].update(cam.x, cam.z, dir.x / dl, dir.z / dl);   // HP: bergantian tiap 2 frame
       if (!shadows) return;
       // Kotak bayangan 140×140 di antara pesawat dan jatuhnya bayangan, digeser per texel (tidak berkedip).
       const g = Math.max(heightAt(focus.x, focus.z), 0), k = (focus.y - g) / SUN_DIR.y * 0.5, texel = SH_R * 2 / SH_MAP;

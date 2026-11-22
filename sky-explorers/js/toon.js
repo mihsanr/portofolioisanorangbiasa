@@ -2,6 +2,7 @@
 // Highlight/rim ditambahkan dengan menambal chunk shader toon three.js sekali (uniform default 0 =
 // material toon lain tidak berubah). Murah: tidak ada pass tambahan, hanya beberapa baris di shader.
 import * as THREE from 'three';
+import { LITE } from './config.js';
 
 let patched = false;
 function patch() {
@@ -12,11 +13,13 @@ function patch() {
   if (!C.lights_toon_pars_fragment.includes(line)) return;  // versi three berubah: biarkan toon polos
   C.lights_toon_pars_fragment = 'uniform float toonSpec;\nuniform float toonShine;\nuniform float toonRim;\n' +
     C.lights_toon_pars_fragment.replace(line, `${line}
+	#ifdef TOON_HL
 	vec3 toonHalf = normalize( directLight.direction + geometryViewDir );
 	float toonS = pow( max( dot( geometryNormal, toonHalf ), 0.0 ), max( toonShine, 1.0 ) );
 	reflectedLight.directSpecular += directLight.color * smoothstep( 0.44, 0.62, toonS ) * toonSpec;
 	float toonR = 1.0 - max( dot( geometryNormal, geometryViewDir ), 0.0 );
-	reflectedLight.directSpecular += directLight.color * smoothstep( 0.54, 0.74, toonR ) * max( dot( geometryNormal, directLight.direction ), 0.0 ) * toonRim;`);
+	reflectedLight.directSpecular += directLight.color * smoothstep( 0.54, 0.74, toonR ) * max( dot( geometryNormal, directLight.direction ), 0.0 ) * toonRim;
+	#endif`);
 }
 
 // Tangga cahaya (dot(N,L) dari -1..1): 4 tingkat dengan peralihan lembut (tidak bergerigi). Sisi gelap tetap diterangi hemisphere light.
@@ -31,16 +34,24 @@ export const GRADIENT = (() => {
 // spec = kuat highlight, shine = kecil-besarnya titik highlight, rim = cahaya tepi.
 // sway = daun bergoyang tertiup angin (InstancedMesh, dihitung di GPU).
 export const TIME = { value: 0 };
-export function toon(params = {}, { spec = 0, shine = 40, rim = 0, sway = false, clouds = false } = {}) {
+export function toon(params = {}, { spec = 0, shine = 40, rim = 0, sway = false, clouds = false, hq = false } = {}) {
   patch();
+  if (LITE && !hq) spec = rim = 0;                       // HP: dunia tanpa kilau/rim (hanya pesawat & huruf)
   const m = new THREE.MeshToonMaterial({ gradientMap: GRADIENT, ...params });
+  if (spec || rim) m.defines.TOON_HL = '';
   m.onBeforeCompile = sh => {
     sh.uniforms.toonSpec = { value: spec }; sh.uniforms.toonShine = { value: shine }; sh.uniforms.toonRim = { value: rim };
     if (clouds) {   // bayangan awan bergerak di daratan (gelombang sinus, berulang tiap 1000 unit = satu petak dunia)
       sh.uniforms.uTime = TIME;
+      const CLOUD = 'sin(vCl.x * 4.0 - uTime * 0.05 + 1.6 * sin(vCl.y * 3.0)) * cos(vCl.y * 5.0 + uTime * 0.03 + 1.3 * sin(vCl.x * 2.0)) + 0.35 * sin(vCl.x * 11.0 + 2.0 * sin(vCl.y * 7.0) - uTime * 0.07)';
+      if (LITE) {   // HP: dihitung per titik, bukan per piksel
+        sh.vertexShader = 'varying float vClN; uniform float uTime;\n' + sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>\n vec2 vCl = (modelMatrix * vec4(transformed, 1.0)).xz * 0.00628318; vClN = ${CLOUD};`);
+        sh.fragmentShader = 'varying float vClN;\n' + sh.fragmentShader.replace('#include <color_fragment>', '#include <color_fragment>\n diffuseColor.rgb *= 1.0 - 0.28 * clamp((vClN - 0.3) * 5.0, 0.0, 1.0);');
+        return;
+      }
       sh.vertexShader = 'varying vec2 vCl;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n vCl = (modelMatrix * vec4(transformed, 1.0)).xz * 0.00628318;');
       sh.fragmentShader = 'varying vec2 vCl; uniform float uTime;\n' + sh.fragmentShader.replace('#include <color_fragment>', `#include <color_fragment>
-  float clN = sin(vCl.x * 4.0 - uTime * 0.05 + 1.6 * sin(vCl.y * 3.0)) * cos(vCl.y * 5.0 + uTime * 0.03 + 1.3 * sin(vCl.x * 2.0)) + 0.35 * sin(vCl.x * 11.0 + 2.0 * sin(vCl.y * 7.0) - uTime * 0.07);
+  float clN = ${CLOUD};
   diffuseColor.rgb *= 1.0 - 0.32 * smoothstep(0.3, 0.5, clN);`);
     }
     if (sway) {

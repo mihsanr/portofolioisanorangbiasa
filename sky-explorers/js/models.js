@@ -2,12 +2,13 @@
 // tegas di sudut), kotak membulat, lathe untuk badan. Tiap model dipanggang jadi satu geometri
 // berwarna vertex → satu draw call, bisa di-instance. Tanpa file GLB.
 import * as THREE from 'three';
-import { mergeGeometries, toCreasedNormals } from 'three/addons/BufferGeometryUtils.js';
+import { mergeGeometries } from 'three/addons/BufferGeometryUtils.js';
 import { RoundedBoxGeometry } from 'three/addons/RoundedBoxGeometry.js';
 import { Font } from 'three/addons/FontLoader.js';
 import { TextGeometry } from 'three/addons/TextGeometry.js';
 import fontData from './font.js';
 import { toon } from './toon.js';
+import { LITE } from './config.js';
 
 const { PI } = Math;
 const DEG = PI / 180;
@@ -17,17 +18,74 @@ const V = (x, y) => new THREE.Vector2(x, y);
 
 // Plastik mengilap (pesawat & huruf) memantulkan langit lewat envMap (diisi main.js).
 // Gaya kartun: cahaya bertingkat + highlight putih tegas + rim (js/toon.js).
-export const toyMat = toon({ vertexColors: true }, { spec: 0.9, shine: 50, rim: 0.35 });
+export const toyMat = toon({ vertexColors: true }, { spec: 0.9, shine: 50, rim: 0.35, hq: true });
 export const glassMat = new THREE.MeshStandardMaterial({ color: 0x9fdcff, roughness: 0.06, metalness: 0, envMapIntensity: 1.4 });
 // Dunia: Lambert (murah), sama seperti material dunia Pemburu Kaset.
 export const worldMat = toon({ vertexColors: true }, { spec: 0.18, shine: 24, rim: 0.18 });
+
+// Material yang dipakai bersama Mesh & InstancedMesh memaksa three.js mencocokkan ulang program tiap objek tiap frame.
+// variant() memberi salinan khusus untuk instans (dan instans berwarna) → tidak ada pencocokan ulang.
+const variants = new WeakMap();
+export function variant(mat, kind) {
+  const o = variants.get(mat) || variants.set(mat, {}).get(mat);
+  if (!o[kind]) { const c = o[kind] = mat.clone(); c.onBeforeCompile = mat.onBeforeCompile; c.customProgramCacheKey = mat.customProgramCacheKey; }
+  return o[kind];
+}
+
+// Normal creased versi cepat (array mentah; hasil sama dengan toCreasedNormals three.js tetapi ±10x lebih cepat).
+function creased(geo, angle) {
+  const g = geo.index ? geo.toNonIndexed() : geo, P = g.attributes.position.array, n = P.length / 3, F = new Float32Array(n), N = new Float32Array(n * 3), cos = Math.cos(angle) - 1e-4;
+  for (let i = 0; i < P.length; i += 9) {
+    const ax = P[i + 3] - P[i], ay = P[i + 4] - P[i + 1], az = P[i + 5] - P[i + 2], bx = P[i + 6] - P[i], by = P[i + 7] - P[i + 1], bz = P[i + 8] - P[i + 2];
+    let x = ay * bz - az * by, y = az * bx - ax * bz, z = ax * by - ay * bx; const l = Math.hypot(x, y, z) || 1;
+    F[i / 3] = x / l; F[i / 3 + 1] = y / l; F[i / 3 + 2] = z / l;
+  }
+  const head = new Map(), next = new Int32Array(n).fill(-1);
+  const K = new Float64Array(n);
+  for (let i = 0; i < n; i++) {
+    const k = K[i] = ((Math.round(P[i * 3] * 250) + 65536) * 131072 + Math.round(P[i * 3 + 1] * 250) + 65536) * 131072 + Math.round(P[i * 3 + 2] * 250) + 65536;
+    const h = head.get(k); if (h !== undefined) next[i] = h; head.set(k, i);
+  }
+  for (let i = 0; i < n; i++) {
+    const f = i - i % 3, fx = F[f], fy = F[f + 1], fz = F[f + 2]; let x = 0, y = 0, z = 0;
+    for (let j = head.get(K[i]); j >= 0; j = next[j]) { const q = j - j % 3; if (F[q] * fx + F[q + 1] * fy + F[q + 2] * fz >= cos) { x += F[q]; y += F[q + 1]; z += F[q + 2]; } }
+    const l = Math.hypot(x, y, z); if (l > 1e-6) { N[i * 3] = x / l; N[i * 3 + 1] = y / l; N[i * 3 + 2] = z / l; } else { N[i * 3] = fx; N[i * 3 + 1] = fy; N[i * 3 + 2] = fz; }
+  }
+  g.setAttribute('normal', new THREE.BufferAttribute(N, 3));
+  return g;
+}
+// Titik kembar disatukan (indeks) + normal 8-bit + warna 16-bit: kerja titik GPU & memori turun 2–4x.
+export const i8 = a => { const o = new Int8Array(a.length); for (let i = 0; i < a.length; i++) o[i] = Math.round(a[i] * 127); return new THREE.BufferAttribute(o, 3, true); };
+export const u16 = (a, n = 3) => { const o = new Uint16Array(a.length); for (let i = 0; i < a.length; i++) o[i] = Math.round(Math.min(1, Math.max(0, a[i])) * 65535); return new THREE.BufferAttribute(o, n, true); };
+export function weld(g) {
+  const P = g.attributes.position.array, N = g.attributes.normal.array, C = g.attributes.color?.array, n = P.length / 3;
+  let size = 1; while (size < n * 2) size <<= 1;
+  const table = new Int32Array(size).fill(-1), idx = n > 65535 ? new Uint32Array(n) : new Uint16Array(n), from = [];
+  for (let i = 0; i < n; i++) {
+    const a = i * 3;
+    let h = Math.imul(Math.round(P[a] * 400), 73856093) ^ Math.imul(Math.round(P[a + 1] * 400), 19349663) ^ Math.imul(Math.round(P[a + 2] * 400), 83492791) ^ Math.imul(Math.round(N[a] * 30), 2654435) ^ Math.imul(Math.round(N[a + 1] * 30), 97531) ^ Math.imul(Math.round(N[a + 2] * 30), 1299721);
+    if (C) h ^= Math.imul(Math.round(C[a] * 200), 15485863) ^ Math.imul(Math.round(C[a + 1] * 200), 32452843);
+    h = (h ^ h >>> 15) & size - 1;
+    for (;;) {
+      const t = table[h];
+      if (t < 0) { table[h] = idx[i] = from.length; from.push(i); break; }
+      const b = from[t] * 3;
+      if (Math.abs(P[a] - P[b]) < 2e-3 && Math.abs(P[a + 1] - P[b + 1]) < 2e-3 && Math.abs(P[a + 2] - P[b + 2]) < 2e-3 && Math.abs(N[a] - N[b]) + Math.abs(N[a + 1] - N[b + 1]) + Math.abs(N[a + 2] - N[b + 2]) < 0.04 && (!C || Math.abs(C[a] - C[b]) + Math.abs(C[a + 1] - C[b + 1]) + Math.abs(C[a + 2] - C[b + 2]) < 0.006)) { idx[i] = t; break; }
+      h = h + 1 & size - 1;
+    }
+  }
+  const m = from.length, o = new THREE.BufferGeometry(), pick = A => { const r = new Float32Array(m * 3); for (let i = 0; i < m; i++) { const b = from[i] * 3; r[i * 3] = A[b]; r[i * 3 + 1] = A[b + 1]; r[i * 3 + 2] = A[b + 2]; } return r; };
+  o.setAttribute('position', new THREE.BufferAttribute(pick(P), 3)); o.setAttribute('normal', i8(pick(N))); if (C) o.setAttribute('color', u16(pick(C)));
+  o.setIndex(new THREE.BufferAttribute(idx, 1));
+  return o;
+}
 
 // geo → ditransformasi, normal creased, diberi warna per muka (color boleh fungsi pusat-muka → warna).
 export function part(geo, color, { p = [0, 0, 0], r = [0, 0, 0], s = [1, 1, 1], crease = 48, soft = false } = {}) {   // soft = warna per titik (pola tidak bergerigi segitiga)
   for (const k of Object.keys(geo.attributes)) if (k !== 'position') geo.deleteAttribute(k);
   geo.clearGroups();
   geo.applyMatrix4(m4.compose(new THREE.Vector3(...p), q.setFromEuler(e.set(...r)), new THREE.Vector3(...s)));
-  const g = toCreasedNormals(geo, crease * DEG);
+  const g = creased(geo, crease * DEG);
   const pos = g.attributes.position, c = new Float32Array(pos.count * 3), ctr = new THREE.Vector3();
   for (let i = 0; i < pos.count; i += 3) {
     if (soft) {
@@ -47,7 +105,7 @@ export function part(geo, color, { p = [0, 0, 0], r = [0, 0, 0], s = [1, 1, 1], 
 // AO dipanggang ke warna vertex: sisi bawah & bagian dekat dasar model lebih gelap (gratis saat render).
 export function bake(parts, ao = true) {
   const g = mergeGeometries(parts);
-  if (!ao) return g;
+  if (!ao) return weld(g);
   g.computeBoundingBox();
   const { min, max } = g.boundingBox, h = Math.max(1e-3, max.y - min.y);
   const p = g.attributes.position, n = g.attributes.normal, c = g.attributes.color;
@@ -56,23 +114,26 @@ export function bake(parts, ao = true) {
     const f = (0.7 + 0.3 * up) * (0.8 + 0.2 * t * t * (3 - 2 * t));
     c.setXYZ(i, c.getX(i) * f, c.getY(i) * f, c.getZ(i) * f);
   }
-  return g;
+  return weld(g);
 }
 
-const sph = (w = 20, h = 14) => new THREE.SphereGeometry(1, w, h);
-const cyl = (rt, rb, h, n = 16) => new THREE.CylinderGeometry(rt, rb, h, n);
-const cone = (r, h, n = 16) => new THREE.ConeGeometry(r, h, n);
-const rbox = (x, y, z, rad = 0.12) => new RoundedBoxGeometry(x, y, z, 2, Math.min(rad, x / 2.01, y / 2.01, z / 2.01));
-const lathe = (pts, n = 24) => new THREE.LatheGeometry(pts.map(([x, y]) => V(x, y)), n);
-const torus = (R, t, rs = 10, ts = 24, arc = PI * 2) => new THREE.TorusGeometry(R, t, rs, ts, arc);
+// Tesselasi: HP memakai ±60% ruas (pesawat tetap penuh). Bentuk bersegi (≤ 8 ruas) tidak diubah.
+let Q = LITE ? 0.6 : 1;
+const q8 = n => (n <= 8 ? n : Math.max(8, Math.round(n * Q)));
+const sph = (w = 20, h = 14) => new THREE.SphereGeometry(1, w <= 6 ? w : Math.max(6, Math.round(w * Q)), h <= 5 ? h : Math.max(5, Math.round(h * Q)));
+const cyl = (rt, rb, h, n = 16) => new THREE.CylinderGeometry(rt, rb, h, q8(n));
+const cone = (r, h, n = 16) => new THREE.ConeGeometry(r, h, q8(n));
+const rbox = (x, y, z, rad = 0.12) => Q < 1 && rad < Math.min(x, y, z) * 0.22 ? new THREE.BoxGeometry(x, y, z) : new RoundedBoxGeometry(x, y, z, Q < 1 ? 1 : 2, Math.min(rad, x / 2.01, y / 2.01, z / 2.01));
+const lathe = (pts, n = 24) => new THREE.LatheGeometry(pts.map(([x, y]) => V(x, y)), q8(n));
+const torus = (R, t, rs = 10, ts = 24, arc = PI * 2) => new THREE.TorusGeometry(R, t, Q < 1 ? Math.min(rs, 6) : rs, q8(ts), arc);
 // Bentuk 2D diekstrusi dengan tepi membulat (bevel) lalu ditengahkan pada tebalnya.
 const slab = (shape, depth, bevel = 0.04) => new THREE.ExtrudeGeometry(shape, {
-  depth, bevelEnabled: true, bevelThickness: bevel, bevelSize: bevel, bevelSegments: 3, curveSegments: 10,
+  depth, bevelEnabled: true, bevelThickness: bevel, bevelSize: bevel, bevelSegments: Q < 1 ? 1 : 3, curveSegments: Q < 1 ? 6 : 10,
 }).translate(0, 0, -depth / 2);
 
 // Gumpalan mulus dari beberapa bola (smooth union): satu permukaan tanpa garis sambung. balls: [x, y, z, r]
 export function blob(balls, detail = 5, k = 0.9, sy = 1) {
-  const g = new THREE.IcosahedronGeometry(1, detail), p = g.attributes.position, d = new THREE.Vector3(), o = new THREE.Vector3();
+  const g = new THREE.IcosahedronGeometry(1, LITE ? Math.max(2, detail - (detail > 5 ? 2 : 1)) : detail), p = g.attributes.position, d = new THREE.Vector3(), o = new THREE.Vector3();
   let W = 0; for (const [x, y, z, r] of balls) { o.add(d.set(x, y, z).multiplyScalar(r * r)); W += r * r; } o.multiplyScalar(1 / W);
   const seen = new Map(), far = Math.max(...balls.map(b => Math.hypot(b[0] - o.x, b[1] - o.y, b[2] - o.z) + b[3])) + k * 2;
   const sdf = (x, y, z) => { let s = 0; for (const b of balls) s += Math.exp(-(Math.hypot(x - b[0], y - b[1], z - b[2]) - b[3]) / k); return -k * Math.log(s); };
@@ -134,7 +195,7 @@ const tipShape = (w, h, r, x0, sx) => { // ujung sayap: lurus di dalam, membulat
 };
 
 function planeMeshes(key) {
-  const K = SKINS[key] || SKINS.classic;
+  const K = SKINS[key] || SKINS.classic, keepQ = Q; Q = LITE ? 0.8 : 1;
   // pola badan per karakter (warna per muka): perut terang, belang kucing, totol dino
   const skin = c => {
     if (c.y < -0.3) return K.belly;
@@ -186,6 +247,7 @@ function planeMeshes(key) {
     ...[0, 1, 2].map(i => part(sph(12, 8), K.prop, { p: [Math.sin(i * 2.094) * 0.34, Math.cos(i * 2.094) * 0.34, 0.05], r: [0, 0.4, -i * 2.094], s: [0.12, 0.34, 0.035] })),
   ]), toyMat);
   prop.position.set(0, -0.08, -1.42);  // diameter ±1,4 ≈ 30% panjang badan (PRD 7.2)
+  Q = keepQ;
   for (const m of [body, glass, prop]) m.castShadow = true;
   return { body, glass, prop };
 }
@@ -209,18 +271,18 @@ export function setPlaneSkin(plane, key) {
 // ── Huruf & angka 3D tebal, tepi membulat ──
 const font = new Font(fontData);
 export function makeGlyph(ch, color) {
-  let g = new TextGeometry(ch, { font, size: ch >= 'a' ? 9.2 : 7.6, depth: 1.7, curveSegments: 9, bevelEnabled: true, bevelThickness: 0.5, bevelSize: 0.32, bevelSegments: 3 });
+  let g = new TextGeometry(ch, { font, size: ch >= 'a' ? 9.2 : 7.6, depth: 1.7, curveSegments: LITE ? 5 : 9, bevelEnabled: true, bevelThickness: 0.5, bevelSize: 0.32, bevelSegments: LITE ? 1 : 3 });
   g.deleteAttribute('uv'); g.deleteAttribute('normal');
-  g = toCreasedNormals(g, 35 * DEG);
+  g = weld(creased(g, 35 * DEG));
   g.center();
   // fog: false + emissive → warna tetap penuh dari jauh (tidak pudar oleh kabut).
-  return new THREE.Mesh(g, toon({ color, emissive: new THREE.Color(color).multiplyScalar(0.32), fog: false, transparent: true }, { spec: 1, shine: 40, rim: 0.4 }));
+  return new THREE.Mesh(g, toon({ color, emissive: new THREE.Color(color).multiplyScalar(0.32), fog: false, transparent: true }, { spec: 1, shine: 40, rim: 0.4, hq: true }));
 }
 
 // Panah penunjuk: panah pipih rebah di bidang XZ, ujung ke -z (arah maju)
 export function makeArrow() {
   const s = new THREE.Shape([[0, 1.35], [1.05, 0.1], [0.42, 0.1], [0.42, -1.05], [-0.42, -1.05], [-0.42, 0.1], [-1.05, 0.1]].map(q => V(...q)));
-  return new THREE.Mesh(part(slab(s, 0.22, 0.1).rotateX(-PI / 2), 0xffffff, { crease: 40 }), toon({ vertexColors: true, fog: false }, { spec: 0.6, shine: 30, rim: 0.3 }));
+  return new THREE.Mesh(part(slab(s, 0.22, 0.1).rotateX(-PI / 2), 0xffffff, { crease: 40 }), toon({ vertexColors: true, fog: false }, { spec: 0.6, shine: 30, rim: 0.3, hq: true }));
 }
 
 // ── Objek dunia ──

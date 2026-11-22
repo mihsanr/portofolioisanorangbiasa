@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { NO_PHOTO, CRASH_VO, FLIGHT, LETTERS, NUMBERS, COLORS, THRUST, FOG } from './config.js';
+import { LITE, NO_PHOTO, CRASH_VO, FLIGHT, LETTERS, NUMBERS, COLORS, THRUST, FOG } from './config.js';
 import { buildWorld, heightAt, near, wrapC, blobMat } from './world.js';
 import { makePlane, makeArrow, setPlaneSkin, SKINS } from './models.js';
 import { createEnvironment } from './sky.js';
@@ -14,6 +14,9 @@ import { oldTown, LEMBANG } from './districts.js';
 const $ = s => document.querySelector(s);
 const $$ = s => document.querySelectorAll(s);
 
+// Beri kesempatan layar pemuat tampil dulu sebelum dunia dibangun (pembangunan memakan CPU).
+await new Promise(r => { requestAnimationFrame(() => setTimeout(r, 30)); setTimeout(r, 250); });   // (tab tersembunyi: rAF tidak jalan)
+
 // ── Simpan lokal (versi skema untuk migrasi; tanpa data pribadi) ──
 const SAVE_KEY = 'skyexplorers.save';
 const save = (() => {
@@ -27,17 +30,21 @@ const persist = () => { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save
 
 // ── Render ──
 const canvas = $('#c');
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
-let pixelRatio = Math.min(devicePixelRatio, 1.5);
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance' });   // penghalusan tepi dilakukan di render target / pass garis
+renderer.debug.checkShaderErrors = false;
+// Resolusi otomatis: mulai dari tangga pertama, turun bila frame tidak terkejar.
+const LADDER = (LITE ? [1.25, 1, 0.85, 0.7] : [1.5, 1.25, 1, 0.8]).map(v => Math.min(v, devicePixelRatio)).filter((v, i, a) => !i || v < a[i - 1]);
+let rung = 0, pixelRatio = LADDER[0];
 renderer.setPixelRatio(pixelRatio);
 renderer.toneMapping = THREE.ACESFilmicToneMapping;  // sama dengan Pemburu Kaset
 // Bayangan matahari sungguhan hanya di desktop (HP: bayangan bulat saja supaya ringan).
-const SHADOWS = !matchMedia('(pointer: coarse)').matches && !/[?&]noshadow/.test(location.search);
+const SHADOWS = !LITE && !/[?&]noshadow/.test(location.search);
 if (SHADOWS) { installLeanShadows(); renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFShadowMap; }
 const scene = new THREE.Scene();
 scene.environment = createEnvironment(renderer);    // hanya material Standard (kaca kokpit) yang memantulkan langit
 const camera = new THREE.PerspectiveCamera(60, 1, 0.5, 1800);
-function resize() { renderer.setSize(innerWidth, innerHeight); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); }
+let W = innerWidth, H = innerHeight;   // disimpan: membaca innerWidth tiap frame memaksa browser menghitung ulang tata letak
+function resize() { W = innerWidth; H = innerHeight; renderer.setSize(W, H); camera.aspect = W / H; camera.updateProjectionMatrix(); }
 addEventListener('resize', resize); resize();
 
 const world = buildWorld(scene, { shadows: SHADOWS });
@@ -56,17 +63,17 @@ const pSun = new THREE.DirectionalLight('#ffe9c8', 2.6); pSun.position.set(-2, 4
 pScene.add(new THREE.HemisphereLight('#dfeaff', '#9aa77d', 1.5), pSun);
 function portrait(key, make, { bg = '#8fd0ff', back = false, zoom = 1, light = 1 } = {}) {
   if (portraits.has(key)) return portraits.get(key);
-  const o = make(), W = 320, H = 240, pr = renderer.getPixelRatio(), dir = back ? 1 : -1;
+  const o = make(), PW = 320, PH = 240, K = 2, pr = renderer.getPixelRatio(), dir = back ? 1 : -1;   // digambar 2x lalu dikecilkan (halus)
   pSun.position.set(-2, 4, dir * 4);
   pScene.add(o); o.updateMatrixWorld(true);
   const sp = new THREE.Box3().setFromObject(o).getBoundingSphere(new THREE.Sphere());
   pCam.position.copy(sp.center).add(new THREE.Vector3(-0.55, 0.3, dir).normalize().multiplyScalar(sp.radius * 3.3 / zoom));
   pCam.lookAt(sp.center); pScene.background = new THREE.Color(bg);
-  renderer.setRenderTarget(null); renderer.setViewport(0, 0, W / pr, H / pr); renderer.setScissor(0, 0, W / pr, H / pr); renderer.setScissorTest(true);
+  renderer.setRenderTarget(null); const cw = Math.min(PW * K, renderer.domElement.width), ch = cw * PH / PW; renderer.setViewport(0, 0, cw / pr, ch / pr); renderer.setScissor(0, 0, cw / pr, ch / pr); renderer.setScissorTest(true);
   renderer.render(pScene, pCam);
-  const c = document.createElement('canvas'); c.width = W; c.height = H;
-  c.getContext('2d').drawImage(renderer.domElement, 0, renderer.domElement.height - H, W, H, 0, 0, W, H);
-  renderer.setScissorTest(false); renderer.setViewport(0, 0, innerWidth, innerHeight);
+  const c = document.createElement('canvas'); c.width = PW; c.height = PH;
+  c.getContext('2d').drawImage(renderer.domElement, 0, renderer.domElement.height - ch, cw, ch, 0, 0, PW, PH);
+  renderer.setScissorTest(false); renderer.setViewport(0, 0, W, H);
   pScene.remove(o);
   const url = c.toDataURL('image/webp', 0.9);
   portraits.set(key, url); return url;
@@ -75,7 +82,9 @@ function portrait(key, make, { bg = '#8fd0ff', back = false, zoom = 1, light = 1
 // Pilih karakter pesawat: ubin bergambar (tanpa perlu membaca); pesawat di layar langsung berganti.
 if (!SKINS[save.skin]) save.skin = 'classic';
 const SKIN_BG = { classic: '#ffd0c9', police: '#bcd8ff', cat: '#ffe4a6', dino: '#c9f2bd' };
-$('#planes').innerHTML = Object.keys(SKINS).map(k => `<button class="plane" role="radio" data-skin="${k}" aria-label="${SKINS[k].name}"><img alt="" src="${portrait('s-' + k, () => makePlane(k).root, { bg: SKIN_BG[k], zoom: 1.5 })}"></button>`).join('');
+$('#planes').innerHTML = Object.keys(SKINS).map(k => `<button class="plane" role="radio" data-skin="${k}" aria-label="${SKINS[k].name}"><img alt="" src="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22320%22 height=%22240%22/%3E" style="background:${SKIN_BG[k]}"></button>`).join('');
+// Potret pesawat digambar satu per satu setelah dunia tampil.
+const drawSkins = () => { const list = Object.keys(SKINS), next = () => { const k = list.shift(); if (!k) return; $(`#planes [data-skin=${k}] img`).src = portrait('s-' + k, () => makePlane(k).root, { bg: SKIN_BG[k], zoom: 1.5 }); outline.render(); setTimeout(next, 120); }; setTimeout(next, 60); };
 function showSkin() { $$('#planes .plane').forEach(b => b.setAttribute('aria-checked', b.dataset.skin === save.skin)); }
 $('#planes').addEventListener('click', e => {
   const b = e.target.closest('.plane'); if (!b) return;
@@ -105,7 +114,7 @@ function syncSound() {
 $$('.mute').forEach(b => b.addEventListener('click', () => { save.muted = !save.muted; persist(); syncSound(); }));
 $$('.vol').forEach(r => r.addEventListener('input', () => { save.volume = +r.value; save.muted = false; persist(); syncSound(); }));
 syncSound();
-const firstGesture = () => { audio.unlock(); audio.music(true); audio.preloadVoices([...all.map(voName), CRASH_VO].filter(Boolean)); LETTERS.forEach(d => { if (d.big && !noPhoto.has(d.ch)) new Image().src = `assets/words/${d.lo}.webp`; }); };
+const firstGesture = () => { audio.unlock(); audio.music(true); audio.preloadVoices([...all.map(voName), CRASH_VO].filter(Boolean)); const pics = LETTERS.filter(d => d.big && !noPhoto.has(d.ch)), nextPic = () => { const d = pics.shift(); if (!d) return; const i = new Image(); i.onload = i.onerror = () => setTimeout(nextPic, 300); i.src = `assets/words/${d.lo}.webp`; }; setTimeout(nextPic, 4000); };
 addEventListener('pointerdown', firstGesture, { once: true });
 addEventListener('keydown', firstGesture, { once: true });
 $$('button').forEach(b => b.addEventListener('click', () => audio.play('click')));
@@ -371,9 +380,9 @@ function ambience(dt) {
 // ── Loop ──
 const clock = new THREE.Clock();
 let smoothDt = 1 / 60;   // langkah waktu diratakan → gerak tidak tersentak saat frame tidak rata
-let t = 0, wasBoost = false, slowFrames = 0, frames = 0;
+let t = 0, wasBoost = false, slowMs = 0, frames = 0, warm = 0;
 const AUTOPILOT = { x: 0.35, y: 0, boost: false }, NO_INPUT = { x: 0, y: 0, boost: false };
-const R2 = FLIGHT.collectRadius ** 2, SHOW = 340;   // huruf terlihat sampai 340 unit, membesar dengan jarak agar tetap terbaca
+const R2 = FLIGHT.collectRadius ** 2, SHOW = LITE ? 290 : 340;   // huruf terlihat sampai 340 unit, membesar dengan jarak agar tetap terbaca
 const pos = flight.state.pos;
 // Panah petunjuk: maks. 3 objective terdekat dalam HINT_R; objective jauh tidak ditunjuk.
 const HINT_R = 260, inds = [0, 1, 2].map(() => {
@@ -390,15 +399,16 @@ scene.add(guide);
 // Menu: kamera mengitari wajah pesawat yang dipilih, digeser supaya tidak tertutup panel.
 const heroLook = new THREE.Vector3();
 function heroCamera(dt) {
-  const a = flight.state.yaw + Math.sin(t * 0.35) * 0.55 - 0.45, wide = innerWidth > innerHeight, D = wide ? 8.5 : 10.5;
+  const a = flight.state.yaw + Math.sin(t * 0.35) * 0.55 - 0.45, wide = W > H, D = wide ? 8.5 : 10.5;
   camera.up.set(0, 1, 0); camera.position.set(pos.x - Math.sin(a) * D, pos.y + 1.6, pos.z - Math.cos(a) * D);
   camera.lookAt(heroLook.copy(pos));
-  if (wide) camera.setViewOffset(innerWidth, innerHeight, -Math.min(230, innerWidth * 0.17), 0, innerWidth, innerHeight);
-  else camera.setViewOffset(innerWidth, innerHeight, 0, innerHeight * 0.27, innerWidth, innerHeight);
+  if (wide) camera.setViewOffset(W, H, -Math.min(230, W * 0.17), 0, W, H);
+  else camera.setViewOffset(W, H, 0, H * 0.27, W, H);
   hop = Math.max(0, hop - dt * 1.4);
   plane.visual.rotation.z += (1 - Math.pow(1 - hop, 3)) * Math.PI * 2; plane.visual.visible = true;
 }
 
+world.update(0, 0.016, camera.position, pos, camera.getWorldDirection(camDir)); outline.prepare();
 renderer.setAnimationLoop(() => {
   const raw = Math.min(clock.getDelta(), 0.05), dt = smoothDt += (raw - smoothDt) * 0.2;
   if (mode === 'pause' || mode === 'book' || document.hidden) return;  // tidak render saat jeda
@@ -446,10 +456,10 @@ renderer.setAnimationLoop(() => {
       m.position.set(near(it.home.x, pos.x), it.home.y + Math.sin(t * 1.6 + it.phase) * 0.6, near(it.home.z, pos.z)); // salinan terdekat
       const d2 = m.position.distanceToSquared(pos);
       const d = Math.sqrt(d2), tgt = quests.target === it.data, have = owned(it.data.ch) && !tgt, vis = Math.min(1, Math.max(0, (SHOW - d) / 40));
-      m.visible = vis > 0.15;
+      m.visible = vis > 0.15; m.matrixAutoUpdate = m.visible;
       const want = Math.max(0.001, vis) * (have ? 0.7 : 1) * Math.min(2.6, Math.max(1, 1 + (d - 50) / 120));
       it.s = it.s === undefined ? want : it.s + (want - it.s) * (1 - Math.exp(-7 * dt)); m.scale.setScalar(it.s);
-      it.halo.visible = !have;   // sudah dimiliki: lebih kecil & tanpa cahaya, warna tetap penuh
+      it.halo.visible = !have && (!LITE || d < 150);   // sudah dimiliki: lebih kecil & tanpa cahaya, warna tetap penuh
       if (mode === 'play' && !flight.crashed && d2 < R2) collect(it);
       else if (tgt || !have && d2 < HINT_R * HINT_R) near3.push([tgt ? -1 : d2, it]);   // huruf misi selalu ditunjuk lebih dulu
     } else if (it.state === 'pop') {
@@ -472,9 +482,9 @@ renderer.setAnimationLoop(() => {
     guide.material.color.set(colorNum(first.data)); guide.material.emissive.set(colorNum(first.data)).multiplyScalar(0.4);
   }
   inds.forEach(el => {
-    const it = el.it;
-    el.hidden = !(it && mode === 'play' && save.hint && !flight.crashed);
-    if (el.hidden) { el.snap = true; return; }
+    const it = el.it, hide = !(it && mode === 'play' && save.hint && !flight.crashed);
+    if (el.hidden !== hide) el.hidden = hide;
+    if (hide) { el.snap = true; return; }
     ndc.copy(it.mesh.position).add({ x: 0, y: 3.5 * it.mesh.scale.y, z: 0 }).project(camera);
     const behind = ndc.z > 1, lim = el.on ? 1.05 : 1, onScreen = el.on = !behind && Math.abs(ndc.x) < 0.9 * lim && Math.abs(ndc.y) < 0.85 * lim;
     let x = ndc.x, y = ndc.y, ang = 0;
@@ -484,8 +494,10 @@ renderer.setAnimationLoop(() => {
       const k2 = 0.86 / Math.max(Math.abs(x) / 0.92, Math.abs(y) / 0.8, 1e-3);
       x *= k2; y *= k2;
     }
-    el.classList.toggle('on-screen', onScreen); el.classList.toggle('tgt', quests.target === it.data);
-    let px = (x * 0.5 + 0.5) * innerWidth, py = Math.min((-y * 0.5 + 0.5) * innerHeight, onScreen ? 1e9 : innerHeight - (innerHeight > innerWidth ? 215 : innerHeight < 520 ? 105 : 165));   // jangan tertutup tombol roket & strip abjad
+    const tgtNow = quests.target === it.data;
+    if (el.was !== onScreen) el.classList.toggle('on-screen', el.was = onScreen);
+    if (el.wasT !== tgtNow) el.classList.toggle('tgt', el.wasT = tgtNow);
+    let px = (x * 0.5 + 0.5) * W, py = Math.min((-y * 0.5 + 0.5) * H, onScreen ? 1e9 : H - (H > W ? 215 : H < 520 ? 105 : 165));   // jangan tertutup tombol roket
     for (let k = 0; k < 3; k++) for (const [qx, qy] of placed) if (Math.hypot(px - qx, py - qy) < 62) {   // jangan bertumpuk: geser sepanjang tepi
       if (Math.abs(x) > Math.abs(y) * 1.1) py = qy + (py > qy ? 64 : -64); else px = qx + (px > qx ? 64 : -64);
     }
@@ -494,9 +506,8 @@ renderer.setAnimationLoop(() => {
     const k3 = 1 - Math.exp(-(onScreen ? 16 : 9) * dt), ta = onScreen ? Math.PI / 2 : ang;
     el.px += (px - el.px) * k3; el.py += (py - el.py) * k3; el.a += Math.atan2(Math.sin(ta - el.a), Math.cos(ta - el.a)) * k3;
     el.style.transform = `translate(${el.px.toFixed(1)}px, ${el.py.toFixed(1)}px)`;
-    el.style.setProperty('--c', colorOf(it.data));
+    if (el.ch !== it.data.ch) { el.ch = el.lastChild.textContent = it.data.ch; el.style.setProperty('--c', colorOf(it.data)); }   // DOM disentuh hanya saat berubah
     el.firstChild.style.transform = onScreen ? 'rotate(90deg)' : `rotate(${el.a}rad) translateX(${quests.target === it.data ? 46 : 34}px)`;  // di atas objek: menunjuk ke bawah
-    el.lastChild.textContent = it.data.ch;
   });
 
   const speed01 = (flight.state.speed - FLIGHT.speed) / (FLIGHT.boost - FLIGHT.speed);
@@ -515,9 +526,20 @@ renderer.setAnimationLoop(() => {
 
   outline.render();
 
-  // Resolusi adaptif sederhana: bila sering lambat, turunkan pixel ratio ke 1.
-  if (raw > 0.024) slowFrames++;
-  if (++frames === 180) { if (slowFrames > 60 && pixelRatio > 0.75) { pixelRatio = pixelRatio > 1 ? 1 : 0.75; renderer.setPixelRatio(pixelRatio); } frames = slowFrames = 0; }
+  // Kualitas otomatis: rata-rata 45 frame > 20,5 ms → turun satu tangga; sudah di dasar & masih berat → garis tepi dimatikan.
+  if (mode === 'play' || mode === 'menu') {
+    if (raw < 0.049) { slowMs += raw; frames++; }
+    if (frames >= 45) {
+      const avg = slowMs / frames; frames = slowMs = 0;
+      if (warm++ > 1 && avg > 0.0205) {
+        if (rung < LADDER.length - 1) { pixelRatio = LADDER[++rung]; renderer.setPixelRatio(pixelRatio); }
+        else if (outline.level > 1) outline.level = 1;
+        else if (avg > 0.028) outline.level = 0;
+      }
+    }
+  }
 });
 
 window.__sky = { play, showCard, quests, fx, outline, plane, flight, world, save, setMode, renderer, scene, camera, input: joy, keys, get thrust() { return thrust; } }; // untuk uji otomatis
+document.getElementById('boot')?.remove(); drawSkins();
+performance.mark('siap');

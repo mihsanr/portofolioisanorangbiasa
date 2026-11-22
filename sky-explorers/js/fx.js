@@ -2,6 +2,7 @@
 // gelombang cincin; jejak asap ujung sayap; garis kecepatan saat thrust; piringan blur baling-baling;
 // bintang pusing saat nabrak; goyang kamera kecil. Plus pass outline hitam tipis dari depth buffer.
 import * as THREE from 'three';
+import { LITE } from './config.js';
 
 // ── Tekstur atlas partikel: kiri = bola lembut, kanan = bintang ──
 function atlas() {
@@ -49,10 +50,10 @@ export function createFx(scene, camera, renderer) {
   const points = new THREE.Points(geo, mat);
   points.frustumCulled = false; points.renderOrder = 5;
   scene.add(points);
-  let next = 0;
+  let next = 0, alive = 0;
   const tmpC = new THREE.Color();
   function emit(o) {  // {p, v, life, size, size1, color, alpha, star, grav, drag, spin}
-    const q = P[next]; next = (next + 1) % MAX;
+    const q = P[next]; next = (next + 1) % MAX; alive++;
     q.p = o.p.clone(); q.v = o.v ? o.v.clone() : new THREE.Vector3();
     q.life = q.max = o.life ?? 1; q.s0 = o.size ?? 1; q.s1 = o.size1 ?? q.s0; q.a = o.alpha ?? 1;
     q.c = tmpC.set(o.color ?? 0xffffff).toArray(); q.star = o.star ? 1 : 0; q.g = o.grav ?? 0; q.drag = o.drag ?? 0;
@@ -131,8 +132,12 @@ export function createFx(scene, camera, renderer) {
     // dipanggil tiap frame. state: {plane, speed01, boosting, crashed, flying, dt}
     update(dt, s) {
       // partikel
-      for (let i = 0; i < MAX; i++) {
+      if (!alive && points.visible) points.visible = false;
+      if (alive) points.visible = true;
+      const had = alive; alive = 0;
+      if (had) for (let i = 0; i < MAX; i++) {
         const q = P[i];
+        if (q.life > 0) alive++;
         if (q.life <= 0) { col[i * 4 + 3] = 0; size[i] = 0; continue; }
         q.life -= dt;
         const k = Math.max(0, q.life / q.max);
@@ -142,7 +147,7 @@ export function createFx(scene, camera, renderer) {
         col.set([q.c[0], q.c[1], q.c[2], q.a * Math.min(1, k * 2.5)], i * 4);
         size[i] = q.s1 + (q.s0 - q.s1) * k; shape[i] = q.star;
       }
-      geo.attributes.position.needsUpdate = geo.attributes.color.needsUpdate = geo.attributes.size.needsUpdate = geo.attributes.shape.needsUpdate = true;
+      if (had) geo.attributes.position.needsUpdate = geo.attributes.color.needsUpdate = geo.attributes.size.needsUpdate = geo.attributes.shape.needsUpdate = true;
       mat.uniforms.scale.value = renderer.domElement.height * 0.5 / Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
 
       for (const r of rings) {
@@ -233,10 +238,11 @@ export function propBlur() {
 export function createOutline(renderer, scene, camera, fog) {
   const gl = renderer.getContext();
   const hdr = renderer.extensions.has('EXT_color_buffer_half_float') || renderer.extensions.has('EXT_color_buffer_float');
-  const mobile = matchMedia('(pointer: coarse)').matches;
+  // HP: warna 32-bit (R11G11B10) & depth 24-bit → lebar pita memori separuhnya; satu pass saja (garis + penghalus tepi sekaligus).
+  const small = renderer.extensions.has('EXT_color_buffer_float') ? { format: THREE.RGBFormat, internalFormat: 'R11F_G11F_B10F' } : {};
   const rt = new THREE.WebGLRenderTarget(1, 1, {
-    type: hdr ? THREE.HalfFloatType : THREE.UnsignedByteType, samples: mobile ? 0 : 4,
-    depthTexture: new THREE.DepthTexture(1, 1, THREE.FloatType),
+    type: hdr ? THREE.HalfFloatType : THREE.UnsignedByteType, samples: LITE ? 0 : 2, ...small,
+    depthTexture: new THREE.DepthTexture(1, 1, LITE ? THREE.UnsignedIntType : THREE.FloatType),
   });
   const quadMat = new THREE.ShaderMaterial({
     depthTest: false, depthWrite: false,
@@ -271,7 +277,7 @@ export function createOutline(renderer, scene, camera, fog) {
       }`,
   });
   // FXAA: menghaluskan garis & tepi (MSAA tidak menyentuh garis hasil pass ini; HP tidak memakai MSAA).
-  const rt2 = new THREE.WebGLRenderTarget(1, 1, { type: hdr ? THREE.HalfFloatType : THREE.UnsignedByteType, depthBuffer: false });
+  const rt2 = new THREE.WebGLRenderTarget(1, 1, { type: hdr ? THREE.HalfFloatType : THREE.UnsignedByteType, depthBuffer: false, ...small });
   const aaMat = new THREE.ShaderMaterial({
     depthTest: false, depthWrite: false, uniforms: { tColor: { value: rt2.texture }, texel: quadMat.uniforms.texel },
     vertexShader: quadMat.vertexShader,
@@ -297,20 +303,63 @@ export function createOutline(renderer, scene, camera, fog) {
         #include <colorspace_fragment>
       }`,
   });
+  // Pass tunggal untuk HP: 5 contoh depth, warna tetangga hanya diambil di tepi.
+  const liteMat = new THREE.ShaderMaterial({
+    depthTest: false, depthWrite: false, uniforms: quadMat.uniforms, vertexShader: quadMat.vertexShader,
+    fragmentShader: /* glsl */`
+      uniform sampler2D tColor, tDepth; uniform vec2 texel; uniform float near, far, fadeNear, fadeFar, strength, thick; uniform vec3 lineColor;
+      varying vec2 vUv;
+      float lin(vec2 uv) { return 2.0 * near * far / (far + near - (texture2D(tDepth, uv).x * 2.0 - 1.0) * (far - near)); }
+      void main() {
+        vec4 col = texture2D(tColor, vUv);
+        vec2 o = texel * thick;
+        float c = lin(vUv);
+        if (c < fadeFar) {
+          float l = lin(vUv - vec2(o.x, 0.0)), r = lin(vUv + vec2(o.x, 0.0)), u = lin(vUv + vec2(0.0, o.y)), d = lin(vUv - vec2(0.0, o.y));
+          float e = smoothstep(0.012, 0.045, max(max(l - c, r - c), max(u - c, d - c)) / c) * (1.0 - smoothstep(fadeNear, fadeFar, c));
+          float b = max(abs(l - r), abs(u - d)) / c;
+          if (b > 0.02) col.rgb = mix(col.rgb, 0.25 * (texture2D(tColor, vUv + vec2(texel.x, 0.0)).rgb + texture2D(tColor, vUv - vec2(texel.x, 0.0)).rgb + texture2D(tColor, vUv + vec2(0.0, texel.y)).rgb + texture2D(tColor, vUv - vec2(0.0, texel.y)).rgb), 0.45);
+          col.rgb = mix(col.rgb, mix(col.rgb * 0.2, lineColor, 0.75), e * strength * 0.92);
+        }
+        gl_FragColor = vec4(col.rgb, 1.0);
+        #include <tonemapping_fragment>
+        #include <colorspace_fragment>
+      }`,
+  });
+  const copyMat = new THREE.ShaderMaterial({   // tanpa garis (HP sangat lemah)
+    depthTest: false, depthWrite: false, uniforms: quadMat.uniforms, vertexShader: quadMat.vertexShader,
+    fragmentShader: /* glsl */`
+      uniform sampler2D tColor; varying vec2 vUv;
+      void main() {
+        gl_FragColor = vec4(texture2D(tColor, vUv).rgb, 1.0);
+        #include <tonemapping_fragment>
+        #include <colorspace_fragment>
+      }`,
+  });
   const quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), quadMat);
   const qScene = new THREE.Scene(), qCam = new THREE.Camera();
   qScene.add(quad);
   const size = new THREE.Vector2();
   void gl;
   return {
+    // Semua shader disusun sekali di balik layar pemuat (termasuk benda yang belum terlihat) → tidak ada sendatan saat pertama muncul.
+    prepare() {
+      const back = [];
+      scene.traverse(o => { if (!o.isMesh && !o.isPoints && !o.isLine && !o.isSprite && !o.isGroup) return; back.push([o, o.visible, o.frustumCulled, o.count]); o.visible = true; o.frustumCulled = false; if (o.isInstancedMesh && !o.count) o.count = 1; });
+      rt.setSize(16, 16); renderer.setRenderTarget(rt); renderer.render(scene, camera); renderer.setRenderTarget(null); rt.setSize(1, 1);
+      for (const [o, v, f, c] of back) { o.visible = v; o.frustumCulled = f; if (o.isInstancedMesh) o.count = c; }
+    },
+    level: LITE ? 1 : 2,   // 2 = penuh, 1 = satu pass, 0 = tanpa garis (HP sangat lemah)
     render() {
+
       renderer.getDrawingBufferSize(size);
       if (rt.width !== size.x || rt.height !== size.y) {
-        rt.setSize(size.x, size.y); rt2.setSize(size.x, size.y); quadMat.uniforms.texel.value.set(1 / size.x, 1 / size.y);
-        quadMat.uniforms.thick.value = Math.max(1.3, renderer.getPixelRatio() * 1.05);   // garis ±1 px CSS: tipis, ramah anak
+        rt.setSize(size.x, size.y); if (this.level > 1) rt2.setSize(size.x, size.y); quadMat.uniforms.texel.value.set(1 / size.x, 1 / size.y);
+        quadMat.uniforms.thick.value = Math.max(LITE ? 1 : 1.3, renderer.getPixelRatio() * 1.05);   // garis ±1 px CSS: tipis, ramah anak
       }
       renderer.setRenderTarget(rt);
       renderer.render(scene, camera);
+      if (this.level < 2) { renderer.setRenderTarget(null); quad.material = this.level ? liteMat : copyMat; renderer.render(qScene, qCam); return; }
       renderer.setRenderTarget(rt2); quad.material = quadMat;
       renderer.render(qScene, qCam);
       renderer.setRenderTarget(null); quad.material = aaMat;
