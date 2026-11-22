@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="id" translate="no">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Sky Explorers</title>
+<meta name="description" content="Terbang bebas dan kumpulkan huruf A–Z serta angka 0–9.">
+<meta property="og:title" content="Sky Explorers">
+<meta property="og:description" content="Game 3D belajar huruf A–Z: terbang keliling Bandung dan kumpulkan hurufnya. Main langsung di browser, HP atau desktop.">
+<meta property="og:type" content="website">
+<meta property="og:image" content="icons/icon-512.png">
+<meta name="theme-color" content="#3d9bff">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Sky Explorers">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="style.css?v=1">
+<script type="importmap">{ "imports": { "three": "./vendor/three/three.module.min.js", "three/addons/": "./vendor/three/addons/",
+  "./js/audio.js": "./js/audio.js?v=1",
+  "./js/bandung.js": "./js/bandung.js?v=1",
+  "./js/city.js": "./js/city.js?v=1",
+  "./js/config.js": "./js/config.js?v=1",
+  "./js/districts.js": "./js/districts.js?v=1",
+  "./js/flight.js": "./js/flight.js?v=1",
+  "./js/font.js": "./js/font.js?v=1",
+  "./js/fx.js": "./js/fx.js?v=1",
+  "./js/landmarks.js": "./js/landmarks.js?v=1",
+  "./js/life.js": "./js/life.js?v=1",
+  "./js/main.js": "./js/main.js?v=1",
+  "./js/models.js": "./js/models.js?v=1",
+  "./js/play.js": "./js/play.js?v=1",
+  "./js/quests.js": "./js/quests.js?v=1",
+  "./js/shadows.js": "./js/shadows.js?v=1",
+  "./js/sky.js": "./js/sky.js?v=1",
+  "./js/toon.js": "./js/toon.js?v=1",
+  "./js/world.js": "./js/world.js?v=1" } }</script>
+<link rel="modulepreload" href="vendor/three/three.module.min.js">
+<link rel="modulepreload" href="js/main.js?v=1">
+</head>
+<body>
+<!-- Ikon putih sederhana (gaya tombol jelly), dipakai lewat <svg><use href="#i-..."/></svg> -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-play" viewBox="0 0 24 24"><path d="M7 4.5c0-1.2 1.3-1.9 2.3-1.3l10 6.5c.9.6.9 2 0 2.6l-10 6.5C8.3 19.4 7 18.7 7 17.5z"/></symbol>
+  <symbol id="i-pause" viewBox="0 0 24 24"><rect x="5" y="4" width="5" height="16" rx="1.8"/><rect x="14" y="4" width="5" height="16" rx="1.8"/></symbol>
+  <symbol id="i-sound" viewBox="0 0 24 24"><path d="M3 9.5h3.5L11 5v14l-4.5-4.5H3z"/><path d="M14.5 8.5a5 5 0 0 1 0 7M17 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></symbol>
+  <symbol id="i-mute" viewBox="0 0 24 24"><path d="M3 9.5h3.5L11 5v14l-4.5-4.5H3z"/><path d="M15 9l6 6M21 9l-6 6" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></symbol>
+  <symbol id="i-full" viewBox="0 0 24 24"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-compass" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2.4"/><path d="M15.5 8.5L13.3 13.3 8.5 15.5 10.7 10.7z"/></symbol>
+  <symbol id="i-book" viewBox="0 0 24 24"><path d="M3 5.5C5.5 4 8.5 4 11 5.5V20c-2.5-1.5-5.5-1.5-8 0zM21 5.5C18.5 4 15.5 4 13 5.5V20c2.5-1.5 5.5-1.5 8 0z"/></symbol>
+  <symbol id="i-restart" viewBox="0 0 24 24"><path d="M19 12a7 7 0 1 1-2.2-5.1" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"/><path d="M14.5 3.5h5v5z"/></symbol>
+  <symbol id="i-home" viewBox="0 0 24 24"><path d="M12 3.5l9 8h-2.5V20h-4.5v-5h-4v5H5.5v-8.5H3z"/></symbol>
+  <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linecap="round"/></symbol>
+  <symbol id="i-left" viewBox="0 0 24 24"><path d="M16 4.5c0-1-1.1-1.6-2-1.1L5 10.9c-.8.5-.8 1.7 0 2.2l9 7.5c.9.5 2-.1 2-1.1z"/></symbol>
+  <symbol id="i-right" viewBox="0 0 24 24"><path d="M8 4.5c0-1 1.1-1.6 2-1.1l9 7.5c.8.5.8 1.7 0 2.2l-9 7.5c-.9.5-2-.1-2-1.1z"/></symbol>
+  <symbol id="i-rocket" viewBox="0 0 24 24"><path d="M12 2c3.5 2.5 5 6.5 4.5 11l2.5 3-3 1-1-2h-6l-1 2-3-1 2.5-3C7 8.5 8.5 4.5 12 2z"/><circle cx="12" cy="9" r="2" fill="#2b6fd6"/><path d="M10 18h4l-2 4z" fill="#ffd23a"/></symbol>
+  <symbol id="i-skip" viewBox="0 0 24 24"><path d="M4 5l8 7-8 7zM12 5l8 7-8 7z"/></symbol>
+  <symbol id="i-star" viewBox="0 0 24 24"><path fill="#ffd23a" d="M12 2.5l2.9 6 6.6.8-4.9 4.5 1.3 6.5L12 17l-5.9 3.3 1.3-6.5-4.9-4.5 6.6-.8z" stroke="#b4520f" stroke-width="1.4" stroke-linejoin="round"/></symbol>
+  <symbol id="i-plane" viewBox="0 0 24 24"><path d="M21 12c0-1-1-1.5-2-1.5h-4.5L10 3H8l2.5 7.5H6L4.5 8H3l1 4-1 4h1.5L6 13.5h4.5L8 21h2l4.5-7.5H19c1 0 2-.5 2-1.5z"/></symbol>
+</svg>
+
+<canvas id="c"></canvas>
+
+<div id="joyzone" hidden></div>
+<div id="joy"><div id="knob"></div></div>
+
+<div id="hud" hidden>
+  <div class="bar left">
+    <button id="bPause" class="j sq red" aria-label="Jeda"><svg><use href="#i-pause"/></svg></button>
+    <button class="j sq green mute" aria-label="Suara"><svg><use href="#i-sound"/></svg></button>
+    <button class="j sq blue fs" aria-label="Layar penuh"><svg><use href="#i-full"/></svg></button>
+  </div>
+  <div class="bar mid">
+    <span class="pill"><i class="badge red">Aa</i><b id="cL">0</b></span>
+    <span class="pill"><i class="badge purple">123</i><b id="cN">0</b></span>
+    <span class="pill starpill"><svg><use href="#i-star"/></svg><b id="cS">0</b></span>
+  </div>
+  <div class="bar right">
+    <button id="bHint" class="j sq blue" aria-label="Petunjuk arah"><svg><use href="#i-compass"/></svg></button>
+    <button class="j sq orange book" aria-label="Koleksiku"><svg><use href="#i-book"/></svg></button>
+  </div>
+  <div id="mission" role="button" aria-label="Misi"><span class="mi"></span><span class="dots"></span></div>
+  <div id="thrust" class="empty">
+    <button id="bThrust" class="j round orange" aria-label="Thrust (tahan)"><svg><use href="#i-rocket"/></svg></button>
+    <div class="gauge"><i id="thrustBar"></i></div>
+    <span class="key">␣</span>
+  </div>
+  <div id="inds"></div>
+</div>
+
+<div id="tip" class="panel-y" hidden><span id="tipText"></span><button id="tipSkip" class="j small green" aria-label="Lewati"><svg><use href="#i-skip"/></svg></button></div>
+<div id="card" hidden></div>
+<div id="toast" hidden></div>
+
+<!-- Menu tanpa perlu membaca: pilih pesawat dari gambarnya, lalu tekan segitiga hijau -->
+<section id="menu" class="screen">
+  <div class="panel">
+    <h1>Sky Explorers</h1>
+    <div id="planes" role="radiogroup" aria-label="Pilih pesawat"></div>
+    <button id="mPlay" class="j green big" aria-label="Main"><svg><use href="#i-play"/></svg></button>
+    <div class="icons">
+      <button class="j sq orange book" aria-label="Koleksiku"><svg><use href="#i-book"/></svg></button>
+      <button class="j sq green mute" aria-label="Suara"><svg><use href="#i-sound"/></svg></button>
+      <button class="j sq blue fs" aria-label="Layar penuh"><svg><use href="#i-full"/></svg></button>
+    </div>
+    <p class="small credit">Musik: Kevin MacLeod (incompetech.com) CC BY 4.0 · Redafs (Pixabay) · Peta Bandung © OpenStreetMap contributors · Huruf: Andika (SIL OFL)</p>
+  </div>
+</section>
+
+<section id="pause" class="screen" hidden>
+  <div class="panel">
+    <button id="pResume" class="j green big" aria-label="Lanjut"><svg><use href="#i-play"/></svg></button>
+    <div class="icons">
+      <button id="pRestart" class="j sq blue" aria-label="Ulang terbang"><svg><use href="#i-restart"/></svg></button>
+      <button class="j sq orange book" aria-label="Koleksiku"><svg><use href="#i-book"/></svg></button>
+      <button id="pMenu" class="j sq red" aria-label="Menu utama"><svg><use href="#i-home"/></svg></button>
+    </div>
+    <div class="row"><button class="j sq green mute" aria-label="Suara"><svg><use href="#i-sound"/></svg></button><input class="vol" type="range" min="0" max="1" step="0.05" aria-label="Volume"></div>
+  </div>
+</section>
+
+<section id="book" class="screen" hidden>
+  <div class="panel wide">
+    <div class="head">
+      <div id="tabs" role="tablist">
+        <button class="j sq red" data-tab="abc" aria-label="Huruf"><b>Aa</b></button>
+        <button class="j sq purple" data-tab="num" aria-label="Angka"><b>12</b></button>
+      </div>
+      <button id="bClose" class="j sq red close" aria-label="Tutup"><svg><use href="#i-close"/></svg></button>
+    </div>
+    <div id="total"><b></b></div>
+    <div id="grid"></div>
+    <p class="small credit" id="photoCredit"></p>
+  </div>
+</section>
+
+<div id="ios" class="screen" hidden>
+  <div class="panel">
+    <h2>Layar penuh di iPhone</h2>
+    <p>Ketuk <b>Bagikan</b> <span class="share">⬆︎</span> lalu <b>Tambah ke Layar Utama</b>.<br>Buka Sky Explorers dari ikon itu — tampil penuh tanpa bilah browser.</p>
+    <button id="iosClose" class="j green big">OK</button>
+  </div>
+</div>
+
+<noscript>Sky Explorers butuh JavaScript.</noscript>
+<script type="module" src="js/main.js?v=1"></script>
+</body>
+</html>
