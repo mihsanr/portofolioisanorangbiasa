@@ -54,7 +54,7 @@ export const COLORS = [0xff4040, 0x2f7bff, 0xffbf1a, 0x2fbf4f, 0x9b4dff, 0xff7a1
 
 // Versi web dapat mematikan gambar/suara tertentu (diisi tools/publish.mjs --tanpa-tokoh).
 export const NO_PHOTO = [];
-export const CRASH_VO = null;
+export const CRASH_VO = 'crash_aduh';
 
 // Titik sebaran collectible (PRD 6.6): dekat start, landmark, ketinggian berbeda, antar pulau.
 export const SPOTS = [
