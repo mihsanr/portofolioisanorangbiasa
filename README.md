@@ -28,6 +28,7 @@ Tidak ada konfigurasi khusus. Total ±44 MB (39 MB video).
 ## Struktur
 - `index.html` — root ala linktree (@isanorgbiasa): avatar, ikon sosmed, kartu link (portfolio, free tools, donate, req lagu, next up, TikTok, IG, product). CSS inline, tanpa preloader/BGM supaya cepat dibuka dari bio. Link lama `/#projects` dsb otomatis dialihkan ke `work.html`.
 - `index.html` juga memuat **Preview Wall** di atas profil (`js/tapes.js` + `js/fisheye.js`, variant `preview`): hanya item di halaman atlas pertama + `atlas-0-sm.webp`, klik/ketuk karya → `work.html#tape/<slug>`.
+- `sky-explorers/` — game anak belajar huruf (three.js, mandiri). Jangan diedit di sini: sumbernya folder `sky-explorers/` di luar repo, disalin dengan `node tools/publish.mjs <repo>/sky-explorers <versi> --tanpa-tokoh` (naikkan versi tiap rilis). Kartu preview di `index.html#sky`: `assets/game/sky.{mp4,webp}`.
 - `work.html` — portofolio (dulu `index.html`): hero ringkas, **CH 00 · Globe semua karya** (video + gambar + dokumen, filter `SEMUA · VIDEO · DESAIN`), **PRIME TIME** (3–4 case terpilih, kartu bertumpuk saat scroll — isinya `PRIME` di `js/data.js`), Channel Guide (8 proyek + strip thumbnail), marquee klien (ikut arah scroll), Journey (CV), skills, CTA kontak + jejak stiker.
   Deep link: `work.html#tape/<slug>` membuka Viewer langsung (tanpa preloader) untuk video, gambar, maupun dokumen; `work.html#ch-01` membuka modal channel 1.
 - `product.html` — layar "NO SIGNAL": MOTION — COMING SOON (CH 99 / Off Air).

@@ -304,11 +304,22 @@
       <li id="game">
         <a class="lt-card lt-card--feature lt-card--game" href="game.html">
           <span class="lt-screen">
-            <video id="gameDemo" muted loop playsinline preload="none" poster="assets/game/demo.webp" data-src="assets/game/demo.mp4" aria-hidden="true"></video>
+            <video muted loop playsinline preload="none" poster="assets/game/demo.webp" data-src="assets/game/demo.mp4" aria-hidden="true"></video>
             <span class="lt-tag" aria-hidden="true">GAME 3D</span>
             <span class="lt-play" aria-hidden="true">▶&#xFE0E; MAIN</span>
           </span>
           <span class="lt-label">Pemburu Kaset<small>kumpulin 20 kaset secepatnya · HP &amp; desktop</small><small class="lt-rec" id="gameRec" hidden></small></span>
+          <span class="lt-arrow" aria-hidden="true">↗&#xFE0E;</span>
+        </a>
+      </li>
+      <li id="sky">
+        <a class="lt-card lt-card--feature lt-card--game" href="sky-explorers/">
+          <span class="lt-screen">
+            <video muted loop playsinline preload="none" poster="assets/game/sky.webp" data-src="assets/game/sky.mp4" aria-hidden="true"></video>
+            <span class="lt-tag" aria-hidden="true">GAME ANAK</span>
+            <span class="lt-play" aria-hidden="true">▶&#xFE0E; MAIN</span>
+          </span>
+          <span class="lt-label">Sky Explorers<small>belajar huruf A–Z sambil terbang · HP &amp; desktop</small></span>
           <span class="lt-arrow" aria-hidden="true">↗&#xFE0E;</span>
         </a>
       </li>
@@ -436,10 +447,9 @@
     // Kartu game: klip demo baru diunduh saat kartu mendekati layar, berhenti saat keluar layar.
     // Hemat data / kurangi gerak: cukup gambar diam. Rekor teratas diambil sekali dari papan skor.
     (function () {
-      var v = document.getElementById('gameDemo'), rec = document.getElementById('gameRec');
-      if (!v) return;
+      var vids = document.querySelectorAll('.lt-card--game video[data-src]'), rec = document.getElementById('gameRec');
+      if (!vids.length) return;
       var still = matchMedia('(prefers-reduced-motion: reduce)').matches || (navigator.connection && navigator.connection.saveData);
-      var seen = false;
       function pad(n) { return (n < 10 ? '0' : '') + n; }
       function fmt(ms) { var cs = Math.floor(ms / 10); return pad(Math.floor(cs / 6000)) + ':' + pad(Math.floor(cs / 100) % 60) + '.' + pad(cs % 100); }
       function top() {
@@ -456,19 +466,22 @@
           })
           .catch(function () {});
       }
-      function first() {
-        seen = true;
+      function load(v) {
+        v.seen = true;
         if (!still) { v.src = v.getAttribute('data-src'); v.muted = true; }
+        if (!rec || !v.closest('#game')) return;
         var s = document.createElement('script');
         s.src = 'js/supabase-config.js?v=8'; s.onload = top;
         document.head.appendChild(s);
       }
-      if (!('IntersectionObserver' in window)) { first(); if (!still) v.play().catch(function () {}); return; }
-      new IntersectionObserver(function (es) {
-        var e = es[es.length - 1];
-        if (e.isIntersecting) { if (!seen) first(); if (!still) v.play().catch(function () {}); }
-        else if (!v.paused) v.pause();
-      }, { rootMargin: '150px 0px' }).observe(v);
+      [].forEach.call(vids, function (v) {
+        if (!('IntersectionObserver' in window)) { load(v); if (!still) v.play().catch(function () {}); return; }
+        new IntersectionObserver(function (es) {
+          var e = es[es.length - 1];
+          if (e.isIntersecting) { if (!v.seen) load(v); if (!still) v.play().catch(function () {}); }
+          else if (!v.paused) v.pause();
+        }, { rootMargin: '150px 0px' }).observe(v);
+      });
     })();
   </script>
 </body>
