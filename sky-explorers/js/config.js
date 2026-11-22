@@ -53,7 +53,7 @@ export const NUMBERS = ['Nol', 'Satu', 'Dua', 'Tiga', 'Empat', 'Lima', 'Enam', '
 export const COLORS = [0xff4040, 0x2f7bff, 0xffbf1a, 0x2fbf4f, 0x9b4dff, 0xff7a1a, 0xff4f9a, 0x12b5a5];
 
 // Versi web dapat mematikan gambar/suara tertentu (diisi tools/publish.mjs --tanpa-tokoh).
-export const NO_PHOTO = ["a","A","c","C","e","E","f","F","i","I","j","J","k","K","m","M","o","O","r","R","s","S","t","T","u","U"];
+export const NO_PHOTO = [];
 export const CRASH_VO = null;
 
 // Titik sebaran collectible (PRD 6.6): dekat start, landmark, ketinggian berbeda, antar pulau.

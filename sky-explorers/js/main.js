@@ -207,7 +207,7 @@ document.addEventListener('error', e => {
   if (i.tagName === 'IMG' && i.dataset.icon) { noPhoto.add(i.dataset.ch); i.replaceWith(i.dataset.icon); }
 }, true);
 fetch('assets/words/credits.json').then(r => r.json()).then(c => {
-  $('#photoCredit').textContent = 'Foto: Wikimedia Commons — ' + Object.entries(c).map(([k, v]) => `${k.toUpperCase()}: ${v.author} (${v.license})`).join(' · ');
+  $('#photoCredit').textContent = 'Foto: Wikimedia Commons — ' + Object.entries(c).map(([k, v]) => `${k.toUpperCase()}: ${v.author} (${v.license})`).join(' · ') + ' · Gambar tokoh Upin & Ipin © Les’ Copaque Production, dipakai non-komersial';
 }).catch(() => {});
 const STAR = '<svg><use href="#i-star"/></svg>';
 
