@@ -8,9 +8,9 @@ const color = d => COLORS[d.i % COLORS.length];
 
 export function createPlay({ scene, world, flight, fx, audio, quests, owned, say, showCard }) {
   const geoOf = Object.fromEntries(world.items.map(i => [i.data.ch, i.mesh.geometry])), st = flight.state;
-  const glyph = () => { const m = new THREE.Mesh(geoOf.A, toon({ emissive: 0x222222, fog: false, transparent: true }, { spec: 1, shine: 40, rim: 0.4 })); m.renderOrder = 2; return m; };
+  const glyph = () => { const m = new THREE.Mesh(geoOf.A, toon({ emissive: 0x222222, fog: false, transparent: true }, { spec: 1, shine: 40, rim: 0.4, hq: true })); m.renderOrder = 2; return m; };
   const paint = (m, d) => { m.geometry = geoOf[d.ch]; m.material.color.set(color(d)); m.material.emissive.set(color(d)).multiplyScalar(0.32); };
-  const geo = new THREE.SphereGeometry(4, 32, 22), mat = new THREE.MeshPhongMaterial({ color: 0xbfe9ff, specular: 0xffffff, shininess: 90, emissive: 0x2a5a7a, transparent: true, opacity: 0.34, depthWrite: false, fog: false });
+  const geo = new THREE.SphereGeometry(4, 20, 14), mat = new THREE.MeshPhongMaterial({ color: 0xbfe9ff, specular: 0xffffff, shininess: 90, emissive: 0x2a5a7a, transparent: true, opacity: 0.34, depthWrite: false, fog: false });
   const bubbles = [0, 1, 2].map(() => { const m = new THREE.Mesh(geo, mat), l = glyph(); l.scale.setScalar(0.52); m.add(l); m.visible = false; m.renderOrder = 3; scene.add(m); return { m, l, d: null, home: new THREE.Vector3(), t: 0 }; });
   let wait = 9, order = [], count = 0;
   function spawnBubble() {

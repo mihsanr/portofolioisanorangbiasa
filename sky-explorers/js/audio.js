@@ -91,6 +91,10 @@ export function createAudio(settings) {
     return [src, g];
   }
 
+  function sound(name) {
+    if (!buffers[name]) { const x = render(name); buffers[name] = ctx.createBuffer(1, x.length, SR); buffers[name].copyToChannel(x, 0); }
+    return buffers[name];
+  }
   // Dipanggil dari gesture pertama (kebijakan autoplay browser).
   function unlock() {
     if (!ctx) {
@@ -99,13 +103,17 @@ export function createAudio(settings) {
       // BGM lewat WebAudio: iOS mengabaikan audio.volume, gain node tetap bekerja.
       bgmGain = ctx.createGain(); bgmGain.connect(master);
       ctx.createMediaElementSource(bgm).connect(bgmGain);
-      for (const name of Object.keys(SYNTH)) {
-        const x = render(name);
-        buffers[name] = ctx.createBuffer(1, x.length, SR); buffers[name].copyToChannel(x, 0);
-      }
-      [engine, engineGain] = loop('engine');
-      windGain = loop('wind')[1]; birdGain = loop('birds')[1]; waveGain = loop('waves')[1];
       apply();
+      // SFX disintesis satu per satu di sela frame, bukan sekaligus (dulu membekukan HP ±1 detik).
+      const queue = Object.keys(SYNTH);
+      const step = () => {
+        const name = queue.shift(); if (!name) return;
+        sound(name);
+        if (name === 'engine') [engine, engineGain] = loop('engine');
+        if (name === 'wind') windGain = loop('wind')[1]; if (name === 'birds') birdGain = loop('birds')[1]; if (name === 'waves') waveGain = loop('waves')[1];
+        setTimeout(step, 70);
+      };
+      setTimeout(step, 30);
     }
     ctx.resume();
     if (wantBgm && bgm.paused) bgm.src ? bgm.play().catch(() => {}) : startBgm();
@@ -116,18 +124,18 @@ export function createAudio(settings) {
     apply,
     play(name, rate = 1) {
       if (!ctx) return;
-      const s = ctx.createBufferSource(); s.buffer = buffers[name]; s.playbackRate.value = rate; s.connect(master); s.start();
+      const s = ctx.createBufferSource(); s.buffer = sound(name); s.playbackRate.value = rate; s.connect(master); s.start();
     },
     // speed01: 0 = normal, 1 = boost. on=false saat menu/pause.
     flight(on, speed01 = 0) {
-      if (!ctx) return;
+      if (!engine || !windGain) return;
       const now = ctx.currentTime;
       engineGain.gain.setTargetAtTime(on ? 1 : 0, now, 0.25);
       engine.playbackRate.setTargetAtTime(0.9 + speed01 * 0.35, now, 0.3);
       windGain.gain.setTargetAtTime(on ? 0.45 + 0.55 * speed01 : 0, now, 0.4);
     },
     ambient(birds, waves) { // 0..1
-      if (!ctx) return;
+      if (!birdGain || !waveGain) return;
       birdGain.gain.setTargetAtTime(birds, ctx.currentTime, 0.8); waveGain.gain.setTargetAtTime(waves, ctx.currentTime, 0.8);
     },
     music(on) {
@@ -147,7 +155,7 @@ export function createAudio(settings) {
         s.onended = () => { if (voSrc === s) { voSrc = null; duck(false); } };
       });
     },
-    preloadVoices(names) { if (ctx) names.forEach(loadVoice); },
+    preloadVoices(names) { const q = [...names], next = () => { const n = q.shift(); if (n && ctx) loadVoice(n).then(() => setTimeout(next, 350)); }; setTimeout(next, 2500); },   // satu per satu
   };
   function loadVoice(name) {
     if (!voices.has(name)) voices.set(name, fetch(`audio/vo/${name}.mp3`).then(r => (r.ok ? r.arrayBuffer() : Promise.reject())).then(b => ctx.decodeAudioData(b)).catch(() => null));

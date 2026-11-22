@@ -12,7 +12,7 @@ export const SUN_DIR = new THREE.Vector3(-0.45, 0.8, 0.4).normalize();
 
 export function createSky(sunDir = SUN_DIR) {
   const mat = new THREE.ShaderMaterial({
-    side: THREE.BackSide, depthWrite: false, depthTest: false, fog: false, toneMapped: false,
+    side: THREE.BackSide, depthWrite: false, fog: false, toneMapped: false,
     uniforms: {
       uZenith: { value: SKY.zenith }, uMid: { value: SKY.mid }, uHorizon: { value: SKY.horizon },
       uGround: { value: SKY.ground }, uSun: { value: SKY.sun }, uSunDir: { value: sunDir.clone().normalize() },
@@ -39,9 +39,9 @@ export function createSky(sunDir = SUN_DIR) {
         #include <colorspace_fragment>
       }`,
   });
-  const mesh = new THREE.Mesh(new THREE.SphereGeometry(1, 32, 16), mat);
+  const mesh = new THREE.Mesh(new THREE.SphereGeometry(1, 20, 10), mat);
   mesh.frustumCulled = false;
-  mesh.renderOrder = -1000;
+  mesh.renderOrder = 900;   // terakhir di antara benda padat: hanya piksel kosong yang dihitung
   return mesh;
 }
 

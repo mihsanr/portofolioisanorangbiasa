@@ -5,6 +5,8 @@
 import * as THREE from 'three';
 import { BUILDINGS, ROADS, PARKS, SATE } from './bandung.js';
 import { toon } from './toon.js';
+import { LITE } from './config.js';
+import { i8, u16 } from './models.js';
 
 const FLOOR = 1.6;      // tinggi satu lantai (unit); sedikit dilebih-lebihkan supaya terbaca dari udara
 const FACADE_W = 6;     // satu petak tekstur fasad = 6 unit lebar × 1 lantai
@@ -17,7 +19,7 @@ function tex(w, h, draw, srgb = true) {
   const c = document.createElement('canvas'); c.width = w; c.height = h;
   draw(c.getContext('2d'), w, h);
   const t = new THREE.CanvasTexture(c);
-  t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 8;
+  t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = LITE ? 2 : 8;
   if (srgb) t.colorSpace = THREE.SRGBColorSpace;
   return t;
 }
@@ -185,7 +187,7 @@ export function buildCity(scene, heightAt, { extraBuildings = [], extraRoads = [
       const OH = 0.28;                                                     // teritis
       const e = pts.map(([x, z]) => { const dx = x - cx, dz = z - cz, l = Math.hypot(dx, dz) || 1; return V(x + dx / l * OH * 1.3, top - 0.12, z + dz / l * OH * 1.3); });
       const soffit = shade(wall, 0.55);
-      for (let i = 0; i < e.length; i++) { // sisi bawah teritis (terlihat dari bawah) + lis kayu
+      for (let i = 0; i < e.length && !LITE; i++) { // sisi bawah teritis (terlihat dari bawah) + lis kayu
         const j = (i + 1) % e.length, w0 = V(pts[i][0], top, pts[i][1]), w1 = V(pts[j][0], top, pts[j][1]);
         tri(B.roof, [w0, w1, e[j]], flatUV, [soffit, soffit, soffit], DOWN); tri(B.roof, [w0, e[j], e[i]], flatUV, [soffit, soffit, soffit], DOWN);
       }
@@ -235,8 +237,8 @@ export function buildCity(scene, heightAt, { extraBuildings = [], extraRoads = [
     const g = new THREE.BufferGeometry();
     g.setAttribute('position', new THREE.Float32BufferAttribute(br.pos, 3));
     g.setAttribute('uv', new THREE.Float32BufferAttribute(br.uv, 2));
-    g.setAttribute('color', new THREE.Float32BufferAttribute(br.col, 3));
-    g.computeVertexNormals();
+    g.setAttribute('color', u16(br.col));
+    g.computeVertexNormals(); g.setAttribute('normal', i8(g.attributes.normal.array)); g.computeBoundingSphere();
     return new THREE.Mesh(g, mat);
   };
   const tiles = tileTex();
@@ -246,7 +248,7 @@ export function buildCity(scene, heightAt, { extraBuildings = [], extraRoads = [
 
   // Bayangan kontak (AO) di tanah sekeliling bangunan: pita hitam transparan, memudar ke luar.
   const ap = [], ac = [];
-  for (const [x1, z1, x2, z2, o] of ao) {
+  for (const [x1, z1, x2, z2, o] of LITE ? [] : ao) {
     const W = 1.9, q = [[x1, z1, 0.34], [x2, z2, 0.34], [x2 + o.x * W, z2 + o.z * W, 0], [x1 + o.x * W, z1 + o.z * W, 0]]
       .map(([x, z, al]) => [x, heightAt(x, z) + 0.22, z, al]);
     for (const i of [0, 2, 1, 0, 3, 2]) { ap.push(q[i][0], q[i][1], q[i][2]); ac.push(0.05, 0.06, 0.04, q[i][3]); }
@@ -258,7 +260,7 @@ export function buildCity(scene, heightAt, { extraBuildings = [], extraRoads = [
       for (let i = 0; i < 9; i++) c[0].push(pos[t * 9 + i]);
       for (let i = 0; i < n * 3; i++) c[1].push(col[t * n * 3 + i]);
     }
-    for (const [p, q] of cells.values()) { const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(p, 3)); g.setAttribute('color', new THREE.Float32BufferAttribute(q, n)); g.computeVertexNormals(); group.add(new THREE.Mesh(g, mat)); }
+    for (const [p, q] of cells.values()) { const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(p, 3)); g.setAttribute('color', u16(q, n)); g.computeVertexNormals(); g.setAttribute('normal', i8(g.attributes.normal.array)); g.computeBoundingSphere(); group.add(new THREE.Mesh(g, mat)); }
     return group;
   };
   const aoMesh = split(ap, ac, 4, new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, depthWrite: false, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3 }));

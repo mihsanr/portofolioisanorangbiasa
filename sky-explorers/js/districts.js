@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import * as M from './models.js';
 import { row, hipRoof, sign, arch, pyramid } from './landmarks.js';
 import { toon } from './toon.js';
+import { LITE } from './config.js';
 
 const { part, bake, sph, cyl, cone, rbox, lathe, torus, slab } = M;
 const PI = Math.PI, TAU = PI * 2;
@@ -212,7 +213,7 @@ export function buildDistricts({ scene, groundAt, near, wrappedInstances, instan
   add(bake([part(rbox(6, 0.25, 2.4, 0.1), 0x2f7bff, { p: [0, 3, 0] }), part(rbox(6, 2.2, 0.15, 0.05), 0x9fd2f0, { p: [0, 1.6, 1.0] }), ...[-2.8, 2.8].map(x => part(cyl(0.1, 0.1, 3, 6), 0x4a5361, { p: [x, 1.5, -0.8] })), part(rbox(4.4, 0.3, 0.8, 0.08), 0xffc21a, { p: [0, 0.8, 0.5] })]), [at(-38, -8.8, 1, PHI + PI), at(30, 4.6, 1, PHI + PI), at(112, -8.8, 1, PHI + PI)], { maxR: 220 });
   // orang (gaya mainan) berjalan-jalan kecil
   const PC = [0xe8453a, 0x2f7bff, 0xffc21a, 0x2fbf4f, 0x9b4dff, 0xff7aa8].map(c => new THREE.Color(c));
-  const folk = range(64, i => { const alun = i < 30, e = alun ? -44 + rand() * 36 : 12 + rand() * 96, o = alun ? 9 + rand() * 22 : 19.6 + rand() * 4.6; return [...at(e, o, 0.75, rand() * TAU), e, o, rand() * TAU]; });
+  const folk = range(LITE ? 34 : 64, i => { const alun = i < 30, e = alun ? -44 + rand() * 36 : 12 + rand() * 96, o = alun ? 9 + rand() * 22 : 19.6 + rand() * 4.6; return [...at(e, o, 0.75, rand() * TAU), e, o, rand() * TAU]; });
   add(bake([part(cyl(0.32, 0.5, 1.3, 10), 0xffffff, { p: [0, 0.95, 0] })]), folk, { maxR: 150, colors: folk.map((_, i) => PC[i % PC.length]) });
   add(bake([part(sph(10, 8), 0xf2c39a, { p: [0, 2.0, 0], s: [0.42, 0.44, 0.42] }), part(sph(10, 6), 0x2a211b, { p: [0, 2.2, -0.05], s: [0.44, 0.32, 0.44] }), ...[-0.2, 0.2].map(x => part(cyl(0.13, 0.13, 0.5, 6), 0x33404f, { p: [x, 0.22, 0] }))]), folk, { maxR: 150 });
   anim.push(t => { for (const f of folk) { const k = t * 0.35 + f[7], [x, z] = oldTown(f[5] + Math.cos(k) * 2.2, f[6] + Math.sin(k) * 0.9); f[0] = x; f[2] = z; f[1] = OT.y + 0.1 + Math.abs(Math.sin(t * 5 + f[7])) * 0.14; f[4] = -k + PHI; } });

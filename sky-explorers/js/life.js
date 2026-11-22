@@ -3,6 +3,7 @@
 import * as THREE from 'three';
 import * as M from './models.js';
 import { toon } from './toon.js';
+import { LITE } from './config.js';
 import { SKY } from './sky.js';
 import { inDistrict, onRoad } from './districts.js';
 
@@ -69,11 +70,11 @@ export function buildLife({ scene, heightAt, near, wrapC, wrappedInstances, inst
   // Cakrawala: 3 lapis pegunungan pucat (perspektif udara). Ikut kamera, tanpa kabut → selalu ada kedalaman.
   const ranges = new THREE.Group();
   [[1500, 420, 0.5, 3, 0.0], [1250, 270, 0.72, 5, 2.0], [1000, 150, 0.95, 8, 4.4]].forEach(([R, H, mix, f, ph], li) => {
-    const N = 420, p = [], c = [], lo = SKY.horizon.clone(), hi = SKY.horizon.clone().lerp(C('#6f9fc4'), mix);
+    const N = LITE ? 260 : 420, p = [], c = [], lo = SKY.horizon.clone(), hi = SKY.horizon.clone().lerp(C('#6f9fc4'), mix);
     for (let i = 0; i < N; i++) {
       const seg = [i, i + 1].map(k => {
         const a = k / N * TAU, north = 0.4 + 0.6 * Math.pow(0.5 - 0.5 * Math.sin(a), 1.2);      // paling tinggi di utara
-        let h = (0.45 + 0.28 * Math.sin(a * f + ph) + 0.17 * Math.sin(a * f * 2.7 + ph * 2) + 0.1 * Math.sin(a * f * 6.1));
+        let h = (0.45 + 0.28 * Math.sin(a * f + ph) + 0.17 * Math.sin(a * Math.round(f * 2.7) + ph * 2) + 0.1 * Math.sin(a * Math.round(f * 6.1)));
         if (li === 1) { const d = Math.abs(Math.atan2(Math.sin(a + PI / 2 - 0.35), Math.cos(a + PI / 2 - 0.35))); const q = Math.min(1, Math.max(0, (d - 0.1) / 0.36)); h = Math.max(h, h + (1.2 - h) * (1 - q * q * (3 - 2 * q))); } // siluet perahu terbalik
         return [Math.cos(a) * R, Math.max(6, h * H * north), Math.sin(a) * R];
       });
@@ -83,7 +84,7 @@ export function buildLife({ scene, heightAt, near, wrapC, wrappedInstances, inst
     const g = new THREE.BufferGeometry();
     g.setAttribute('position', new THREE.Float32BufferAttribute(p, 3)); g.setAttribute('color', new THREE.Float32BufferAttribute(c, 3));
     const m = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ vertexColors: true, fog: false, side: THREE.DoubleSide, depthWrite: false, toneMapped: false }));
-    m.renderOrder = -500 + li; m.frustumCulled = false; ranges.add(m);
+    m.renderOrder = 901 + li; m.frustumCulled = false; ranges.add(m);
   });
   scene.add(ranges);
 
@@ -128,7 +129,7 @@ export function buildLife({ scene, heightAt, near, wrapC, wrappedInstances, inst
   });
 
   // Layang-layang di atas permukiman
-  const kites = Array.from({ length: 16 }, (_, i) => { const a = rand() * TAU, r = 60 + rand() * 220; return [Math.cos(a) * r, 24 + rand() * 12, Math.sin(a) * r, i]; });
+  const kites = Array.from({ length: LITE ? 9 : 16 }, (_, i) => { const a = rand() * TAU, r = 60 + rand() * 220; return [Math.cos(a) * r, 24 + rand() * 12, Math.sin(a) * r, i]; });
   const kite = new THREE.InstancedMesh(kiteGeo(), toon({ vertexColors: true }, { rim: 0.2 }), kites.length);
   const KC = [0xff5a5a, 0x7fd4ff, 0xffffff, 0xb7f07a, 0xff9ad0].map(C);
   kites.forEach((k, i) => kite.setColorAt(i, KC[i % KC.length]));
@@ -146,7 +147,7 @@ export function buildLife({ scene, heightAt, near, wrapC, wrappedInstances, inst
   const round = p => { for (let k = 0; k < 2; k++) { const q = [p[0]]; for (let i = 0; i + 1 < p.length; i++) { const [a, b] = [p[i], p[i + 1]]; q.push([a[0] * 0.75 + b[0] * 0.25, a[1] * 0.75 + b[1] * 0.25], [a[0] * 0.25 + b[0] * 0.75, a[1] * 0.25 + b[1] * 0.75]); } q.push(p.at(-1)); q.lift = p.lift; p = q; } return p; };   // tikungan mulus untuk mobil
   const roads = city.mainRoads.map(round).map(p => { const L = [0]; for (let i = 1; i < p.length; i++) L.push(L[i - 1] + Math.hypot(p[i][0] - p[i - 1][0], p[i][1] - p[i - 1][1])); return { p, L, len: L.at(-1) }; }).filter(r => r.len > 45);
   const fleet = (geo, n, speed, colors) => {
-    const m = cast(new THREE.InstancedMesh(geo, M.worldMat, n), false);
+    const m = cast(new THREE.InstancedMesh(geo, M.variant(M.worldMat, 'ic'), n), false);
     const cars = Array.from({ length: n }, (_, i) => ({ r: roads[Math.floor(rand() * roads.length)], d: rand() * 200, rev: i % 2, v: speed * (0.8 + rand() * 0.5) }));
     cars.forEach((c, i) => m.setColorAt(i, c.col = C(colors[i % colors.length])));
     m.frustumCulled = false; scene.add(m);
@@ -168,11 +169,11 @@ export function buildLife({ scene, heightAt, near, wrapC, wrappedInstances, inst
       m.count = i; m.visible = i > 0; m.instanceMatrix.needsUpdate = m.instanceColor.needsUpdate = true;
     });
   };
-  if (roads.length) { fleet(carGeo(), 64, 7, ['#e8343a', '#2f7bff', '#ffffff', '#ffc21a', '#2fbf4f', '#4a5361', '#ff7a1a']); fleet(busGeo(), 10, 5, ['#ffffff', '#bfe4ff', '#ffd9b0']); }
+  if (roads.length) { fleet(carGeo(), LITE ? 34 : 64, 7, ['#e8343a', '#2f7bff', '#ffffff', '#ffc21a', '#2fbf4f', '#4a5361', '#ff7a1a']); fleet(busGeo(), 10, 5, ['#ffffff', '#bfe4ff', '#ffd9b0']); }
 
   // Lampu jalan di jalan besar
   const lamps = [];
-  for (const r of roads) for (let s = 8; s < r.len && lamps.length < 220; s += 22) {
+  for (const r of roads) for (let s = 8; s < r.len && lamps.length < (LITE ? 120 : 220); s += LITE ? 34 : 22) {
     let k = 1; while (k < r.L.length - 1 && r.L[k] < s) k++;
     const [x1, z1] = r.p[k - 1], [x2, z2] = r.p[k], l = r.L[k] - r.L[k - 1] || 1, u = (s - r.L[k - 1]) / l, dx = (x2 - x1) / l, dz = (z2 - z1) / l, x = x1 + (x2 - x1) * u - dz * 3.3, z = z1 + (z2 - z1) * u + dx * 3.3;
     lamps.push([x, heightAt(x, z), z, 1, Math.atan2(-dx, dz) + PI]);
@@ -183,7 +184,7 @@ export function buildLife({ scene, heightAt, near, wrapC, wrappedInstances, inst
   const poles = [], wire = [];
   for (const r of roads) {
     let prev = null;
-    for (let s = 4; s < r.len && poles.length < 190; s += 24) {
+    for (let s = 4; s < r.len && poles.length < (LITE ? 90 : 190); s += 24) {
       let k = 1; while (k < r.L.length - 1 && r.L[k] < s) k++;
       const [x1, z1] = r.p[k - 1], [x2, z2] = r.p[k], l = r.L[k] - r.L[k - 1] || 1, u = (s - r.L[k - 1]) / l, dx = (x2 - x1) / l, dz = (z2 - z1) / l, x = x1 + (x2 - x1) * u + dz * 3.9, z = z1 + (z2 - z1) * u - dx * 3.9, y = heightAt(x, z);
       if (y < 1.5 || inDistrict(x, z) || hit(V3.set(x, y + 4, z), 0.4)) { prev = null; continue; }
