@@ -9,6 +9,7 @@ import { createAudio } from './audio.js';
 import { createFx, createOutline, propBlur } from './fx.js';
 import { createQuests } from './quests.js';
 import { createPlay } from './play.js';
+import { createCoop, validCode, codePics, randomCode, PICS, ALPHA } from './coop.js';
 import { oldTown, LEMBANG } from './districts.js';
 
 const $ = s => document.querySelector(s);
@@ -123,7 +124,7 @@ $$('button').forEach(b => b.addEventListener('click', () => audio.play('click'))
 const keys = new Set();
 const KEYMAP = { ArrowLeft: 'l', KeyA: 'l', ArrowRight: 'r', KeyD: 'r', ArrowUp: 'u', KeyW: 'u', ArrowDown: 'd', KeyS: 'd', Space: 'b', ShiftLeft: 'b', ShiftRight: 'b' };
 addEventListener('keydown', e => {
-  if (e.code === 'Escape') { mode === 'play' ? setMode('pause') : mode === 'pause' ? setMode('play') : mode === 'book' && closeBook(); return; }
+  if (e.code === 'Escape') { mode === 'play' ? setMode('pause') : mode === 'pause' ? setMode('play') : mode === 'book' ? closeBook() : mode === 'coop' && $('#cClose').click(); return; }
   if (KEYMAP[e.code]) { keys.add(KEYMAP[e.code]); if (e.code.startsWith('Arrow') || e.code === 'Space') e.preventDefault(); }
 });
 addEventListener('keyup', e => keys.delete(KEYMAP[e.code]));
@@ -183,10 +184,13 @@ $('#iosClose').addEventListener('click', () => ($('#ios').hidden = true));
 
 // ── Collectible ──
 const all = [...LETTERS, ...NUMBERS];
-const owned = ch => save.got.includes(ch);
+const mine = ch => save.got.includes(ch);
+let coop = null;                                             // main bareng: koleksi room dipakai bersama
+const owned = ch => (coop?.on ? coop.got.has(ch) : mine(ch));
 function resetItems() {
   for (const it of world.items) {
-    it.state = 'idle'; it.mesh.visible = true; it.mesh.scale.setScalar(1);
+    const gone = coop?.on && coop.got.has(it.data.ch);
+    it.state = gone ? 'gone' : 'idle'; it.mesh.visible = !gone; it.mesh.scale.setScalar(1);
   }
 }
 resetItems();
@@ -221,7 +225,7 @@ fetch('assets/words/credits.json').then(r => r.json()).then(c => {
 const STAR = '<svg><use href="#i-star"/></svg>';
 
 // Notifikasi besar saat mengambil objective: huruf besar+kecil (yang diambil paling menonjol), gambar utuh, kata.
-function showCard(d, fresh = false) {
+function showCard(d, fresh = false, mate = null) {
   const letter = d.kind === 'letter', pair = letter && owned(d.up) && owned(d.lo);
   const pic = letter ? `<span class="pic">${photo(d)}</span>`
     : d.n ? `<span class="stars">${STAR.repeat(d.n)}</span>` : '<span class="stars empty">☁️</span>';
@@ -229,7 +233,7 @@ function showCard(d, fresh = false) {
   const word = letter ? `<small>${d.ch} untuk</small><em>${d.word[0]}</em>${d.word.slice(1)}` : d.word;
   const c = $('#card');
   c.style.setProperty('--c', colorOf(d));
-  c.innerHTML = `${fresh ? `<span class="ribbon">${STAR.repeat(pair ? 3 : 1)}</span>` : ''}<span class="ltr">${big}</span>${pic}<span class="word">${word}</span>`;
+  c.innerHTML = `${mate ? `<span class="by"><img alt="" src="${skinImg(mate.skin)}"></span>` : ''}${fresh ? `<span class="ribbon">${STAR.repeat(pair ? 3 : 1)}</span>` : ''}<span class="ltr">${big}</span>${pic}<span class="word">${word}</span>`;
   popCard();
 }
 let bookTimer = 0;
@@ -241,15 +245,21 @@ function popCard() {
   if (mode === 'book') bookTimer = setTimeout(() => { c.hidden = true; }, 3800);
 }
 
+const keep = ch => { if (!mine(ch)) { save.got.push(ch); persist(); } };
+function allDone() {
+  if (all.some(d => !owned(d.ch))) return;
+  toast('🏆✨', 5); fx.party(pos); audio.play('fanfare');
+  if (coop.on) setTimeout(() => coop.on && coop.lead && coop.got.size >= all.length && coop.nextRound(), 9000);   // semua huruf lengkap → babak baru bersama
+}
 function collect(it) {
   it.state = 'pop'; it.t = 0;
   fx.collect(it.mesh.position, colorNum(it.data));
   audio.play('pickup');
   setTimeout(() => audio.voice(voName(it.data)), 250);
   const fresh = !owned(it.data.ch);
-  if (fresh) { save.got.push(it.data.ch); persist(); updateCounts(); }
+  keep(it.data.ch); coop?.take(it.data.ch); updateCounts();
   showCard(it.data, fresh);
-  if (fresh && save.got.length === all.length) toast('🏆✨', 5);
+  if (fresh) allDone();
   thrust = Math.min(THRUST.max, thrust + THRUST.perItem); drawThrust();
   if (it.data.kind === 'letter') quests.event('letter', it.data.ch);
   const other = it.data.kind === 'letter' && (it.data.big ? it.data.lo : it.data.up);
@@ -269,15 +279,15 @@ let tab = 'abc';
 $('#tabs').addEventListener('click', e => { const b = e.target.closest('button'); if (b) { tab = b.dataset.tab; audio.play('click'); drawBook(); } });
 function drawBook() {
   $$('#tabs button').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === tab));
-  const num = d => (owned(d.ch)
+  const num = d => (mine(d.ch)
     ? `<button class="tile" data-ch="${d.ch}" style="--c:${colorOf(d)}"><b>${d.ch}</b><span class="stars">${STAR.repeat(d.n)}</span></button>`
     : `<button class="tile off" data-ch="${d.ch}"><b>${d.ch}</b></button>`);
   // Huruf ditampilkan berpasangan (Aa) berurutan A–Z; yang belum ditemukan tampak abu-abu.
   const pairTile = d => {
-    const U = owned(d.up), l = owned(d.lo);
+    const U = mine(d.up), l = mine(d.lo);
     return `<button class="tile ${U || l ? '' : 'off'}" data-ch="${U ? d.up : d.lo}" style="--c:${colorOf(d)}"><span class="pair"><b class="${U ? '' : 'no'}">${d.up}</b><b class="${l ? '' : 'no'}">${d.lo}</b></span>${U || l ? photo(d) : ''}</button>`;
   };
-  const T = { abc: [LETTERS.filter(d => d.big).map(pairTile), LETTERS.filter(d => owned(d.ch)).length, LETTERS.length], num: [NUMBERS.map(num), NUMBERS.filter(d => owned(d.ch)).length, NUMBERS.length] }[tab];
+  const T = { abc: [LETTERS.filter(d => d.big).map(pairTile), LETTERS.filter(d => mine(d.ch)).length, LETTERS.length], num: [NUMBERS.map(num), NUMBERS.filter(d => mine(d.ch)).length, NUMBERS.length] }[tab];
   $('#grid').className = tab; $('#grid').innerHTML = T[0].join('');
   $('#total').style.setProperty('--p', T[1] / T[2] * 100 + '%'); $('#total b').textContent = `${T[1]} / ${T[2]}`;
   $('#photoCredit').hidden = tab !== 'abc';
@@ -317,8 +327,9 @@ $('h1').innerHTML = 'Sky|Explorers'.split('|').map(w => `<span>${[...w].map((ch,
 let mode = 'menu';
 function setMode(m) {
   mode = m;
-  if (m !== 'menu') camera.clearViewOffset();
+  if (m !== 'menu' && m !== 'coop') camera.clearViewOffset();
   $('#menu').hidden = m !== 'menu';
+  $('#coop').hidden = m !== 'coop';
   $('#pause').hidden = m !== 'pause';
   $('#book').hidden = m !== 'book';
   $('#hud').hidden = m !== 'play';
@@ -327,6 +338,7 @@ function setMode(m) {
   audio.flight(m === 'play'); if (m !== 'play') audio.ambient(0, 0);
 }
 function startFlight() {
+  flight.lane = coop.on ? coop.slot : 0;
   flight.reset(); resetItems(); play.reset(); thrust = 0; drawThrust(); camera.clearViewOffset(); setMode('play'); quests.refresh();
   if (!save.tutorialDone) { tut = { step: 0, t: 0, turned: 0, climbed: 0, collected: false }; tutStep(0); }
 }
@@ -334,7 +346,7 @@ $('#mPlay').addEventListener('click', startFlight);
 $('#bPause').addEventListener('click', () => setMode('pause'));
 $('#pResume').addEventListener('click', () => setMode('play'));
 $('#pRestart').addEventListener('click', startFlight);
-$('#pMenu').addEventListener('click', () => { tut = null; $('#tip').hidden = true; $('#card').hidden = true; $('#toast').hidden = true; flight.reset(); resetItems(); setMode('menu'); });
+$('#pMenu').addEventListener('click', () => { tut = null; $('#tip').hidden = true; $('#card').hidden = true; $('#toast').hidden = true; leaveRoom(); flight.lane = 0; flight.reset(); resetItems(); setMode('menu'); });
 $('#bHint').addEventListener('click', () => { save.hint = !save.hint; persist(); $('#bHint').classList.toggle('off', !save.hint); });
 $('#bHint').classList.toggle('off', !save.hint);
 document.addEventListener('visibilitychange', () => {
@@ -362,6 +374,116 @@ const play = createPlay({
   scene, world, flight, fx, audio, quests, owned, say: d => audio.voice(voName(d)), showCard,
 });
 $('#cS').textContent = save.stars || 0; quests.refresh();
+
+// ── Main bareng (room 4 gambar) ──
+const skinImg = k => portrait('s-' + k, () => makePlane(k).root, { bg: SKIN_BG[k], zoom: 1.5 });
+const cEl = { pick: $('#cPick'), host: $('#cHost'), enter: $('#cEnter') };
+let coopBack = 'menu', typed = '', seek = 0, startT = 0;
+const show = k => { for (const n in cEl) cEl[n].hidden = n !== k; };
+const setUrl = c => { try { history.replaceState(null, '', location.pathname + (c ? '?room=' + c : '')); } catch {} };
+const roomUrl = () => location.origin + location.pathname + '?room=' + coop.code;
+function leaveRoom() { clearTimeout(seek); clearTimeout(startT); coop.leave(); setUrl(''); updateCounts(); }
+function drawSlots(sel, pics, cls = '') { $(sel).innerHTML = [0, 1, 2, 3].map(i => `<i class="${pics[i] ? 'on' : ''}">${pics[i] || ''}</i>`).join(''); $(sel).className = 'code ' + cls; }
+function drawCrew() {
+  const list = coop.on ? [{ skin: save.skin }, ...coop.mates] : [];
+  const html = list.map((m, i) => `<img alt="" class="${i ? '' : 'me'}" src="${skinImg(m.skin)}">`).join('') + (list.length < 2 ? '<b>?</b>' : '');
+  $('#cCrew').innerHTML = html; $('#room').hidden = !coop.on;
+  $('#room').innerHTML = `<i class="dot ${coop.status}"></i>` + html;
+}
+let qrLib = null;
+function drawQr() {
+  qrLib ||= new Promise((r, j) => { const s = document.createElement('script'); s.src = 'vendor/qrcode/qrcode.min.js'; s.onload = r; s.onerror = j; document.head.append(s); });
+  qrLib.then(() => {
+    const q = window.qrcode(0, 'M'); q.addData(roomUrl()); q.make();
+    const n = q.getModuleCount(), c = $('#cQr'), k = 6; c.width = c.height = (n + 4) * k;
+    const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.fillStyle = '#1c2a44';
+    for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) if (q.isDark(y, x)) g.fillRect((x + 2) * k, (y + 2) * k, k, k);
+  }).catch(() => ($('#cQr').hidden = true));
+}
+function openCoop() { coopBack = mode === 'play' ? 'play' : 'menu'; if (coop.on) showHost(); else show('pick'); setMode('coop'); }
+function showHost() { drawSlots('#cCode', codePics(coop.code)); drawCrew(); drawQr(); show('host'); }
+let hosting = 0;
+function hostRoom() {
+  coop.join(randomCode()); setUrl(coop.code); showHost();
+  hosting = performance.now();   // kalau ada orang lain di kode ini dalam 1,5 detik pertama = kode terpakai → ganti
+}
+function tryJoin(c) {
+  hosting = 0;
+  drawSlots('#cSlots', codePics(c), 'wait'); coop.join(c); setUrl(c);
+  clearTimeout(seek); seek = setTimeout(() => { if (!coop.mates.length) noRoom(); }, 7000);
+}
+function noRoom() { leaveRoom(); typed = ''; audio.play('bump'); drawSlots('#cSlots', [], 'no'); show('enter'); setMode('coop'); }
+coop = createCoop({
+  scene, flight, getSkin: () => save.skin, validCh: c => all.some(d => d.ch === c),
+  cb: {
+    onStatus: () => drawCrew(),
+    onRoster(mates, joined, gone) {
+      if (joined.length && hosting && joined.some(m => m.old)) { hosting = 0; setTimeout(hostRoom, 0); return; }
+      drawCrew();
+      if (joined.length) {
+        hosting = 0;
+        clearTimeout(seek); audio.play('fanfare'); toast('✈️✈️', 1.6); fx.party(pos);
+        if (mode === 'coop' && coopBack !== 'play') { show('host'); showHost(); clearTimeout(startT); startT = setTimeout(() => mode === 'coop' && coop.on && startFlight(), 1500); }   // teman masuk → langsung terbang bersama
+        else if (mode === 'coop') setMode('play');
+      }
+      if (gone.length && mode === 'play') toast('👋', 1.4);
+    },
+    onTake(ch, mate) {
+      const it = world.items.find(i => i.data.ch === ch); keep(ch); updateCounts();
+      if (it?.state === 'idle') { it.state = 'pop'; it.t = 0; if (it.mesh.visible) fx.collect(it.mesh.position, colorNum(it.data)); }
+      if (mode === 'play') { audio.play('pickup', 0.85); audio.voice(voName(it.data)); showCard(it.data, false, mate); }
+      allDone();
+    },
+    onSync() { for (const it of world.items) if (coop.got.has(it.data.ch) && it.state === 'idle') { it.state = 'gone'; it.mesh.visible = false; } updateCounts(); if (coop.got.size >= all.length) allDone(); },
+    onRound() { resetItems(); updateCounts(); toast('🎉', 2.4); },
+    onFull() { noRoom(); },
+  },
+});
+$('#mCoop').addEventListener('click', openCoop);
+$('#room').addEventListener('click', openCoop);
+$('#cNew').addEventListener('click', () => hostRoom());
+$('#cJoin').addEventListener('click', () => { typed = ''; drawSlots('#cSlots', []); show('enter'); });
+$('#cKeys').innerHTML = PICS.map((p, i) => `<button class="j" data-k="${ALPHA[i]}">${p}</button>`).join('');
+$('#cKeys').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b || typed.length >= 4) return;
+  audio.play('click'); typed += b.dataset.k; drawSlots('#cSlots', codePics(typed));
+  if (typed.length === 4) tryJoin(typed);
+});
+$('#cDel').addEventListener('click', () => { if (coop.on) leaveRoom(); clearTimeout(seek); typed = typed.slice(0, -1); drawSlots('#cSlots', codePics(typed)); });
+$('#cGo').addEventListener('click', () => { if (coopBack === 'play') setMode('play'); else startFlight(); });
+$('#cShare').addEventListener('click', () => {
+  const url = roomUrl(), ok = () => { $('#cShare').classList.add('ok'); setTimeout(() => $('#cShare').classList.remove('ok'), 1400); };
+  if (navigator.share) navigator.share({ title: 'Sky Explorers', url }).catch(() => {}); else navigator.clipboard?.writeText(url).then(ok).catch(() => {});
+});
+$('#cClose').addEventListener('click', () => {
+  if (coopBack === 'play') { setMode('play'); return; }
+  if (cEl.pick.hidden) { leaveRoom(); show('pick'); } else setMode('menu');
+});
+
+// Penunjuk teman: potret pesawat di tepi layar / di atas pesawat teman.
+const mateEls = [0, 1, 2].map(() => { const el = document.createElement('div'); el.className = 'mate'; el.hidden = true; el.innerHTML = '<span class="ar"><svg><use href="#i-play"/></svg></span><img alt="">'; $('#inds').append(el); return el; });
+const mv3 = new THREE.Vector3();
+function drawMates(dt) {
+  const list = [...coop.avatars.values()].filter(a => !a.stale);
+  mateEls.forEach((el, i) => {
+    const a = list[i], hide = !a || mode !== 'play';
+    if (el.hidden !== hide) { el.hidden = hide; el.snap = true; }
+    if (hide) return;
+    if (el.skin !== a.skin) { el.skin = a.skin; el.lastChild.src = skinImg(a.skin); }
+    mv3.copy(a.plane.root.position).add({ x: 0, y: 2.6, z: 0 }).project(camera);
+    const behind = mv3.z > 1, on = !behind && Math.abs(mv3.x) < 0.92 && Math.abs(mv3.y) < 0.88;
+    let x = mv3.x, y = mv3.y, ang = Math.PI / 2;
+    if (!on) { if (behind) { x = -x; y = -y; } ang = Math.atan2(-y, x); const k = 0.84 / Math.max(Math.abs(x) / 0.92, Math.abs(y) / 0.72, 1e-3); x *= k; y *= k; }
+    let px = (x * 0.5 + 0.5) * W, py = Math.min((-y * 0.5 + 0.5) * H, on ? 1e9 : H - (H > W ? 215 : 110)) - (on ? 34 : 0);
+    for (let k = 0; k < 3; k++) for (const [qx, qy] of placed) if (Math.hypot(px - qx, py - qy) < 58) py = qy + (py > qy ? 60 : -60);   // tidak menimpa petunjuk huruf
+    placed.push([px, py]);
+    const q = el.snap ? 1 : 1 - Math.exp(-(on ? 16 : 9) * dt);
+    if (el.snap) { el.px = px; el.py = py; el.snap = false; }
+    el.px += (px - el.px) * q; el.py += (py - el.py) * q;
+    el.style.transform = `translate(${el.px.toFixed(1)}px, ${el.py.toFixed(1)}px)`;
+    el.firstChild.style.transform = `rotate(${ang}rad) translateX(34px)`;
+  });
+}
 
 // Suara sekitar: burung di darat, ombak di laut, peluit kereta & sapi saat lewat.
 let ambT = 0, hornT = 0, mooT = 0;
@@ -392,6 +514,7 @@ const HINT_R = 260, inds = [0, 1, 2].map(() => {
 });
 const ndc = new THREE.Vector3(), camDir = new THREE.Vector3();
 // Panah 3D di atas pesawat: menunjuk objective terdekat.
+const placed = [];
 let guideA = 0;
 const guide = makeArrow();
 scene.add(guide);
@@ -473,7 +596,7 @@ renderer.setAnimationLoop(() => {
   near3.sort((a, b) => a[0] * (a[1].shown ? 0.7 : 1) - b[0] * (b[1].shown ? 0.7 : 1));   // yang sedang ditunjuk tidak mudah berganti
   for (const el of inds) if (el.it && !near3.slice(0, 3).some(n => n[1] === el.it)) { el.it.shown = false; el.it = null; }
   for (const [, it] of near3.slice(0, 3)) if (!it.shown) { const el = inds.find(e => !e.it); if (el) { el.it = it; it.shown = true; el.snap = true; } }
-  const placed = [], first = near3[0]?.[1];
+  placed.length = 0; const first = near3[0]?.[1];
   guide.visible = !!first && mode === 'play' && save.hint && !flight.crashed;
   if (guide.visible) {
     const cy = Math.atan2(-camDir.x, -camDir.z), rel = Math.atan2(-(first.mesh.position.x - pos.x), -(first.mesh.position.z - pos.z)) - cy;
@@ -515,7 +638,8 @@ renderer.setAnimationLoop(() => {
   ambience(dt);
   const inCloud = world.life.clouds.some(c => Math.abs(c[1] - pos.y) < 5 * c[3] && Math.hypot(wrapC(c[0] - pos.x), wrapC(c[2] - pos.z)) < 6 * c[3]);
   fx.update(dt, { plane, boosting: mode === 'play' && (inp.boost || flight.state.push > 0) && !flight.crashed, crashed: flight.crashed, flying: !flight.crashed, mist: inCloud && !flight.crashed, spray: pos.y < 9 && heightAt(pos.x, pos.z) < 0 && !flight.crashed });
-  if (mode === 'menu') heroCamera(dt);
+  if (mode === 'menu' || mode === 'coop') heroCamera(dt);
+  coop.update(dt, mode === 'play'); drawMates(dt);
   blur.material.opacity = flight.crashed ? 0 : 0.65 + 0.35 * speed01;
 
   const g = Math.max(heightAt(pos.x, pos.z), 0);
@@ -540,6 +664,7 @@ renderer.setAnimationLoop(() => {
   }
 });
 
-window.__sky = { play, showCard, quests, fx, outline, plane, flight, world, save, setMode, renderer, scene, camera, input: joy, keys, get thrust() { return thrust; } }; // untuk uji otomatis
+window.__sky = { get coop() { return coop; }, play, showCard, quests, fx, outline, plane, flight, world, save, setMode, renderer, scene, camera, input: joy, keys, get thrust() { return thrust; } }; // untuk uji otomatis
 document.getElementById('boot')?.remove(); drawSkins();
+{ const c = new URLSearchParams(location.search).get('room'); if (validCode(c)) { typed = c; coopBack = 'menu'; show('enter'); setMode('coop'); tryJoin(c); } }   // dibuka dari link / QR room
 performance.mark('siap');

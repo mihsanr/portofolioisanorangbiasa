@@ -17,28 +17,30 @@
 <meta name="apple-mobile-web-app-title" content="Sky Explorers">
 <link rel="apple-touch-icon" href="icons/icon-180.png">
 <link rel="icon" href="icons/icon-192.png">
-<link rel="stylesheet" href="style.css?v=5">
+<link rel="stylesheet" href="style.css?v=6">
 <script type="importmap">{ "imports": { "three": "./vendor/three/three.module.min.js", "three/addons/": "./vendor/three/addons/",
-  "./js/audio.js": "./js/audio.js?v=5",
-  "./js/bandung.js": "./js/bandung.js?v=5",
-  "./js/city.js": "./js/city.js?v=5",
-  "./js/config.js": "./js/config.js?v=5",
-  "./js/districts.js": "./js/districts.js?v=5",
-  "./js/flight.js": "./js/flight.js?v=5",
-  "./js/font.js": "./js/font.js?v=5",
-  "./js/fx.js": "./js/fx.js?v=5",
-  "./js/landmarks.js": "./js/landmarks.js?v=5",
-  "./js/life.js": "./js/life.js?v=5",
-  "./js/main.js": "./js/main.js?v=5",
-  "./js/models.js": "./js/models.js?v=5",
-  "./js/play.js": "./js/play.js?v=5",
-  "./js/quests.js": "./js/quests.js?v=5",
-  "./js/shadows.js": "./js/shadows.js?v=5",
-  "./js/sky.js": "./js/sky.js?v=5",
-  "./js/toon.js": "./js/toon.js?v=5",
-  "./js/world.js": "./js/world.js?v=5" } }</script>
+  "./js/audio.js": "./js/audio.js?v=6",
+  "./js/bandung.js": "./js/bandung.js?v=6",
+  "./js/city.js": "./js/city.js?v=6",
+  "./js/config.js": "./js/config.js?v=6",
+  "./js/coop.js": "./js/coop.js?v=6",
+  "./js/districts.js": "./js/districts.js?v=6",
+  "./js/flight.js": "./js/flight.js?v=6",
+  "./js/font.js": "./js/font.js?v=6",
+  "./js/fx.js": "./js/fx.js?v=6",
+  "./js/landmarks.js": "./js/landmarks.js?v=6",
+  "./js/life.js": "./js/life.js?v=6",
+  "./js/main.js": "./js/main.js?v=6",
+  "./js/models.js": "./js/models.js?v=6",
+  "./js/play.js": "./js/play.js?v=6",
+  "./js/quests.js": "./js/quests.js?v=6",
+  "./js/rt.js": "./js/rt.js?v=6",
+  "./js/shadows.js": "./js/shadows.js?v=6",
+  "./js/sky.js": "./js/sky.js?v=6",
+  "./js/toon.js": "./js/toon.js?v=6",
+  "./js/world.js": "./js/world.js?v=6" } }</script>
 <link rel="modulepreload" href="vendor/three/three.module.min.js">
-<link rel="modulepreload" href="js/main.js?v=5">
+<link rel="modulepreload" href="js/main.js?v=6">
 </head>
 <body>
 <!-- Ikon putih sederhana (gaya tombol jelly), dipakai lewat <svg><use href="#i-..."/></svg> -->
@@ -58,6 +60,10 @@
   <symbol id="i-rocket" viewBox="0 0 24 24"><path d="M12 2c3.5 2.5 5 6.5 4.5 11l2.5 3-3 1-1-2h-6l-1 2-3-1 2.5-3C7 8.5 8.5 4.5 12 2z"/><circle cx="12" cy="9" r="2" fill="#2b6fd6"/><path d="M10 18h4l-2 4z" fill="#ffd23a"/></symbol>
   <symbol id="i-skip" viewBox="0 0 24 24"><path d="M4 5l8 7-8 7zM12 5l8 7-8 7z"/></symbol>
   <symbol id="i-star" viewBox="0 0 24 24"><path fill="#ffd23a" d="M12 2.5l2.9 6 6.6.8-4.9 4.5 1.3 6.5L12 17l-5.9 3.3 1.3-6.5-4.9-4.5 6.6-.8z" stroke="#b4520f" stroke-width="1.4" stroke-linejoin="round"/></symbol>
+  <symbol id="i-duo" viewBox="0 0 24 24"><g transform="translate(-1 -3) scale(.68)"><path d="M21 12c0-1-1-1.5-2-1.5h-4.5L10 3H8l2.5 7.5H6L4.5 8H3l1 4-1 4h1.5L6 13.5h4.5L8 21h2l4.5-7.5H19c1 0 2-.5 2-1.5z"/></g><g transform="translate(8 9) scale(.68)"><path d="M21 12c0-1-1-1.5-2-1.5h-4.5L10 3H8l2.5 7.5H6L4.5 8H3l1 4-1 4h1.5L6 13.5h4.5L8 21h2l4.5-7.5H19c1 0 2-.5 2-1.5z"/></g></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 4v16M4 12h16" fill="none" stroke="currentColor" stroke-width="4.4" stroke-linecap="round"/></symbol>
+  <symbol id="i-share" viewBox="0 0 24 24"><path d="M12 15V4M7.5 8L12 3.5 16.5 8M5 13v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-del" viewBox="0 0 24 24"><path d="M9 5h10a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H9l-7-7z"/><path d="M11.5 9.5l5 5M16.5 9.5l-5 5" stroke="#c8202f" stroke-width="2.2" stroke-linecap="round"/></symbol>
   <symbol id="i-plane" viewBox="0 0 24 24"><path d="M21 12c0-1-1-1.5-2-1.5h-4.5L10 3H8l2.5 7.5H6L4.5 8H3l1 4-1 4h1.5L6 13.5h4.5L8 21h2l4.5-7.5H19c1 0 2-.5 2-1.5z"/></symbol>
 </svg>
 
@@ -83,6 +89,7 @@
     <button class="j sq orange book" aria-label="Koleksiku"><svg><use href="#i-book"/></svg></button>
   </div>
   <div id="mission" role="button" aria-label="Misi"><span class="mi"></span><span class="dots"></span></div>
+  <button id="room" aria-label="Room" hidden></button>
   <div id="thrust" class="empty">
     <button id="bThrust" class="j round orange" aria-label="Thrust (tahan)"><svg><use href="#i-rocket"/></svg></button>
     <div class="gauge"><i id="thrustBar"></i></div>
@@ -102,6 +109,7 @@
     <div id="planes" role="radiogroup" aria-label="Pilih pesawat"></div>
     <button id="mPlay" class="j green big" aria-label="Main"><svg><use href="#i-play"/></svg></button>
     <div class="icons">
+      <button id="mCoop" class="j sq purple" aria-label="Main bareng"><svg><use href="#i-duo"/></svg></button>
       <button class="j sq orange book" aria-label="Koleksiku"><svg><use href="#i-book"/></svg></button>
       <button class="j sq green mute" aria-label="Suara"><svg><use href="#i-sound"/></svg></button>
       <button class="j sq blue fs" aria-label="Layar penuh"><svg><use href="#i-full"/></svg></button>
@@ -119,6 +127,28 @@
       <button id="pMenu" class="j sq red" aria-label="Menu utama"><svg><use href="#i-home"/></svg></button>
     </div>
     <div class="row"><button class="j sq green mute" aria-label="Suara"><svg><use href="#i-sound"/></svg></button><input class="vol" type="range" min="0" max="1" step="0.05" aria-label="Volume"></div>
+  </div>
+</section>
+
+<!-- Main bareng: tanpa teks. Buat room (pesawat +) atau gabung (4 gambar) -->
+<section id="coop" class="screen" hidden>
+  <div class="panel">
+    <button id="cClose" class="j sq red close" aria-label="Tutup"><svg><use href="#i-close"/></svg></button>
+    <div id="cPick">
+      <button id="cNew" class="j green big" aria-label="Buat room"><svg><use href="#i-duo"/></svg><svg><use href="#i-plus"/></svg></button>
+      <button id="cJoin" class="j blue big" aria-label="Gabung room"><span>🐘</span><span>🍌</span><span>⭐</span><span>🚗</span></button>
+    </div>
+    <div id="cHost" hidden>
+      <div id="cCode" class="code"></div>
+      <div class="qr"><canvas id="cQr"></canvas><button id="cShare" class="j sq orange" aria-label="Bagikan link room"><svg><use href="#i-share"/></svg></button></div>
+      <div id="cCrew"></div>
+      <button id="cGo" class="j green big" aria-label="Terbang"><svg><use href="#i-play"/></svg></button>
+    </div>
+    <div id="cEnter" hidden>
+      <div id="cSlots" class="code"></div>
+      <div id="cKeys"></div>
+      <button id="cDel" class="j orange" aria-label="Hapus"><svg><use href="#i-del"/></svg></button>
+    </div>
   </div>
 </section>
 
@@ -146,6 +176,6 @@
 </div>
 
 <noscript>Sky Explorers butuh JavaScript.</noscript>
-<script type="module" src="js/main.js?v=5"></script>
+<script type="module" src="js/main.js?v=6"></script>
 </body>
 </html>

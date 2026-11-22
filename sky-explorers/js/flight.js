@@ -41,7 +41,7 @@ export function createFlight(plane, camera, world) {
   }
 
   function reset() {
-    s.pos.set(...F.spawn); s.yaw = s.pitch = s.roll = s.steer = s.climb = s.crash = 0; s.speed = F.speed;
+    s.pos.set(F.spawn[0] + api.lane * 9, F.spawn[1], F.spawn[2]); s.yaw = s.pitch = s.roll = s.steer = s.climb = s.crash = 0; s.speed = F.speed;
     s.safe = SAFE_TIME; s.v = {}; Object.assign(cam, { yaw: 0, pitch: 0, dist: F.camDist, lift: 0, v: {} });
     fwd.set(0, 0, -1);
     plane.visual.rotation.set(0, 0, 0);
@@ -111,5 +111,6 @@ export function createFlight(plane, camera, world) {
     return hit;
   }
 
-  return { state: s, reset, update, get crashed() { return s.crash > 0; } };
+  const api = { state: s, reset, update, lane: 0, get crashed() { return s.crash > 0; } };   // lane = jalur mulai saat main bareng
+  return api;
 }
