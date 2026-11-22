@@ -3,7 +3,7 @@
 // Kabut (FOG.far < TILE/2) menyembunyikan titik sambungnya.
 import * as THREE from 'three';
 import * as M from './models.js';
-import { SPOTS, LETTERS, NUMBERS, COLORS, TILE, FOG, LITE } from './config.js';
+import { ITEM_POS, SPOTS, LETTERS, NUMBERS, COLORS, TILE, FOG, LITE } from './config.js';
 import { createSky, SKY, SUN_DIR } from './sky.js';
 import { buildCity } from './city.js';
 import { landmarks } from './landmarks.js';
@@ -203,7 +203,8 @@ export function buildWorld(scene, { shadows = false } = {}) {
   anim.push(t => { boat.position.y = 0.3 + Math.sin(t * 1.3) * 0.25; boat.rotation.z = Math.sin(t * 0.9) * 0.05; });
 
   // Pohon: cemara di barat laut, pohon bulat di pedesaan, pohon taman kota dari OSM
-  const outside = (x, z) => !inDistrict(x, z) && !onRoad(x, z) && heightAt(x, z) > 2.5 && Math.hypot(x, z) > CITY_R + 25 && Math.hypot(x - 300, z + 180) > 18 && Math.hypot(x - 345, z - 215) > 14;
+  const letters = Object.values(ITEM_POS).filter(p => p[1] - heightAt(p[0], p[2]) < 30), clear = (x, z) => !letters.some(p => Math.hypot(p[0] - x, p[2] - z) < 13);   // pohon tidak menutupi huruf rendah
+  const outside = (x, z) => clear(x, z) && !inDistrict(x, z) && !onRoad(x, z) && heightAt(x, z) > 2.5 && Math.hypot(x, z) > CITY_R + 25 && Math.hypot(x - 300, z + 180) > 18 && Math.hypot(x - 345, z - 215) > 14;
   const blobs = [], lite = M.treeGeo(true);
   const ring = (n, r0, r1, ok = () => true) => { const L = []; for (let k = 0; L.length < n && k < n * 60; k++) { const a = rand() * Math.PI * 2, r = r0 + rand() * (r1 - r0), x = Math.cos(a) * r, z = Math.sin(a) * r; if (outside(x, z) && ok(x, z, groundAt(x, z))) L.push([x, groundAt(x, z) - 0.3, z, 0.9 + rand() * 0.8, rand() * 6]); } return L; };
   const pines = []; while (pines.length < 80) { const x = -340 + (rand() - 0.5) * 160, z = -60 + (rand() - 0.5) * 200; if (outside(x, z)) pines.push([x, groundAt(x, z) - 0.3, z, 1 + rand() * 0.8, rand() * 6]); }
@@ -211,7 +212,7 @@ export function buildWorld(scene, { shadows = false } = {}) {
   const trees = ring(60, 325, 420), wide = ring(34, 325, 405, (x, z, y) => y < 18), flame = ring(22, 325, 400, (x, z, y) => y < 16), cypress = ring(26, 325, 400);
   const palms = []; for (let k = 0; palms.length < 46 && k < 4000; k++) { const a = rand() * Math.PI * 2, r = 385 + rand() * 60, x = Math.cos(a) * r, z = Math.sin(a) * r, y = groundAt(x, z); if (y > 0.9 && y < 3.2) palms.push([x, y - 0.2, z, 0.9 + rand() * 0.5, rand() * 6]); }
   // pohon taman kota: campuran jenis
-  city.parkTrees.slice(0, 170).forEach(([x, z], i) => (i % 5 === 0 ? wide : i % 7 === 0 ? flame : trees).push([x, groundAt(x, z) - 0.2, z, 0.5 + rand() * 0.28, rand() * 6]));
+  city.parkTrees.filter(([x, z]) => clear(x, z)).slice(0, 170).forEach(([x, z], i) => (i % 5 === 0 ? wide : i % 7 === 0 ? flame : trees).push([x, groundAt(x, z) - 0.2, z, 0.5 + rand() * 0.28, rand() * 6]));
   for (const [x, z, k, s] of TREES_X) (k === 'wide' ? wide : k === 'flame' ? flame : trees).push([x, groundAt(x, z) - 0.1, z, s, rand() * 6]);
   const tint = list => list.map(() => new THREE.Color().setHSL(0.27 + (rand() - 0.5) * 0.1, 0.25, 0.86 + rand() * 0.12));   // warna daun sedikit berbeda tiap pohon
   for (const [geo, list, far, rr, bl] of [[M.pineGeo(), pines, null, 2.6, 5.5], [M.treeGeo(), trees, lite, 2.9, 6.5], [M.umbrellaGeo(), wide, M.umbrellaGeo(0, true), 3.6, 8.5], [M.umbrellaGeo(0xe8402c), flame, M.umbrellaGeo(0xe8402c, true), 3.6, 8.5], [M.palmGeo(), palms, M.palmGeo(true), 2.2, 5], [M.cypressGeo(), cypress, M.cypressGeo(true), 1.6, 4]]) {
@@ -271,11 +272,11 @@ export function buildWorld(scene, { shadows = false } = {}) {
       const rr = spot.ring * (0.7 + 0.3 * rand());
       let x = spot.at[0] + Math.cos(a) * rr, z = spot.at[2] + Math.sin(a) * rr;
       for (let k = 1; k < 30 && spot.ring && items.some(o => Math.hypot(wrapC(o.home.x - x), wrapC(o.home.z - z)) < 34); k++) { const q = a + k * 0.7, R = rr + k * 2.2; x = spot.at[0] + Math.cos(q) * R; z = spot.at[2] + Math.sin(q) * R; }   // jarak mendatar ≥ 34: tidak saling menutupi
-      const y = Math.max(spot.at[1] + (rand() - 0.5) * 16, heightAt(x, z) + 14);
+      const y = Math.max(spot.at[1] + (rand() - 0.5) * 16, heightAt(x, z) + 14), fix = ITEM_POS[ch];
       const data = byCh[ch];
       const color = COLORS[data.i % COLORS.length], mesh = M.makeGlyph(data.ch, color);
-      const home = new THREE.Vector3(x, y, z);
-      for (let k = 0; k < 20 && (hit(home, 7) || items.some(o => o.home.distanceTo(home) < 14)); k++) home.y += 4;  // selalu bisa diambil: jauh dari bangunan & huruf lain
+      const home = fix ? new THREE.Vector3(...fix) : new THREE.Vector3(x, y, z);
+      for (let k = 0; k < 20 && !fix && (hit(home, 7) || items.some(o => o.home.distanceTo(home) < 14)); k++) home.y += 4;  // selalu bisa diambil: jauh dari bangunan & huruf lain
       const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: blobTex, color: new THREE.Color(color).lerp(new THREE.Color(0xffffff), 0.55), opacity: 0.75, depthWrite: false, fog: false }));
       halo.scale.setScalar(15); halo.position.z = -4.5;   // selalu di belakang huruf, jangan memudarkan mukanya
       halo.renderOrder = 1; mesh.renderOrder = 2;   // semua cahaya dulu, baru huruf: cahaya huruf lain tidak memucatkan
