@@ -333,6 +333,8 @@ void main(){
     const onOpen = opts.onOpen || (() => {});
     const onHover = opts.onHover || (() => {});
     const hrefFor = opts.href || ((t) => `#tape/${t.s}`);
+    // hover: 'parallax' → kursor menggeser dinding pelan (tanpa angkat tile / cuplikan video)
+    const parallax = opts.hover === 'parallax' && !coarse && !reduce;
     if (!tapes.length) return null;
 
     const TH = preview ? (coarse ? 72 : 84) : (coarse ? 118 : 150);
@@ -367,6 +369,7 @@ void main(){
     video.preload = 'auto'; video.disableRemotePlayback = true; video.dataset.noDuck = '';
     el.append(canvas, ring, hud, cap, live, tuning, video);
     if (coarse) el.classList.add('is-touch');
+    if (parallax) el.classList.add('is-parallax');
 
     /* renderer */
     let rd = null, surface = canvas;
@@ -389,6 +392,7 @@ void main(){
     };
     let layout = null, ext = [0, 0], filter = 'all';
     const vel = [0, 0];
+    const po = [0, 0], pt = [0, 0]; // offset parallax saat ini & targetnya (unit dunia)
     let mode = 'idle'; // idle | drag | coast | snap
     let snapTo = null, hoverTimer = 0, leaveTimer = 0, playTimer = 0, holdTimer = 0;
     let pendingKey = null, hovered = null;
@@ -670,7 +674,10 @@ void main(){
         ptr.x = x; ptr.y = y;
         return;
       }
-      if (e.pointerType === 'mouse' && !coarse) hover(x, y);
+      if (e.pointerType === 'mouse' && !coarse) {
+        if (parallax) { pt[0] = clamp(x / (st.W / 2), -1, 1) * CW * 1.6; pt[1] = clamp(y / (st.H / 2), -1, 1) * CH * 0.7; kick(); }
+        else hover(x, y);
+      }
     }
     function onUp(e) {
       if (!ptr || e.pointerId !== ptr.id) return;
@@ -743,7 +750,7 @@ void main(){
     el.addEventListener('pointerenter', (e) => { if (e.pointerType === 'mouse') { pointerIn = true; kick(); } });
     el.addEventListener('pointerleave', (e) => {
       if (e.pointerType !== 'mouse') return;
-      pointerIn = false; lastPtr = null;
+      pointerIn = false; lastPtr = null; pt[0] = pt[1] = 0;
       clearTimeout(hoverTimer); pendingKey = null;
       tellHover(null);
       if (!ptr && !coarse) clearActive();
@@ -792,7 +799,7 @@ void main(){
         if (sp < 0.036) { // ~0.6 px/frame
           vel[0] = vel[1] = 0; mode = 'idle';
           if (coarse) settle();
-          else if (lastPtr) hover(lastPtr[0], lastPtr[1]);
+          else if (lastPtr && !parallax) hover(lastPtr[0], lastPtr[1]);
         }
       } else if (mode === 'snap' && snapTo) {
         const k = 1 - Math.pow(1 - 0.15, f);
@@ -804,13 +811,23 @@ void main(){
           setActive(snapTo.h, { play: true, delay: 300 });
           snapTo = null;
         }
-      } else if (mode === 'idle' && !reduce && !ptr && !(pointerIn && !coarse) && !(touched && coarse)) {
+      } else if (mode === 'idle' && !reduce && !ptr && !(pointerIn && !coarse && !parallax) && !(touched && coarse)) {
         // drift: desktop while the pointer is outside, touch until the first touch
         st.cam[0] += DRIFT[0] * dt; st.cam[1] += DRIFT[1] * dt;
         moving = true;
         if (coarse) {
           const n = nearestToCenter();
           if (n && (!st.A || st.A.key !== n.h.key)) setActive(n.h, { play: true, delay: 300 });
+        }
+      }
+      // parallax: kamera mengikuti kursor dengan pegas lembut; dinding ikut miring sedikit (CSS --px/--py)
+      if (parallax) {
+        const k = 1 - Math.pow(1 - 0.07, f);
+        const dx = (pt[0] - po[0]) * k, dy = (pt[1] - po[1]) * k;
+        if (Math.abs(dx) + Math.abs(dy) > 0.01) {
+          po[0] += dx; po[1] += dy; st.cam[0] += dx; st.cam[1] += dy; moving = true;
+          el.style.setProperty('--px', (po[0] / (CW * 1.6)).toFixed(3));
+          el.style.setProperty('--py', (po[1] / (CH * 0.7)).toFixed(3));
         }
       }
       // keep the camera inside one world period (shader & hit-test wrap distances)
@@ -966,7 +983,7 @@ void main(){
       tellHover(null); // the tile under the cursor is a different one now
       el.dispatchEvent(new CustomEvent('wall:filter', { detail: { filter } }));
       dirty = true; kick();
-      if (lastPtr && pointerIn && !coarse) hover(lastPtr[0], lastPtr[1]);
+      if (lastPtr && pointerIn && !coarse && !parallax) hover(lastPtr[0], lastPtr[1]);
     }
 
     const inst = {

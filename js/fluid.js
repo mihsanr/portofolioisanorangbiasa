@@ -3,6 +3,10 @@
    diffuses out, and is drawn over the page with screen blending.
    Degrades to nothing if WebGL2/float buffers are unavailable. */
 (() => {
+  // Nonaktif sementara (Nov 2026, permintaan pemilik: hover "minyak" mau diganti).
+  // Ubah ke true untuk menyalakan lagi.
+  const ENABLED = false;
+  if (!ENABLED) return;
   const canvas = document.getElementById('fluid');
   if (!canvas) return;
   if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
