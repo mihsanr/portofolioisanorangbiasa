@@ -679,7 +679,7 @@
   if (cta && finePointer && !reduceMotion) {
     cta.classList.add('has-trail');
     const N = 8, GAP = 120, LIFE = 800, MAX = 8;
-    const src = (i) => `assets/img/trail/t${i + 1}.webp`;
+    const src = (i) => `assets/img/trail/t${i + 1}.webp?v=2`;
     let warmed = false, lx = null, ly = null, n = 0;
     const alive = [];
     cta.addEventListener('pointerenter', () => {
